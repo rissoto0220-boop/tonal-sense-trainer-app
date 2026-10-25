@@ -48,6 +48,8 @@ import { hasCompletedSession } from "./src/relative-pitch/practice-history.js";
 import { showHistoryScreen as showRelativePitchHistoryScreen } from "./src/relative-pitch/history-screen.js";
 import { syncPendingSessions } from "./src/shared/session-uploader.js";
 import { resolveSessionEndpoint } from "./src/shared/server-config.js";
+import { runFunctionalPitchSession } from "./src/functional-pitch/functional-session.js";
+import { resolveFunctionalPitchOptions } from "./src/functional-pitch/dev-flag.js";
 
 const QUESTION_MS = 3000;
 const INTER_QUESTION_GAP_MS = 1000; // 問題間の間隔(仕様13.4)
@@ -130,6 +132,8 @@ function showIdConfirm() {
 
 // テスト選択画面に並べるテストの一覧。テストを追加するときはここに1件足す。
 function availableTests() {
+  // 機能的音感は未完成のため、URLに ?functional=dev があるときだけ選べる(本番では「準備中」のまま)。
+  const functionalPitchOptions = resolveFunctionalPitchOptions(window.location);
   return [
     {
       id: "absolute-pitch",
@@ -148,8 +152,9 @@ function availableTests() {
     {
       id: "functional-pitch",
       title: "機能的音感テスト",
-      description: "現在準備中です。",
-      available: false,
+      description: functionalPitchOptions.enabled ? "2つのフレーズの印象の変化を評定します(開発確認用)。" : "現在準備中です。",
+      available: functionalPitchOptions.enabled,
+      onStart: startFunctionalPitchTest,
     },
   ];
 }
@@ -226,6 +231,20 @@ function startRelativePitchTest() {
         },
       });
     },
+  });
+}
+
+// --- 機能的音感測定(開発確認用。URLに ?functional=dev があるときだけ選べる) ---
+
+// 測定本体は参加者IDに依存しない。結果はメモリ上で受け取るだけで、保存・送信はしない(仕様未確定)。
+function startFunctionalPitchTest() {
+  const { practiceRequired, trialLimit } = resolveFunctionalPitchOptions(window.location);
+  runFunctionalPitchSession({
+    screenEl,
+    practiceRequired,
+    trialLimit,
+    onExit: showTestSelection,
+    onKeyMeasured: (result) => console.info("機能的音感の測定結果(メモリ上のみ・保存なし)", result),
   });
 }
 
