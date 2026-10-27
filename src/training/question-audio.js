@@ -21,6 +21,7 @@ import {
 export const SETUP_TO_QUESTION_GAP_SECONDS = 1.0;
 // 音源(WAV)の前後に入っている無音の長さ(仮音源の作り: 前後に1拍=0.5秒ずつ)。
 // 正式音源で変わったら、ここを合わせる(間隔1秒はこの値を差し引いて保つ)。
+// 音源を差し替えたら scripts/check-training-wavs.py で前後の無音を確かめる。
 export const AUDIO_EDGE_SILENCE_SECONDS = 0.5;
 // 正解のとき、フィードバックのフレーズが終わってから次の問題へ進むまでの時間(研究者の決定)。
 export const AUTO_NEXT_DELAY_SECONDS = 0.5;
