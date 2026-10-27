@@ -50,6 +50,10 @@ import { syncPendingSessions } from "./src/shared/session-uploader.js";
 import { resolveSessionEndpoint } from "./src/shared/server-config.js";
 import { runFunctionalPitchSession } from "./src/functional-pitch/functional-session.js";
 import { resolveFunctionalPitchOptions } from "./src/functional-pitch/dev-flag.js";
+import { resolveTrainingOptions } from "./src/training/dev-flag.js";
+import { TRAINING_MENUS } from "./src/training/menus.js";
+import { showTrainingMenuScreen } from "./src/training/menu-screen.js";
+import { runTrainingSession } from "./src/training/training-session.js";
 
 const QUESTION_MS = 3000;
 const INTER_QUESTION_GAP_MS = 1000; // 問題間の間隔(仕様13.4)
@@ -134,6 +138,9 @@ function showIdConfirm() {
 function availableTests() {
   // 機能的音感は未完成のため、URLに ?functional=dev があるときだけ選べる(本番では「準備中」のまま)。
   const functionalPitchOptions = resolveFunctionalPitchOptions(window.location);
+  // 音感訓練も未完成のため、URLに ?training=dev があるときだけ選べる(本番では「準備中」のまま)。
+  // 完成形のトップページ(訓練/テスト/設定)を作るまでの仮の置き場所として、テスト選択の一覧に並べる。
+  const trainingOptions = resolveTrainingOptions(window.location);
   return [
     {
       id: "absolute-pitch",
@@ -155,6 +162,13 @@ function availableTests() {
       description: functionalPitchOptions.enabled ? "2つのフレーズの印象の変化を評定します(開発確認用)。" : "現在準備中です。",
       available: functionalPitchOptions.enabled,
       onStart: startFunctionalPitchTest,
+    },
+    {
+      id: "training",
+      title: "音感訓練",
+      description: trainingOptions.enabled ? "メロディの音や和音を答えて練習します(開発確認用)。" : "現在準備中です。",
+      available: trainingOptions.enabled,
+      onStart: showTrainingMenus,
     },
   ];
 }
@@ -245,6 +259,32 @@ function startFunctionalPitchTest() {
     trialLimit,
     onExit: showTestSelection,
     onKeyMeasured: (result) => console.info("機能的音感の測定結果(メモリ上のみ・保存なし)", result),
+  });
+}
+
+// --- 音感訓練(開発確認用。URLに ?training=dev があるときだけ選べる) ---
+
+// 訓練は参加者IDに依存しない。結果はメモリ上で受け取るだけで、保存・送信はしない(保存の方法は今後検討する)。
+function showTrainingMenus() {
+  showTrainingMenuScreen({
+    screenEl,
+    menus: TRAINING_MENUS,
+    onSelect: startTraining,
+    onBack: showTestSelection,
+  });
+}
+
+// メニューのボタンを押した操作の中で、音声(AudioContext)を有効化してから始める。
+async function startTraining(menu) {
+  const { replayMode, questionCount } = resolveTrainingOptions(window.location);
+  await resumeAudioContext();
+  runTrainingSession({
+    screenEl,
+    menu,
+    replayMode,
+    questionCount,
+    onFinished: (results) => console.info("音感訓練の結果(メモリ上のみ・保存なし)", results),
+    onExit: showTrainingMenus,
   });
 }
 

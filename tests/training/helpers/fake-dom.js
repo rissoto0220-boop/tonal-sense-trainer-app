@@ -4,13 +4,16 @@
 // 画面を作り直した回数(innerHTML への代入の回数)も数えられる。
 // 入れ子の同じタグ(div の中の div など)は扱わない(訓練の画面では、data-role 付きの div は入れ子にならない)。
 // 対応するセレクター: "h2" / "button" / "[data-code]" / '[data-role="x"]'
+// data-menu-id → dataset.menuId(ブラウザと同じく、ハイフンの後ろを大文字にする)
+const camel = (name) => name.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+
 function decode(text) {
   return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
 }
 
 function createElement(tag, attrs, inner) {
   const dataset = {};
-  for (const [, name, value] of attrs.matchAll(/data-([\w-]+)="([^"]*)"/g)) dataset[name] = value;
+  for (const [, name, value] of attrs.matchAll(/data-([\w-]+)="([^"]*)"/g)) dataset[camel(name)] = value;
   const classes = new Set((attrs.match(/class="([^"]*)"/)?.[1] ?? "").split(" ").filter(Boolean));
   let innerHtml = inner;
   return {
@@ -58,9 +61,9 @@ export function createFakeDom() {
   function matches(element, selector) {
     if (["h2", "button", "p"].includes(selector)) return element.tag === selector;
     const dataKey = selector.match(/^\[data-([\w-]+)\]$/);
-    if (dataKey) return dataKey[1] in element.dataset;
+    if (dataKey) return camel(dataKey[1]) in element.dataset;
     const dataValue = selector.match(/^\[data-([\w-]+)="([^"]+)"\]$/);
-    if (dataValue) return element.dataset[dataValue[1]] === dataValue[2];
+    if (dataValue) return element.dataset[camel(dataValue[1])] === dataValue[2];
     return false;
   }
 
