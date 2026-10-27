@@ -83,8 +83,8 @@ test("課題テンプレート: 刺激の中身(正解)を持たない", () => {
 });
 
 test("src/training は定義・解決だけ。DOM・保存・サーバー・音声に依存しない(importの許可リスト)", () => {
-  // src/training/ 内のファイル同士の import だけを許可する。
-  const allowed = /^\.\/[a-z-]+\.js$/;
+  // src/training/ 内のファイル同士と、画面部品が使う共通の小さな部品(HTMLの無害化・1回だけ受付)だけを許可する。
+  const allowed = /^(\.\/[a-z-]+\.js|\.\.\/shared\/(escape-html|answer-lock)\.js)$/;
   const files = readdirSync(new URL("../../src/training/", import.meta.url)).filter((name) => name.endsWith(".js"));
   assert.ok(files.length >= 2);
   for (const file of files) {
