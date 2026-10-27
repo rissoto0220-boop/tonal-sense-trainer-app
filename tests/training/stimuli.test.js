@@ -78,10 +78,10 @@ test("音源ファイル名: 未対応のKey・未定義の刺激IDは例外", (
   assert.throws(() => feedbackAudioFilenameFor("C", "st-n9-x"), /未定義の刺激IDです: st-n9-x/);
 });
 
-test("拍の暫定値: 第1音(第1和音)1拍 → ド(Ⅰ)1拍", () => {
+test("拍の暫定値: 第1音(第1和音)2拍 → ド(Ⅰ)2拍", () => {
   for (const stimulus of TRAINING_STIMULI) {
     for (const part of [stimulus.parts.melody, stimulus.parts.harmony]) {
-      assert.deepEqual(part.events.map((event) => [event.onsetBeats, event.durationBeats]), [[0, 1], [1, 1]]);
+      assert.deepEqual(part.events.map((event) => [event.onsetBeats, event.durationBeats]), [[0, 2], [2, 2]]);
     }
   }
 });

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { createFakeScreen } from "../functional-pitch/helpers/fake-screen.js";
+import { createFakeDom } from "./helpers/fake-dom.js";
 import {
   buildAnswerScreenHtml,
   mountAnswerScreen,
@@ -20,7 +20,7 @@ const keyButtons = (html) => [...html.matchAll(/<button type="button" class="([^
   .map(([, classes, code, rest, label]) => ({ classes: classes.split(" "), code, disabled: /\sdisabled/.test(rest), label, rest }));
 
 function mount(options = MELODY) {
-  const screenEl = createFakeScreen();
+  const screenEl = createFakeDom();
   const calls = [];
   const screen = mountAnswerScreen({
     screenEl,
@@ -49,7 +49,7 @@ test("単音の鍵盤: ソ ラ シ ド レ ミ ファ の横一列。ドだけ�
   const keys = keyButtons(html);
   assert.deepEqual(keys.map((key) => key.label), ["ソ", "ラ", "シ", "ド", "レ", "ミ", "ファ"]);
   assert.deepEqual(keys.filter((key) => key.classes.includes("training-key--tonic")).map((key) => key.code), ["n1"]);
-  assert.match(html, /<div class="training-prompt">\? → ド<\/div>/);
+  assert.match(html, /<div class="training-prompt" data-role="prompt">\? → ド<\/div>/);
 });
 
 test("出題に使う音だけ押せる。使わない音は is-inactive で、回答可能になっても押せない", () => {
@@ -74,7 +74,7 @@ test("和音の六角形: Ⅰが上(0)、時計回りに Ⅰ Ⅳ Ⅲ Ⅵ Ⅱ Ⅴ
   assert.match(html, /class="training-hexagon"/);
   assert.match(html, /data-code="n1" style="--i:0"/);
   assert.match(html, /data-code="n5" style="--i:5"/);
-  assert.match(html, /<div class="training-prompt">\? → Ⅰ<\/div>/);
+  assert.match(html, /<div class="training-prompt" data-role="prompt">\? → Ⅰ<\/div>/);
 });
 
 test("和音のボタンは、和音ごとの色の印(training-chord--n1 など)を持ち、ローマ数字を表示する", () => {
@@ -86,55 +86,57 @@ test("和音のボタンは、和音ごとの色の印(training-chord--n1 など
 test("回答: 1回だけ受け付け、上部の表示が回答した音に変わり、全ボタンが押せなくなる", () => {
   const { screenEl, screen, calls } = mount();
   screen.setAnswerable(true);
-  screenEl.button('[data-code="n2"]').click();
-  screenEl.button('[data-code="n7"]')?.click();
+  screenEl.el('[data-code="n2"]').click();
+  screenEl.el('[data-code="n7"]')?.click();
   assert.deepEqual(calls, [["answer", "n2"]]);
-  assert.match(screenEl.innerHTML, /<div class="training-prompt">レ → ド<\/div>/);
+  assert.equal(screenEl.text('[data-role="prompt"]'), "レ → ド");
   assert.ok(screenEl.querySelectorAll("[data-code]").every((button) => button.disabled));
-  assert.ok(screenEl.button('[data-role="giveup"]').disabled);
-  assert.match(screenEl.innerHTML, /class="training-key selected" data-code="n2"/);
+  assert.ok(screenEl.el('[data-role="giveup"]').disabled);
+  assert.ok(screenEl.el('[data-code="n2"]').classList.contains("selected"));
+  assert.equal(screenEl.el('[data-code="n7"]').classList.contains("selected"), false);
 });
 
 test("回答可能になる前の押下は無視される", () => {
   const { screenEl, calls } = mount();
-  screenEl.button('[data-code="n1"]').click();
+  screenEl.el('[data-code="n1"]').click();
   assert.deepEqual(calls, []);
 });
 
 test("「わからない」: 回答コードは giveup。上部の表示は「?」のまま", () => {
   const { screenEl, screen, calls } = mount();
   screen.setAnswerable(true);
-  screenEl.button('[data-role="giveup"]').click();
+  screenEl.el('[data-role="giveup"]').click();
   assert.deepEqual(calls, [["answer", "giveup"]]);
-  assert.match(screenEl.innerHTML, /<div class="training-prompt">\? → ド<\/div>/);
+  assert.equal(screenEl.text('[data-role="prompt"]'), "? → ド");
 });
 
 test("正誤の表示: 正解は文言だけ、不正解は文言と「次に進む」(押すと onNext)", () => {
   const correct = mount();
   correct.screen.setAnswerable(true);
-  correct.screenEl.button('[data-code="n1"]').click();
+  correct.screenEl.el('[data-code="n1"]').click();
   correct.screen.showResult({ outcome: "correct", correctAnswerCode: "n1" });
-  assert.match(correct.screenEl.innerHTML, /role="status" aria-live="polite"><p>正解です<\/p><\/div>/);
-  assert.equal(correct.screenEl.button('[data-role="next"]'), undefined);
+  assert.equal(correct.screenEl.el('[data-role="feedback"]').innerHTML, "<p>正解です</p>");
+  assert.equal(correct.screenEl.el('[data-role="next"]').hidden, true, "正解のときは「次に進む」を出さない");
 
   const wrong = mount();
   wrong.screen.setAnswerable(true);
-  wrong.screenEl.button('[data-code="n2"]').click();
+  wrong.screenEl.el('[data-code="n2"]').click();
   wrong.screen.showResult({ outcome: "incorrect", correctAnswerCode: "n7", showNext: true, replayEnabled: true });
-  assert.match(wrong.screenEl.innerHTML, /<p>不正解です<\/p><p>正解は「シ」です<\/p>/);
-  const next = wrong.screenEl.button('[data-role="next"]');
+  assert.equal(wrong.screenEl.el('[data-role="feedback"]').innerHTML, "<p>不正解です</p><p>正解は「シ」です</p>");
+  assert.equal(wrong.screenEl.el('[data-role="next"]').hidden, false);
+  const next = wrong.screenEl.el('[data-role="next"]');
   assert.equal(next.focused, true, "「次に進む」にフォーカスを移す");
   next.click();
-  assert.equal(wrong.screenEl.button('[data-role="replay"]').disabled, false, "不正解のあとは聞き直せる");
-  wrong.screenEl.button('[data-role="replay"]').click();
+  assert.equal(wrong.screenEl.el('[data-role="replay"]').disabled, false, "不正解のあとは聞き直せる");
+  wrong.screenEl.el('[data-role="replay"]').click();
   assert.deepEqual(wrong.calls, [["answer", "n2"], ["next"], ["replay"]]);
 });
 
 test("リプレイ: 回答可能なときに押せ、onReplay を呼ぶ", () => {
   const { screenEl, screen, calls } = mount();
-  assert.ok(screenEl.button('[data-role="replay"]').disabled);
+  assert.ok(screenEl.el('[data-role="replay"]').disabled);
   screen.setAnswerable(true);
-  screenEl.button('[data-role="replay"]').click();
+  screenEl.el('[data-role="replay"]').click();
   assert.deepEqual(calls, [["replay"]]);
 });
 
@@ -142,8 +144,8 @@ test("destroy 後の操作は無視される", () => {
   const { screenEl, screen, calls } = mount();
   screen.setAnswerable(true);
   screen.destroy();
-  screenEl.button('[data-code="n1"]').click();
-  screenEl.button('[data-role="replay"]').click();
+  screenEl.el('[data-code="n1"]').click();
+  screenEl.el('[data-role="replay"]').click();
   assert.deepEqual(calls, []);
 });
 
@@ -165,4 +167,32 @@ test("styles.css: 和音の6色(決定済み)と、押せない音の点線、�
   assert.match(section, /\.training-key\.is-inactive,\n\.training-chord\.is-inactive \{ background: #eceae4; border-style: dashed;/);
   assert.equal(/correct|incorrect/.test(section.replace(/\/\*[\s\S]*?\*\//g, "")), false, "正誤用のクラスを作らない");
   assert.equal(/--hex-size: [^;]*%/.test(section), false, "六角形の大きさに%を使わない");
+});
+
+test("状態が変わっても画面を作り直さない(音の再生のたびにボタンが消えないように)", () => {
+  const { screenEl, screen } = mount();
+  assert.equal(screenEl.renders(), 1);
+  const before = screenEl.el('[data-code="n1"]');
+  screen.setAnswerable(true);
+  screen.setReplayEnabled(false);
+  screen.setReplayEnabled(true);
+  screenEl.el('[data-code="n1"]').click();
+  screen.showResult({ outcome: "correct", correctAnswerCode: "n1" });
+  assert.equal(screenEl.renders(), 1, "innerHTML への代入は最初の1回だけ");
+  assert.equal(screenEl.el('[data-code="n1"]'), before, "ボタンは同じ要素のまま");
+});
+
+test("setReplayEnabled: 回答の受付とは別に「リプレイ」を切り替える", () => {
+  const { screenEl, screen } = mount();
+  screen.setAnswerable(true);
+  screen.setReplayEnabled(false);
+  assert.equal(screenEl.el('[data-role="replay"]').disabled, true);
+  assert.equal(screenEl.el('[data-role="giveup"]').disabled, false);
+  screen.setReplayEnabled(null);
+  assert.equal(screenEl.el('[data-role="replay"]').disabled, false, "null に戻すと回答の受付に合わせる");
+});
+
+test("「次に進む」は最初から置いてあり、表示するまでは hidden", () => {
+  const html = buildAnswerScreenHtml({ ...MELODY, state: IDLE });
+  assert.match(html, /class="primary" data-role="next" hidden>次に進む</);
 });

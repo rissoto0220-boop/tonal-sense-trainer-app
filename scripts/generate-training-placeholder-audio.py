@@ -17,7 +17,7 @@
 - 調セットアップ: 8拍(5.0秒)。研究者が共有した楽譜(a)の内容:
     旋律 ソ(1) ミ(1) ファ(0.5) レ(0.5) シ(1) | ド(2) ド(2)
     和音 Ⅰ(2) Ⅳ(1) Ⅴ7(1) | Ⅰ(2) Ⅰ(2)、低音 C(2) F(1) G(1) | C(2) C(2)
-- 出題音: 2拍(2.0秒)。1拍目 = 第1音+第1和音、2拍目 = ド+Ⅰ。
+- 出題音: 4拍(3.0秒)。1〜2拍目 = 第1音+第1和音、3〜4拍目 = ド+Ⅰ(研究者の決定: 2拍+2拍、2026-10-27)。
 - フィードバック: 4拍(3.0秒)。第1音から2拍でドへの導線(和音は第1和音)、3〜4拍目 = ド+Ⅰ。
   フレーズの内容は研究者の決定(2026-10-27)。下の FEEDBACK_PHRASES を参照。
 
@@ -45,7 +45,7 @@ BPM = 120
 BEAT_SECONDS = 60 / BPM
 MARGIN_BEATS = 1  # 前後の余白(拍)
 SETUP_BEATS = 8
-QUESTION_BEATS = 2
+QUESTION_BEATS = 4
 FEEDBACK_BEATS = 4
 PEAK = 0.5  # 全ファイルでピークをこの値(満点=1.0)にそろえる
 EDGE_FADE_SECONDS = 0.01  # 音の出入りのクリック音を防ぐ
@@ -171,8 +171,8 @@ def generate_setup(key):
 
 def generate_question(key, first_degree, first_chord_ref):
     samples = new_buffer(QUESTION_BEATS)
-    add_sequence(samples, key, [(chord_semitones(first_chord_ref), 1), (chord_semitones("ch-n1-maj"), 1)], 0.6)
-    add_sequence(samples, key, melody_events([(first_degree, 1), ("n1", 1)]), 0.8)
+    add_sequence(samples, key, [(chord_semitones(first_chord_ref), 2), (chord_semitones("ch-n1-maj"), 2)], 0.6)
+    add_sequence(samples, key, melody_events([(first_degree, 2), ("n1", 2)]), 0.8)
     write_wav(OUTPUT_DIR / filename("q", key, first_degree, first_chord_ref), samples)
 
 

@@ -6,7 +6,7 @@
 //   和音    : h1 = 第1和音、h2 = Ⅰ(ch-n1-maj)
 // 組み合わせ(第1音/第1和音)は、資料「アプリの仕様_20260328.pdf」ページ8のメニュー記述から決めた
 // (tonal-sense-docs/training-data-design-prototype.md 第7.2節)。
-// 拍(onsetBeats・durationBeats)は仮音源の暫定値(第1音1拍 → ド1拍、♩=120)。正式音源が決まったら合わせて直す。
+// 拍(onsetBeats・durationBeats)は仮音源の暫定値(第1音2拍 → ド2拍、♩=120)。正式音源が決まったら合わせて直す。
 import { DEFINITIONS_SCHEMA_VERSION } from "./definitions.js";
 
 // 訓練で使うKey(相対音感の完全版と同じ4つ)。相対音感のコードは参照せず、訓練用に持つ。
@@ -31,14 +31,14 @@ function twoEventStimulus(firstDegree, firstChordRef) {
     parts: {
       melody: {
         events: [
-          { eventId: "m1", type: "note", onsetBeats: 0, durationBeats: 1, degree: firstDegree },
-          { eventId: "m2", type: "note", onsetBeats: 1, durationBeats: 1, degree: "n1" },
+          { eventId: "m1", type: "note", onsetBeats: 0, durationBeats: 2, degree: firstDegree },
+          { eventId: "m2", type: "note", onsetBeats: 2, durationBeats: 2, degree: "n1" },
         ],
       },
       harmony: {
         events: [
-          { eventId: "h1", type: "chord", onsetBeats: 0, durationBeats: 1, chordRef: firstChordRef },
-          { eventId: "h2", type: "chord", onsetBeats: 1, durationBeats: 1, chordRef: "ch-n1-maj" },
+          { eventId: "h1", type: "chord", onsetBeats: 0, durationBeats: 2, chordRef: firstChordRef },
+          { eventId: "h2", type: "chord", onsetBeats: 2, durationBeats: 2, chordRef: "ch-n1-maj" },
         ],
       },
     },

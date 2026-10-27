@@ -7,7 +7,7 @@
 // - 出題に使う音(activeOptionCodes)だけ押せる。押せない音は薄い灰色と点線の枠(色だけに頼らない)。
 // - 回答後、上部の「?」は回答した音に変わる(正解を示すのではない)。「わからない」のときは「?」のまま。
 // - 正誤は文言で示す。色で正誤を示さない。青は「回答受付」の意味なので正誤に使わない。
-// 状態が変わるたびに画面の中身を描き直す(1問あたり数回だけなので、単純さを優先する)。
+// 画面は問題ごとに1回だけ作り、状態が変わったら必要な部分だけを書き換える(mountAnswerScreen のコメント参照)。
 import { escapeHtml } from "../shared/escape-html.js";
 import { createAnswerLock } from "../shared/answer-lock.js";
 import { OPTION_SETS } from "./definitions.js";
@@ -66,15 +66,19 @@ export function buildAnswerScreenHtml({ optionSetRef, activeOptionCodes, progres
   return `
     <div class="panel training-answer">
       <p class="training-progress">${escapeHtml(progressLabel)}</p>
-      <div class="training-prompt">${escapeHtml(promptText(answerLabel, labelFor(optionSet, TONIC_CODE)))}</div>
+      <div class="training-prompt" data-role="prompt">${escapeHtml(promptText(answerLabel, labelFor(optionSet, TONIC_CODE)))}</div>
       <div class="${isChord ? "training-hexagon" : "training-keyboard"}">${buttons}</div>
       <div class="actions centered training-tools">
         <button type="button" class="secondary" data-role="replay"${(state.replayEnabled ?? toolsEnabled) ? "" : " disabled"}>${BUTTON_TEXT.replay}</button>
         <button type="button" class="secondary" data-role="giveup"${toolsEnabled ? "" : " disabled"}>${BUTTON_TEXT.giveUp}</button>
       </div>
-      <div class="training-feedback" role="status" aria-live="polite">${lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}</div>
-      ${state.showNext ? `<div class="actions centered"><button type="button" class="primary" data-role="next">${BUTTON_TEXT.next}</button></div>` : ""}
+      <div class="training-feedback" data-role="feedback" role="status" aria-live="polite">${feedbackHtml(lines)}</div>
+      <div class="actions centered"><button type="button" class="primary" data-role="next"${state.showNext ? "" : " hidden"}>${BUTTON_TEXT.next}</button></div>
     </div>`;
+}
+
+function feedbackHtml(lines) {
+  return lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("");
 }
 
 // 回答画面を表示する。戻り値の操作で状態を変える。
@@ -82,45 +86,75 @@ export function buildAnswerScreenHtml({ optionSetRef, activeOptionCodes, progres
 //   onReplay(): 「リプレイ」を押したとき。onNext(): 「次に進む」を押したとき。
 // 戻り値:
 //   setAnswerable(enabled): 回答を受け付けるかどうか(音の再生中は受け付けない、など)。
+//   setReplayEnabled(enabled): 「リプレイ」を押せるかどうか(null に戻すと、回答の受付に合わせる)。
 //   showResult({ outcome, correctAnswerCode, showNext, replayEnabled }): 正誤の文言を表示する。
 //   destroy(): 以後の操作を無視する。
+// 画面は最初に1回だけ作り、その後は必要な部分(ボタンの押せる/押せない・選択中の印・上部の表示・正誤の文言・
+// 「次に進む」の表示)だけを書き換える。描き直すと、外枠 .panel のフェードイン(styles.css)が毎回やり直され、
+// 音の再生のたびにボタンが一瞬消えて見えるため(2026-10-27 の確認で判明)。
 export function mountAnswerScreen({ screenEl, optionSetRef, activeOptionCodes, progressLabel, onAnswer = () => {}, onReplay = () => {}, onNext = () => {} }) {
+  const optionSet = OPTION_SETS[optionSetRef];
   const lock = createAnswerLock();
   const state = { answerable: false, selectedCode: null, result: null, showNext: false, replayEnabled: null };
   let destroyed = false;
 
+  screenEl.innerHTML = buildAnswerScreenHtml({ optionSetRef, activeOptionCodes, progressLabel, state });
+  const optionButtons = [...screenEl.querySelectorAll("[data-code]")];
+  const promptEl = screenEl.querySelector('[data-role="prompt"]');
+  const feedbackEl = screenEl.querySelector('[data-role="feedback"]');
+  const replayButton = screenEl.querySelector('[data-role="replay"]');
+  const giveUpButton = screenEl.querySelector('[data-role="giveup"]');
+  const nextButton = screenEl.querySelector('[data-role="next"]');
+
+  function update() {
+    const answered = state.selectedCode !== null;
+    for (const button of optionButtons) {
+      const code = button.dataset.code;
+      button.disabled = !(activeOptionCodes.includes(code) && state.answerable && !answered);
+      button.classList.toggle("selected", code === state.selectedCode);
+    }
+    const answerLabel = answered && state.selectedCode !== GIVE_UP_RESPONSE_CODE ? labelFor(optionSet, state.selectedCode) : null;
+    promptEl.textContent = promptText(answerLabel, labelFor(optionSet, TONIC_CODE));
+    const toolsEnabled = state.answerable && !answered;
+    replayButton.disabled = !(state.replayEnabled ?? toolsEnabled);
+    giveUpButton.disabled = !toolsEnabled;
+    const lines = state.result ? feedbackLines(state.result.outcome, labelFor(optionSet, state.result.correctAnswerCode)) : [];
+    feedbackEl.innerHTML = feedbackHtml(lines);
+    const showingNext = !nextButton.hidden;
+    nextButton.hidden = !state.showNext;
+    if (state.showNext && !showingNext) nextButton.focus();
+  }
+
   function answer(code) {
     if (destroyed || !state.answerable || !lock.tryLock()) return;
     state.selectedCode = code;
-    render();
+    update();
     onAnswer(code);
   }
 
-  function render() {
-    screenEl.innerHTML = buildAnswerScreenHtml({ optionSetRef, activeOptionCodes, progressLabel, state });
-    for (const button of screenEl.querySelectorAll("[data-code]")) {
-      button.addEventListener("click", () => answer(button.dataset.code));
-    }
-    screenEl.querySelector('[data-role="giveup"]')?.addEventListener("click", () => answer(GIVE_UP_RESPONSE_CODE));
-    screenEl.querySelector('[data-role="replay"]')?.addEventListener("click", () => { if (!destroyed) onReplay(); });
-    const next = screenEl.querySelector('[data-role="next"]');
-    next?.addEventListener("click", () => { if (!destroyed) onNext(); });
-    next?.focus();
-  }
+  for (const button of optionButtons) button.addEventListener("click", () => answer(button.dataset.code));
+  giveUpButton.addEventListener("click", () => answer(GIVE_UP_RESPONSE_CODE));
+  replayButton.addEventListener("click", () => { if (!destroyed) onReplay(); });
+  nextButton.addEventListener("click", () => { if (!destroyed) onNext(); });
 
-  render();
   return {
     setAnswerable(enabled) {
       if (destroyed) return;
       state.answerable = enabled;
-      render();
+      update();
+    },
+    // 「リプレイ」を押せるかどうかを、回答の受付とは別に切り替える(再生中は押せない、など)。
+    setReplayEnabled(enabled) {
+      if (destroyed) return;
+      state.replayEnabled = enabled;
+      update();
     },
     showResult({ outcome, correctAnswerCode, showNext = false, replayEnabled = null }) {
       if (destroyed) return;
       state.result = { outcome, correctAnswerCode };
       state.showNext = showNext;
       state.replayEnabled = replayEnabled;
-      render();
+      update();
     },
     destroy() {
       destroyed = true;
