@@ -59,6 +59,12 @@ import { resolveTrainingOptions } from "./src/training/dev-flag.js";
 import { TRAINING_MENUS } from "./src/training/menus.js";
 import { showTrainingMenuScreen } from "./src/training/menu-screen.js";
 import { runTrainingSession } from "./src/training/training-session.js";
+import {
+  createSessionRecorder as createTrainingRecorder,
+  loadParticipantData as loadTrainingParticipantData,
+} from "./src/training/session-store.js";
+import { showHistoryScreen as showTrainingHistoryScreen } from "./src/training/history-screen.js";
+import { enableUnloadGuard } from "./src/functional-pitch/unload-guard.js";
 
 const QUESTION_MS = 3000;
 const INTER_QUESTION_GAP_MS = 1000; // 問題間の間隔(仕様13.4)
@@ -284,12 +290,19 @@ function startFunctionalPitchTest() {
 
 // --- 音感訓練(開発確認用。URLに ?training=dev があるときだけ選べる) ---
 
-// 訓練は参加者IDに依存しない。結果はメモリ上で受け取るだけで、保存・送信はしない(保存の方法は今後検討する)。
+// 結果は参加者IDごとにブラウザ(localStorage)へ、回答を確定するたびに保存し、履歴・CSVで出力できる。
+// サーバーへの送信はしない(送信処理は training: のキーを対象にしていない。サーバーでの種別は未決定)。
 function showTrainingMenus() {
   showTrainingMenuScreen({
     screenEl,
     menus: TRAINING_MENUS,
     onSelect: startTraining,
+    onShowHistory: () => showTrainingHistoryScreen({
+      screenEl,
+      participantId,
+      participantData: loadTrainingParticipantData(participantId, localStorage),
+      onBack: showTrainingMenus,
+    }),
     onBack: showTestSelection,
   });
 }
@@ -298,13 +311,33 @@ function showTrainingMenus() {
 async function startTraining(menu) {
   const { replayMode, questionCount } = resolveTrainingOptions(window.location);
   await resumeAudioContext();
+  const recorder = createTrainingRecorder(participantId, { storage: localStorage });
+  // 訓練の最中に誤ってページを閉じないよう、ブラウザの確認を出す(終われば解除する)。
+  const releaseUnloadGuard = enableUnloadGuard();
   runTrainingSession({
     screenEl,
     menu,
     replayMode,
     questionCount,
-    onFinished: (results) => console.info("音感訓練の結果(メモリ上のみ・保存なし)", results),
-    onExit: showTrainingMenus,
+    onSessionStarted: recorder.onSessionStarted,
+    onTrialConfirmed: recorder.onTrialConfirmed,
+    onTrialUpdated: recorder.onTrialUpdated,
+    onFinished: (trials) => {
+      recorder.onFinished(trials);
+      releaseUnloadGuard();
+    },
+    onInterrupted: (trials) => {
+      recorder.onInterrupted(trials);
+      releaseUnloadGuard();
+    },
+    onAudioError: () => {
+      recorder.onAudioError();
+      releaseUnloadGuard();
+    },
+    onExit: () => {
+      releaseUnloadGuard();
+      showTrainingMenus();
+    },
   });
 }
 

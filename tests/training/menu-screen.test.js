@@ -11,6 +11,7 @@ function mount() {
     screenEl,
     menus: TRAINING_MENUS,
     onSelect: (menu) => calls.push(["select", menu.menuId]),
+    onShowHistory: () => calls.push(["history"]),
     onBack: () => calls.push(["back"]),
   });
   return { screenEl, calls };
@@ -40,10 +41,12 @@ test("テスト選択画面と同じ目次リストのスタイル(test-list・t
   assert.equal((html.match(/class="test-button"/g) ?? []).length, 16);
 });
 
-test("メニューを押すと onSelect にそのメニュー、「テスト選択へ戻る」で onBack", () => {
+test("メニューを押すと onSelect にそのメニュー、「履歴・CSVを見る」で onShowHistory、「テスト選択へ戻る」で onBack", () => {
   const { screenEl, calls } = mount();
   screenEl.el('[data-menu-id="menu-09"]').click();
+  assert.match(screenEl.text('[data-role="history"]'), new RegExp(MENU_SCREEN_TEXT.history));
+  screenEl.el('[data-role="history"]').click();
   screenEl.el('[data-role="back"]').click();
-  assert.deepEqual(calls, [["select", "menu-09"], ["back"]]);
+  assert.deepEqual(calls, [["select", "menu-09"], ["history"], ["back"]]);
   assert.equal(screenEl.el("h2").focused, true, "見出しにフォーカスを移す");
 });

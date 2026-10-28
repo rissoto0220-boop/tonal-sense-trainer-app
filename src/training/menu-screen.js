@@ -5,6 +5,7 @@ import { escapeHtml } from "../shared/escape-html.js";
 export const MENU_SCREEN_TEXT = {
   title: "訓練メニューを選んでください",
   back: "テスト選択へ戻る",
+  history: "履歴・CSVを見る",
 };
 
 // 1メニューの説明(出題数とKey)。
@@ -35,13 +36,16 @@ export function buildMenuScreenHtml(menus) {
       <h2 tabindex="-1">${MENU_SCREEN_TEXT.title}</h2>
       ${groupHtml("Key C", fixed)}
       ${groupHtml("Key ランダム", random)}
-      <div class="actions"><button type="button" class="secondary" data-role="back">${MENU_SCREEN_TEXT.back}</button></div>
+      <div class="actions">
+        <button type="button" class="secondary" data-role="history">${MENU_SCREEN_TEXT.history}</button>
+        <button type="button" class="secondary" data-role="back">${MENU_SCREEN_TEXT.back}</button>
+      </div>
     </div>`;
 }
 
 // onSelect(menu): メニューを押したとき(参加者のクリックの中で呼ぶので、音声の有効化に使える)。
-// onBack(): 「テスト選択へ戻る」を押したとき。
-export function showTrainingMenuScreen({ screenEl, menus, onSelect, onBack }) {
+// onShowHistory(): 「履歴・CSVを見る」を押したとき。onBack(): 「テスト選択へ戻る」を押したとき。
+export function showTrainingMenuScreen({ screenEl, menus, onSelect, onShowHistory = () => {}, onBack }) {
   screenEl.innerHTML = buildMenuScreenHtml(menus);
   screenEl.querySelector("h2")?.focus();
   for (const button of screenEl.querySelectorAll("[data-menu-id]")) {
@@ -50,5 +54,6 @@ export function showTrainingMenuScreen({ screenEl, menus, onSelect, onBack }) {
       if (menu) onSelect(menu);
     });
   }
+  screenEl.querySelector('[data-role="history"]')?.addEventListener("click", onShowHistory);
   screenEl.querySelector('[data-role="back"]')?.addEventListener("click", onBack);
 }

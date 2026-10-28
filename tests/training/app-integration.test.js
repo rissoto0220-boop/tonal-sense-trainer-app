@@ -25,13 +25,33 @@ test("app.js: 旗がないときの説明文は「現在準備中です。」", 
   assert.match(entry, /trainingOptions\.enabled \? "[^"]+" : "現在準備中です。"/);
 });
 
-test("app.js: 音感訓練の起動は、参加者IDや保存・送信の仕組みに触れない", () => {
+// 2026-10-28: 機能的音感と同じく、参加者IDごとにブラウザへ保存し、履歴・CSVを出せるようにした(T7)。
+// 送信には、引き続き触れない(サーバーでの種別が未決定)。
+test("app.js: 音感訓練の起動は、参加者IDつきでブラウザに保存するが、送信の仕組みには触れない", () => {
+  const body = functionBody("async function startTraining(menu)");
+  assert.match(body, /await resumeAudioContext\(\);\n\s+const recorder = createTrainingRecorder\(participantId, \{ storage: localStorage \}\);/);
+  assert.match(body, /runTrainingSession\(/);
+  for (const name of ["onSessionStarted", "onTrialConfirmed", "onTrialUpdated"]) {
+    assert.match(body, new RegExp(`${name}: recorder\\.${name},`), name);
+  }
+  for (const name of ["onFinished", "onInterrupted", "onAudioError"]) {
+    assert.match(body, new RegExp(`recorder\\.${name}\\(`), name);
+  }
   for (const name of ["function showTrainingMenus()", "async function startTraining(menu)"]) {
-    const body = functionBody(name);
-    assert.ok(body.length > 10, name);
-    for (const word of ["participantId", "participantData", "persist", "syncSessionsToServer", "syncPendingSessions", "localStorage", "fetch"]) {
-      assert.equal(body.includes(word), false, `${name}: ${word}`);
+    for (const word of ["syncSessionsToServer", "syncPendingSessions", "fetch", "upload"]) {
+      assert.equal(functionBody(name).includes(word), false, `${name}: ${word}`);
     }
   }
-  assert.match(functionBody("async function startTraining(menu)"), /await resumeAudioContext\(\);\n\s+runTrainingSession\(/);
+});
+
+test("app.js: メニュー選択の「履歴・CSVを見る」で、訓練の履歴画面を出す", () => {
+  const body = functionBody("function showTrainingMenus()");
+  assert.match(body, /onShowHistory: \(\) => showTrainingHistoryScreen\(/);
+  assert.match(body, /participantData: loadTrainingParticipantData\(participantId, localStorage\),/);
+});
+
+test("app.js: 訓練の最中だけ、ページを閉じる前の確認を有効にする", () => {
+  const body = functionBody("async function startTraining(menu)");
+  assert.match(body, /const releaseUnloadGuard = enableUnloadGuard\(\);/);
+  assert.equal((body.match(/releaseUnloadGuard\(\);/g) ?? []).length, 4, "完了・中断・音声エラー・メニューへ戻るで解除する");
 });
