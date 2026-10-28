@@ -22,10 +22,11 @@ test("不正解", () => {
   assert.deepEqual(scoring, { targetCount: 1, correctTargetCount: 0, accuracy: 0, allCorrect: false });
 });
 
-test("「わからない」(giveup)は不正解として扱う", () => {
+test("「わからない」は responseCode: null・outcome: giveup で記録し、採点上は不正解", () => {
   const { responses, scoring } = judgeResponses([MELODY_TARGET], { t1: GIVE_UP_RESPONSE_CODE });
-  assert.deepEqual(responses[0], { targetId: "t1", responseCode: "giveup", correctAnswerCode: "n3", outcome: "incorrect" });
+  assert.deepEqual(responses[0], { targetId: "t1", responseCode: null, correctAnswerCode: "n3", outcome: "giveup" });
   assert.equal(scoring.correctTargetCount, 0);
+  assert.equal(scoring.allCorrect, false);
 });
 
 test("複数の回答対象: 部分正解の集計(将来の複数回答用)", () => {

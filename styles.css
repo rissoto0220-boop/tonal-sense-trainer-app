@@ -561,6 +561,11 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 .training-tools { margin-top: 8px; }
 .training-feedback { min-height: 3.6em; margin-top: 20px; font-size: 1.15rem; font-weight: 700; }
 .training-feedback p { margin: 4px 0; }
+.training-quit { margin-top: 16px; }
+.training-quit-confirm { margin: 16px 0 0; text-align: left; }
+.training-quit-title { margin: 0 0 4px; font-weight: 700; }
+.training-quit-confirm p { margin: 4px 0; }
+.training-quit-confirm .training-quit-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
 
 @media (max-width: 400px) {
   .training-keyboard { gap: 3px; }

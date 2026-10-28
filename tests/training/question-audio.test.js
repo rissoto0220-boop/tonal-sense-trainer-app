@@ -40,6 +40,17 @@ test("最初の再生: 調セットアップ → 音が終わってから1秒 �
   approx(log[1][1], 18.5); // 出題音(3.0秒)のWAVの終わり
 });
 
+test("出題音の音が鳴り終わる時刻(WAVの終わり − 後ろの無音)に onQuestionSoundEnd", async () => {
+  const { env, audio } = await setup();
+  await audio.load();
+  const log = [];
+  audio.playQuestion({ withSetup: true, first: true, onQuestionSoundEnd: (t) => log.push(["soundEnd", t, env.audioContextTimeFn()]), onEnd: () => log.push(["end"]) });
+  env.tick(10);
+  assert.deepEqual(log.map((item) => item[0]), ["soundEnd", "end"]);
+  approx(log[0][1], 18.0); // 出題音のWAV 15.5 + 3.0 − 0.5
+  approx(log[0][2], 18.0);
+});
+
 test("リプレイ(出題音だけ): 調セットアップは鳴らさない", async () => {
   const { env, audio } = await setup();
   await audio.load();

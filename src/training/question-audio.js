@@ -32,8 +32,10 @@ const REPLAY_LEAD_SECONDS = 0.05;
 // question: buildQuestions の1問({ stimulusId, keyCode, ... })。
 // 戻り値の操作:
 //   load(): 3つのWAVを読み込む(Promise)。
-//   playQuestion({ withSetup, first, onQuestionOnset(audioTime), onEnd() }):
-//     withSetup が真なら調セットアップから鳴らす。onQuestionOnset は出題音の音が鳴り始める時刻に呼ぶ。
+//   playQuestion({ withSetup, first, onQuestionOnset(audioTime), onQuestionSoundEnd(audioTime), onEnd() }):
+//     withSetup が真なら調セットアップから鳴らす。onQuestionOnset は出題音の音が鳴り始める時刻、
+//     onQuestionSoundEnd は出題音の音が鳴り終わる時刻(WAVの終わり − 後ろの無音。回答できるようになる時刻)、
+//     onEnd はWAVの終わりに呼ぶ。
 //   playFeedback({ onOnset(audioTime), onEnd(), onAutoNext() }):
 //     onOnset はフレーズの音が鳴り始める時刻、onAutoNext はフレーズが終わって0.5秒後に呼ぶ。
 //   stop(): 鳴っている音と予約を止める(次の再生はできる)。destroy(): 以後何もしない。
@@ -86,7 +88,7 @@ export function createQuestionAudio(question, {
         });
     },
 
-    playQuestion({ withSetup, first = false, onQuestionOnset = () => {}, onEnd = () => {} }) {
+    playQuestion({ withSetup, first = false, onQuestionOnset = () => {}, onQuestionSoundEnd = () => {}, onEnd = () => {} }) {
       const scheduler = begin();
       if (!scheduler) return;
       const base = audioContextTimeFn() + (first ? COLD_START_LEAD_SECONDS : REPLAY_LEAD_SECONDS);
@@ -98,7 +100,9 @@ export function createQuestionAudio(question, {
       }
       schedule(buffers.question, questionStart);
       const onsetAt = questionStart + AUDIO_EDGE_SILENCE_SECONDS;
+      const soundEndsAt = questionStart + buffers.question.duration - AUDIO_EDGE_SILENCE_SECONDS;
       scheduler.runAt(onsetAt, () => onQuestionOnset(onsetAt));
+      scheduler.runAt(soundEndsAt, () => onQuestionSoundEnd(soundEndsAt));
       scheduler.runAt(questionStart + buffers.question.duration, onEnd);
     },
 

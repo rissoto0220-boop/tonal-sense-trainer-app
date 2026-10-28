@@ -9,6 +9,7 @@ import {
   promptText,
   feedbackLines,
   BUTTON_TEXT,
+  QUIT_CONFIRM_TEXT,
 } from "../../src/training/answer-screen.js";
 import { OPTION_SETS } from "../../src/training/definitions.js";
 
@@ -28,6 +29,7 @@ function mount(options = MELODY) {
     onAnswer: (code) => calls.push(["answer", code]),
     onReplay: () => calls.push(["replay"]),
     onNext: () => calls.push(["next"]),
+    onQuit: () => calls.push(["quit"]),
   });
   return { screenEl, screen, calls };
 }
@@ -41,6 +43,7 @@ test("上部の表示: 回答前は「? → ド」、回答後は回答した音
 test("正誤の文言: 正解は「正解です」、不正解は「不正解です」+「正解は「○」です」", () => {
   assert.deepEqual(feedbackLines("correct", "ミ"), ["正解です"]);
   assert.deepEqual(feedbackLines("incorrect", "ミ"), ["不正解です", "正解は「ミ」です"]);
+  assert.deepEqual(feedbackLines("giveup", "ミ"), ["不正解です", "正解は「ミ」です"], "「わからない」も正解を示す");
 });
 
 test("単音の鍵盤: ソ ラ シ ド レ ミ ファ の横一列。ドだけ背が高い印", () => {
@@ -150,11 +153,12 @@ test("destroy 後の操作は無視される", () => {
 });
 
 test("ボタンの文言と、既存のボタンの見た目(secondary / primary)", () => {
-  assert.deepEqual(BUTTON_TEXT, { replay: "リプレイ", giveUp: "わからない", next: "次に進む" });
+  assert.deepEqual(BUTTON_TEXT, { replay: "リプレイ", giveUp: "わからない", next: "次に進む", quit: "訓練を終了する" });
   const html = buildAnswerScreenHtml({ ...MELODY, state: { ...IDLE, showNext: true } });
   assert.match(html, /class="secondary" data-role="replay"/);
   assert.match(html, /class="secondary" data-role="giveup"/);
   assert.match(html, /class="primary" data-role="next">次に進む</);
+  assert.match(html, /class="secondary" data-role="quit">訓練を終了する</);
 });
 
 test("styles.css: 和音の6色(決定済み)と、押せない音の点線、正誤用の色を使わない", () => {
@@ -195,4 +199,55 @@ test("setReplayEnabled: 回答の受付とは別に「リプレイ」を切り�
 test("「次に進む」は最初から置いてあり、表示するまでは hidden", () => {
   const html = buildAnswerScreenHtml({ ...MELODY, state: IDLE });
   assert.match(html, /class="primary" data-role="next" hidden>次に進む</);
+});
+
+test("「次に進む」は、見えていても押せない状態にできる(フィードバックの再生中)。押せるようになったらフォーカス", () => {
+  const { screenEl, screen, calls } = mount();
+  screen.setAnswerable(true);
+  screenEl.el('[data-code="n2"]').click();
+  screen.showResult({ outcome: "incorrect", correctAnswerCode: "n7", showNext: true, nextEnabled: false, replayEnabled: false });
+  const next = screenEl.el('[data-role="next"]');
+  assert.equal(next.hidden, false);
+  assert.equal(next.disabled, true);
+  assert.equal(next.focused, false);
+  next.click();
+  assert.deepEqual(calls, [["answer", "n2"]]);
+  screen.setNextEnabled(true);
+  assert.equal(next.disabled, false);
+  assert.equal(next.focused, true);
+  next.click();
+  assert.deepEqual(calls, [["answer", "n2"], ["next"]]);
+});
+
+test("終了の確認: 最初は隠れている。文言は決定どおり", () => {
+  const html = buildAnswerScreenHtml({ ...MELODY, state: IDLE });
+  assert.match(html, /data-role="quit-confirm"[^>]* hidden>/);
+  assert.equal(QUIT_CONFIRM_TEXT.title, "訓練を終了しますか?");
+  assert.deepEqual(QUIT_CONFIRM_TEXT.lines, ["途中から再開することはできません。", "完了済みの回答は保存されます。"]);
+  assert.match(html, /data-role="quit-yes">終了する</);
+  assert.match(html, /data-role="quit-no">続ける</);
+});
+
+test("終了の確認: 「訓練を終了する」で onQuit。確認の間は他のボタンを押せず、「続ける」で元に戻る", () => {
+  const { screenEl, screen, calls } = mount();
+  screen.setAnswerable(true);
+  screenEl.el('[data-role="quit"]').click();
+  assert.deepEqual(calls, [["quit"]]);
+  const log = [];
+  screen.showQuitConfirm({ onConfirm: () => log.push("confirm"), onCancel: () => log.push("cancel") });
+  assert.equal(screenEl.el('[data-role="quit-confirm"]').hidden, false);
+  assert.ok(screenEl.el('[data-code="n1"]').disabled);
+  assert.ok(screenEl.el('[data-role="replay"]').disabled);
+  assert.ok(screenEl.el('[data-role="giveup"]').disabled);
+  assert.ok(screenEl.el('[data-role="quit"]').disabled);
+  assert.equal(screenEl.el('[data-role="quit-no"]').focused, true, "誤って終了しないよう「続ける」にフォーカス");
+  screenEl.el('[data-role="quit-no"]').click();
+  assert.deepEqual(log, ["cancel"]);
+  assert.equal(screenEl.el('[data-role="quit-confirm"]').hidden, true);
+  assert.equal(screenEl.el('[data-code="n1"]').disabled, false);
+  assert.equal(screenEl.renders(), 1, "確認の表示でも作り直さない");
+
+  screen.showQuitConfirm({ onConfirm: () => log.push("confirm"), onCancel: () => log.push("cancel") });
+  screenEl.el('[data-role="quit-yes"]').click();
+  assert.deepEqual(log, ["cancel", "confirm"]);
 });
