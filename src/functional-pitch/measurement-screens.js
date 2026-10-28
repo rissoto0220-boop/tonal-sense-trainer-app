@@ -5,15 +5,19 @@ import { MEASUREMENT_KEYS } from "./stimuli.js";
 
 export const KEY_LABEL = { C: "Key C", Fis: "Key Fis" };
 
-export function buildKeySelectHtml({ showExit = false } = {}) {
+export function buildKeySelectHtml({ showExit = false, showHistory = false } = {}) {
   const buttons = MEASUREMENT_KEYS.map((key) => `
         <button type="button" class="secondary functional-key-button" data-key="${key}">${escapeHtml(KEY_LABEL[key])}</button>`).join("");
+  const actions = [
+    showHistory ? `<button type="button" class="secondary" data-role="history">履歴・CSVを見る</button>` : "",
+    showExit ? `<button type="button" class="secondary" data-role="exit">テスト選択へ戻る</button>` : "",
+  ].filter(Boolean).join("");
   return `
     <div class="panel functional-key-select">
       <h2 tabindex="-1">実施するKeyを選択してください</h2>
       <div class="functional-key-list">${buttons}
-      </div>${showExit ? `
-      <div class="actions"><button type="button" class="secondary" data-role="exit">テスト選択へ戻る</button></div>` : ""}
+      </div>${actions ? `
+      <div class="actions">${actions}</div>` : ""}
     </div>`;
 }
 
@@ -72,8 +76,9 @@ export function buildInternalErrorHtml() {
 
 // Key選択画面を描画する。onSelect(keyCode): Keyのボタンを押したとき(押した直後に全ボタンを無効にする)。
 // onExit: 「テスト選択へ戻る」を押したとき。省略すると、そのボタンを表示しない。
-export function showKeySelectScreen({ screenEl, onSelect, onExit = null }) {
-  screenEl.innerHTML = buildKeySelectHtml({ showExit: Boolean(onExit) });
+// onShowHistory: 「履歴・CSVを見る」を押したとき。省略すると、そのボタンを表示しない。
+export function showKeySelectScreen({ screenEl, onSelect, onExit = null, onShowHistory = null }) {
+  screenEl.innerHTML = buildKeySelectHtml({ showExit: Boolean(onExit), showHistory: Boolean(onShowHistory) });
   screenEl.querySelector("h2").focus();
   const buttons = [...screenEl.querySelectorAll("button")];
   const lock = () => buttons.forEach((button) => { button.disabled = true; }); // 二重押しを防ぐ
@@ -87,6 +92,12 @@ export function showKeySelectScreen({ screenEl, onSelect, onExit = null }) {
     screenEl.querySelector('[data-role="exit"]').addEventListener("click", () => {
       lock();
       onExit();
+    });
+  }
+  if (onShowHistory) {
+    screenEl.querySelector('[data-role="history"]').addEventListener("click", () => {
+      lock();
+      onShowHistory();
     });
   }
 }

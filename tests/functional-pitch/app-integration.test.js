@@ -17,11 +17,19 @@ test("app.js: 旗がないときの説明文は従来どおり「現在準備中
   assert.match(entry, /functionalPitchOptions\.enabled \? "[^"]+" : "現在準備中です。"/);
 });
 
-test("app.js: 機能的音感の起動は、参加者IDや保存・送信の仕組みに触れない", () => {
+// 2026-10-27: 絶対音感・相対音感の「API送信を入れる前」と同じく、参加者IDごとにブラウザへ保存し、
+// 履歴・CSVを出せるようにした。送信には、引き続き触れない。
+test("app.js: 機能的音感の起動は、参加者IDつきでブラウザに保存するが、送信の仕組みには触れない", () => {
   const start = source.slice(source.indexOf("function startFunctionalPitchTest()"));
   const body = start.slice(0, start.indexOf("\n}\n") + 3);
   assert.match(body, /runFunctionalPitchSession\(/);
-  for (const word of ["participantId", "participantData", "persist", "syncSessionsToServer", "localStorage", "fetch"]) {
+  assert.match(body, /createFunctionalPitchRecorder\(participantId, \{ storage: localStorage \}\)/);
+  for (const name of ["onSessionStarted", "onTrialStarted", "onTrialConfirmed"]) {
+    assert.match(body, new RegExp(`${name}: recorder\\.${name},`), name);
+  }
+  assert.match(body, /recorder\.onKeyMeasured\(result\);/);
+  assert.match(body, /onShowHistory: \(backToKeySelect\) => showFunctionalPitchHistoryScreen\(/);
+  for (const word of ["syncSessionsToServer", "syncPendingSessions", "fetch", "upload"]) {
     assert.equal(body.includes(word), false, word);
   }
 });

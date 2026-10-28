@@ -112,6 +112,21 @@ test("showKeySelectScreen: 「テスト選択へ戻る」で onExit が呼ばれ
   assert.equal(withoutExit.button('[data-role="exit"]'), undefined);
 });
 
+test("showKeySelectScreen: 「履歴・CSVを見る」で onShowHistory が呼ばれ、全ボタンが無効になる(無ければボタンもない)", () => {
+  const shown = [];
+  const withHistory = createFakeScreen();
+  showKeySelectScreen({ screenEl: withHistory, onSelect: () => {}, onExit: () => {}, onShowHistory: () => shown.push("history") });
+  assert.match(withHistory.innerHTML, /data-role="history">履歴・CSVを見る<\/button>/);
+  withHistory.button('[data-role="history"]').click();
+  assert.deepEqual(shown, ["history"]);
+  assert.ok(withHistory.querySelectorAll("button").every((b) => b.disabled));
+
+  const withoutHistory = createFakeScreen();
+  showKeySelectScreen({ screenEl: withoutHistory, onSelect: () => {} });
+  assert.equal(withoutHistory.button('[data-role="history"]'), undefined);
+  assert.equal(buildKeySelectHtml().includes('class="actions"'), false);
+});
+
 test("showBackScreen: 「Key選択へ戻る」を押すと onBack が1回だけ呼ばれる", () => {
   const screenEl = createFakeScreen();
   let backs = 0;

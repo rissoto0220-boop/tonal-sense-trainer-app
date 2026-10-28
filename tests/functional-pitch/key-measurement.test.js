@@ -305,6 +305,43 @@ test("destroy: 試行の最中なら、試行画面を止め、beforeunload を�
   assert.equal(env.measured.length, 0);
 });
 
+test("通知: 読み込み成功後に onSessionStarted、各試行の開始で onTrialStarted、確定で onTrialConfirmed の順", async () => {
+  const events = [];
+  const env = setup({
+    trialLimit: 2,
+    onSessionStarted: (info) => events.push(["session", info.measurement_key_code, info.total_trial_count, info.generated_trial_order.length]),
+    onTrialStarted: (entry) => events.push(["start", entry.trial_number]),
+    onTrialConfirmed: (record) => events.push(["confirm", record.trial_number, record.response_time_ms]),
+    onMeasured: (result) => events.push(["measured", result.measurement_status]),
+  });
+  assert.deepEqual(events, []); // 読み込みが終わるまでは何も通知しない
+  await runAll(env, 2);
+  assert.deepEqual(events, [
+    ["session", "C", 2, 90],
+    ["start", 1], ["confirm", 1, 1],
+    ["start", 2], ["confirm", 2, 2],
+    ["measured", "completed"],
+  ]);
+});
+
+test("通知: onTrialConfirmed の中身は completed_trials の1件と同じ", async () => {
+  const confirmed = [];
+  const env = setup({ trialLimit: 2, onTrialConfirmed: (record) => confirmed.push(record) });
+  await runAll(env, 2);
+  assert.deepEqual(confirmed, env.measured[0].completed_trials);
+});
+
+test("通知: 音源の読み込みに失敗したときは、onSessionStarted も onTrialStarted も呼ばない", async () => {
+  const events = [];
+  setup({
+    loadKeyPhrasesFn: () => Promise.resolve({ ok: false, failures: [{ src: "a.wav", reason: "load" }] }),
+    onSessionStarted: () => events.push("session"),
+    onTrialStarted: () => events.push("start"),
+  });
+  await flush();
+  assert.deepEqual(events, []);
+});
+
 test("destroy は何度呼んでも安全", async () => {
   const env = setup();
   await flush();

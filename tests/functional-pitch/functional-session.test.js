@@ -151,6 +151,37 @@ test("onExit を渡さないと「テスト選択へ戻る」は出ない", () =
   assert.equal(screenEl.button('[data-role="exit"]'), undefined);
 });
 
+test("onSessionStarted には練習結果が加わり、onTrialStarted / onTrialConfirmed はそのまま測定へ渡る", () => {
+  const started = [];
+  const onTrialStarted = () => {};
+  const onTrialConfirmed = () => {};
+  const { stages } = setup({ onSessionStarted: (info) => started.push(info), onTrialStarted, onTrialConfirmed });
+  stages.calls.toneCheck[0].onProceed();
+  stages.calls.practice[0].onFinished({ practice_results: PRACTICE_RESULTS });
+  stages.calls.practice[0].screenEl.button('[data-key="C"]').click();
+  const [call] = stages.calls.key;
+  assert.equal(call.onTrialStarted, onTrialStarted);
+  assert.equal(call.onTrialConfirmed, onTrialConfirmed);
+  call.onSessionStarted({ measurement_key_code: "C", generated_trial_order: [], total_trial_count: 90 });
+  assert.deepEqual(started, [{ measurement_key_code: "C", generated_trial_order: [], total_trial_count: 90, practice_results: PRACTICE_RESULTS }]);
+});
+
+test("onShowHistory を渡すと「履歴・CSVを見る」が出て、渡された関数でKey選択へ戻れる", () => {
+  const backs = [];
+  const { screenEl, stages } = setup({ practiceRequired: false, onShowHistory: (back) => backs.push(back) });
+  screenEl.button('[data-role="history"]').click();
+  assert.equal(backs.length, 1);
+  screenEl.innerHTML = "<h2>履歴</h2>"; // 履歴画面に切り替わった代わり
+  backs[0]();
+  assert.equal(screenEl.querySelectorAll("[data-key]").length, 2);
+  assert.equal(stages.calls.key.length, 0);
+});
+
+test("onShowHistory を渡さないと「履歴・CSVを見る」は出ない", () => {
+  const { screenEl } = setup({ practiceRequired: false });
+  assert.equal(screenEl.button('[data-role="history"]'), undefined);
+});
+
 test("音色確認・練習への追加の引数が渡る", () => {
   const { stages } = setup({ toneCheckOptions: { controllerOptions: { a: 1 } }, practiceFlowOptions: { trialControllerOptions: { b: 2 } } });
   assert.deepEqual(stages.calls.toneCheck[0].controllerOptions, { a: 1 });

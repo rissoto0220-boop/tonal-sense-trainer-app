@@ -50,6 +50,11 @@ import { syncPendingSessions } from "./src/shared/session-uploader.js";
 import { resolveSessionEndpoint } from "./src/shared/server-config.js";
 import { runFunctionalPitchSession } from "./src/functional-pitch/functional-session.js";
 import { resolveFunctionalPitchOptions } from "./src/functional-pitch/dev-flag.js";
+import {
+  createSessionRecorder as createFunctionalPitchRecorder,
+  loadParticipantData as loadFunctionalPitchParticipantData,
+} from "./src/functional-pitch/session-store.js";
+import { showHistoryScreen as showFunctionalPitchHistoryScreen } from "./src/functional-pitch/history-screen.js";
 import { resolveTrainingOptions } from "./src/training/dev-flag.js";
 import { TRAINING_MENUS } from "./src/training/menus.js";
 import { showTrainingMenuScreen } from "./src/training/menu-screen.js";
@@ -251,14 +256,29 @@ function startRelativePitchTest() {
 // --- 機能的音感測定(開発確認用。URLに ?functional=dev があるときだけ選べる) ---
 
 // 測定本体は参加者IDに依存しない。結果はメモリ上で受け取るだけで、保存・送信はしない(仕様未確定)。
+// 結果は参加者IDごとにブラウザ(localStorage)へ1試行ずつ保存し、履歴・CSVで出力できる。
+// サーバーへの送信はしない(送信処理は functional-pitch: のキーを対象にしていない)。
 function startFunctionalPitchTest() {
   const { practiceRequired, trialLimit } = resolveFunctionalPitchOptions(window.location);
+  const recorder = createFunctionalPitchRecorder(participantId, { storage: localStorage });
   runFunctionalPitchSession({
     screenEl,
     practiceRequired,
     trialLimit,
     onExit: showTestSelection,
-    onKeyMeasured: (result) => console.info("機能的音感の測定結果(メモリ上のみ・保存なし)", result),
+    onSessionStarted: recorder.onSessionStarted,
+    onTrialStarted: recorder.onTrialStarted,
+    onTrialConfirmed: recorder.onTrialConfirmed,
+    onKeyMeasured: (result) => {
+      recorder.onKeyMeasured(result);
+      console.info("機能的音感の測定結果(ブラウザに保存済み・送信なし)", result);
+    },
+    onShowHistory: (backToKeySelect) => showFunctionalPitchHistoryScreen({
+      screenEl,
+      participantId,
+      participantData: loadFunctionalPitchParticipantData(participantId, localStorage),
+      onBack: backToKeySelect,
+    }),
   });
 }
 

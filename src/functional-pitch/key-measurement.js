@@ -1,7 +1,8 @@
 // 機能的音感測定の「Keyごとの測定」(仕様15〜19章)。ユーザー・保存・CSV・サーバーに依存しない。
 //
 // 流れ: 90試行の生成と検査 → 10個の音源の読み込みと確認 → 90試行 → 完了画面。
-// 測定結果はメモリ上のコールバック onMeasured で外へ渡すだけで、保存・送信はしない。
+// 測定結果はコールバック(onSessionStarted / onTrialStarted / onTrialConfirmed / onMeasured)で
+// 外へ渡すだけで、ここでは保存・送信はしない(保存は呼び出し側の session-store.js が行う)。
 import { resumeAudioContext } from "../shared/audio-buffer-player.js";
 import { generateTrialOrder, validateTrialOrder } from "./trial-generator.js";
 import { loadKeyPhrases } from "./key-audio.js";
@@ -37,6 +38,11 @@ const toOrderEntry = (trial) => ({
 // onMeasured(result): Keyの測定が終わった時点で1回だけ呼ぶ(音声エラーで中断した場合も含む)。
 //   result: { measurement_key_code, measurement_status("completed"/"audio_error"),
 //             completed_trials, generated_trial_order }
+// onSessionStarted(info): 音源の読み込みに成功し、最初の試行を始める直前に1回だけ呼ぶ
+//   (読み込みに失敗したときは呼ばない。その場合は onMeasured も呼ばない)。
+//   info: { measurement_key_code, generated_trial_order, total_trial_count }
+// onTrialStarted(entry): 各試行を始めるときに呼ぶ。entry: { trial_number, first_stimulus_id, … }
+// onTrialConfirmed(record): 各試行の回答を確定したときに呼ぶ(completed_trials の1件と同じ形)。
 // onBack(): 完了・エラー画面の「Key選択へ戻る」を押したときに呼ぶ。
 // 戻り値の destroy(): 画面を離れるときに呼ぶ。音・タイマー・beforeunload をすべて止める。
 // 以下は、テスト・開発用ページ向けの差し替え。
@@ -44,6 +50,9 @@ export function runKeyMeasurement({
   screenEl,
   keyCode,
   trialLimit = null,
+  onSessionStarted = () => {},
+  onTrialStarted = () => {},
+  onTrialConfirmed = () => {},
   onMeasured = () => {},
   onBack = () => {},
   randomFn = Math.random,
@@ -96,15 +105,18 @@ export function runKeyMeasurement({
   function startTrial(index) {
     const trial = trials[index];
     const isLast = index === trials.length - 1;
+    onTrialStarted(toOrderEntry(trial));
     controller.start({
       trial: { keyCode, firstStimulusId: trial.firstStimulusId, secondStimulusId: trial.secondStimulusId },
       progressLabel: `${index + 1} / ${trials.length}`,
       nextLabel: isLast ? "測定を終える" : "次の問題へ",
       onConfirmed: (confirmed) => {
-        completedTrials.push({
+        const record = {
           ...toOrderEntry(trial),
           ...Object.fromEntries(RESPONSE_KEYS.map((key) => [key, confirmed[key]])),
-        });
+        };
+        completedTrials.push(record);
+        onTrialConfirmed({ ...record });
         if (isLast) finish("completed", buildCompletionHtml(keyCode));
         else startTrial(index + 1);
       },
@@ -115,6 +127,11 @@ export function runKeyMeasurement({
   function startTrials() {
     disableGuard = enableUnloadGuardFn();
     controller = mountTrialScreenFn(screenEl, trialControllerOptions);
+    onSessionStarted({
+      measurement_key_code: keyCode,
+      generated_trial_order: generatedOrder.map(toOrderEntry),
+      total_trial_count: trials.length,
+    });
     startTrial(0);
   }
 
