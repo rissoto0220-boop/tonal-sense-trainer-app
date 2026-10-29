@@ -347,3 +347,227 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
   .panel { animation: none; }
   * { transition: none !important; }
 }
+
+/* ===== 機能的音感測定の試行画面(src/functional-pitch/trial-screen.js) =====
+   既存の画面(.answer系・.answer-panel系)とは名前を分け、混同・影響が起きないようにする。
+   正解・不正解を示す色は使わない。選択中は色だけに頼らず、✓印と内側の枠でも示す。 */
+.functional-trial { max-width: 600px; margin: 0 auto; }
+.functional-progress { margin: 0 0 4px; color: var(--muted); font-weight: 700; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
+.functional-progress:focus { outline: none; }
+.functional-status { margin: 0; min-height: 1.8em; font-weight: 700; }
+
+/* どちらのフレーズが再生中かを示す図(2つの枠)。色だけに頼らず、塗り・枠の形・文字の3つで示す。
+   待機中=白地+点線 / 再生中=青の塗り+濃い枠+内側の白い線(選択中の見た目と同じ作り) / 再生済み=白地+実線。
+   2つの枠は左右対称で、どちらかへ回答を誘導しない。 */
+.functional-phrases { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 14px 0 12px; }
+.functional-phrases__arrow { color: var(--muted); font-size: 1.3rem; }
+.functional-phrase {
+  flex: 1 1 0;
+  max-width: 230px;
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 10px 8px;
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--ink);
+}
+.functional-phrase__name { font-size: 1.05rem; font-weight: 700; }
+.functional-phrase__state { font-size: .85rem; color: var(--muted); }
+.functional-phrase[data-state="played"] { border-style: solid; }
+.functional-phrase[data-state="playing"] { border-style: solid; border-color: var(--ink); background: var(--blue); box-shadow: inset 0 0 0 3px white; color: white; }
+.functional-phrase[data-state="playing"] .functional-phrase__state { color: white; }
+.functional-visually-hidden { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+.rating-item { margin: 22px 0 0; padding: 0; border: 0; min-width: 0; }
+.rating-question { padding: 0; margin-bottom: 10px; font-weight: 700; line-height: 1.7; }
+.rating-options { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.rating-option { position: relative; display: block; margin: 0; font-weight: 700; }
+/* 中身はラジオボタン。見えない状態で押す範囲いっぱいに重ね、キーボード操作(矢印キーなど)をそのまま使う */
+.rating-option input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+.rating-option input:focus-visible { outline: none; }
+.rating-option__face {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  border: 2px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: white;
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 700;
+  transition: background-color .12s ease;
+}
+.rating-option input:not(:disabled):hover + .rating-option__face { border-color: var(--blue); box-shadow: inset 0 0 0 2px var(--blue); background: #eef6fb; }
+.rating-option input:focus-visible + .rating-option__face { outline: 3px solid var(--ink); outline-offset: 3px; }
+.rating-option input:disabled { cursor: default; }
+.rating-option input:disabled + .rating-option__face { background: #eceae4; border-color: #c9c5bb; color: #7b8794; }
+.rating-option input:checked + .rating-option__face { background: var(--blue); border-color: var(--ink); color: white; box-shadow: inset 0 0 0 3px white; }
+.rating-option input:checked + .rating-option__face::after {
+  content: "✓";
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  line-height: 22px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: white;
+  font-size: .85rem;
+  text-align: center;
+}
+.rating-option input:checked:disabled + .rating-option__face { background: var(--muted); border-color: var(--ink); color: white; }
+.rating-ends { display: flex; justify-content: space-between; gap: 12px; margin-top: 6px; color: var(--muted); font-size: .88rem; }
+
+/* 再生中の小さな点(試験導入)。再生中の枠の中だけに表示する。音の波形・強弱とは連動せず、
+   ゆっくり濃淡が変わるだけ。外すときは、trial-screen.jsの functional-trial--animated を取り除く
+   (点が非表示になり、塗り・枠・文字だけで状態を示す)。 */
+.functional-playing { display: inline-flex; gap: 5px; height: 8px; visibility: hidden; }
+.functional-playing i { width: 8px; height: 8px; border-radius: 50%; background: white; }
+.functional-trial--animated .functional-phrase[data-state="playing"] .functional-playing { visibility: visible; }
+.functional-trial--animated .functional-playing i { animation: functional-playing-pulse 2.4s ease-in-out infinite; }
+.functional-trial--animated .functional-playing i:nth-child(2) { animation-delay: .4s; }
+.functional-trial--animated .functional-playing i:nth-child(3) { animation-delay: .8s; }
+@keyframes functional-playing-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+@media (max-width: 650px) {
+  /* 7個の数字ボタンを横に収めるため、狭い画面では余白を詰めて横幅を確保する */
+  .functional-trial { margin-left: -12px; margin-right: -12px; }
+  .rating-options { gap: 4px; }
+  .rating-ends { font-size: .8rem; }
+  .functional-phrases { gap: 8px; }
+  .functional-phrase { min-height: 80px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .functional-trial--animated .functional-playing i { animation: none; }
+}
+
+/* ===== 機能的音感測定: 音色確認・練習の終了画面(tone-check-screen.js / practice-flow.js) =====
+   状態は色だけに頼らず、文字と枠の形(未再生=点線、再生済み=実線、再生中=青の塗り)で示す。 */
+.functional-tone-list { list-style: none; margin: 20px 0; padding: 0; }
+.functional-tone-item { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.functional-tone-item:first-child { border-top: 1px solid var(--line); }
+.functional-tone-state { min-width: 6.5em; padding: 4px 12px; border: 2px dashed var(--line-strong); border-radius: var(--radius); text-align: center; font-weight: 700; color: var(--muted); }
+.functional-tone-item[data-state="played"] .functional-tone-state { border-style: solid; color: var(--ink); }
+.functional-tone-item[data-state="playing"] .functional-tone-state { border-style: solid; border-color: var(--ink); background: var(--blue); color: white; box-shadow: inset 0 0 0 2px white; }
+.functional-practice-end h2:focus { outline: none; }
+
+/* ===== 機能的音感測定: Key選択・完了・エラー画面(measurement-screens.js) =====
+   Key選択の2つのボタンは同じ見た目・同じ大きさにして、どちらかへ誘導しない。 */
+.functional-key-list { display: flex; flex-wrap: wrap; gap: 16px; margin: 28px 0 8px; }
+.functional-key-button { flex: 1 1 140px; font-size: 1.2rem; min-height: 64px; }
+.functional-error-files { margin: 8px 0 16px; padding-left: 1.4em; font-size: .92rem; color: var(--muted); }
+.functional-key-select h2:focus, .functional-completion h2:focus, .functional-measurement-error h2:focus { outline: none; }
+
+/* ===== 音感訓練の回答画面(src/training/answer-screen.js) =====
+   既存の画面(.answer系・.answer-panel系・.functional-*系)とは名前を分け、混同・影響が起きないようにする。
+   正解・不正解を示す色は使わない(正誤は文言で示す)。青は「押せる・回答受付」の意味で、正誤には使わない。
+   押せない音は、色だけでなく点線の枠と灰色の文字でも示す。選択中は✓印と内側の枠でも示す。 */
+.training-answer { text-align: center; }
+.training-progress { margin: 0 0 12px; color: var(--muted); font-weight: 700; }
+.training-prompt {
+  max-width: 280px;
+  margin: 8px auto 32px;
+  padding: 18px 12px;
+  border: 2px solid var(--ink);
+  background: var(--blue-deep);
+  color: white;
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+/* 単音の階名鍵盤: 横一列に7個。ドだけ背を高くする(主音の主張)。 */
+.training-keyboard { display: flex; justify-content: center; align-items: center; gap: 4px; margin: 0 auto 28px; }
+.training-key {
+  position: relative;
+  flex: 0 1 52px;
+  min-width: 0;
+  height: 52px;
+  border: 2px solid var(--ink);
+  border-radius: 8px;
+  background: var(--blue);
+  color: white;
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 0;
+}
+.training-key--tonic { height: 72px; }
+
+/* 和音の六角形: 6つのボタンを、Ⅰを上にして時計回りに並べる(--i: 0〜5)。
+   大きさの指定に%は使わない(.answer-panel--circular の--wheel-sizeと同じ理由。styles.css上部の注意を参照)。 */
+.training-hexagon {
+  --hex-size: min(72vw, 300px);
+  --chord-size: clamp(56px, 16vw, 72px);
+  position: relative;
+  width: var(--hex-size);
+  height: var(--hex-size);
+  margin: 0 auto 20px;
+}
+.training-chord {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--chord-size);
+  height: var(--chord-size);
+  border: 2px solid var(--ink);
+  border-radius: 10px;
+  font-size: calc(var(--chord-size) * 0.34);
+  font-weight: 700;
+  padding: 0;
+  transform:
+    translate(-50%, -50%)
+    rotate(calc(var(--i) * 60deg))
+    translateY(calc(var(--hex-size) * -0.34))
+    rotate(calc(var(--i) * -60deg));
+}
+/* 和音の6色(研究者の決定、2026-10-25。CUDに配慮したOkabe-Ito系。2026-10-27にⅠとⅥを調整(「控えめ」案)。
+   紫と水色は、和音ボタンの色に限る例外)。
+   ローマ数字を必ず表示するので、色は補助。 */
+.training-chord--n1 { background: #D22421; color: white; }   /* Ⅰ 赤(2026-10-27調整。2色覚での区別を落とさない範囲で赤みを強めた) */
+.training-chord--n4 { background: #E69F00; color: var(--ink); } /* Ⅳ オレンジ */
+.training-chord--n3 { background: #00855F; color: white; }   /* Ⅲ 青緑 */
+.training-chord--n6 { background: #8A57B0; color: white; }   /* Ⅵ 紫(2026-10-27調整。暗くして青みを足した) */
+.training-chord--n2 { background: #F0E442; color: var(--ink); } /* Ⅱ 黄 */
+.training-chord--n5 { background: #56B4E9; color: var(--ink); } /* Ⅴ 水色 */
+
+/* 押せない音(この訓練では使わない音): 薄い灰色・点線の枠・灰色の文字(研究者の決定、2026-10-26)。 */
+.training-key.is-inactive,
+.training-chord.is-inactive { background: #eceae4; border-style: dashed; border-color: #c9c5bb; color: #5b6770; }
+.training-key:disabled, .training-chord:disabled { cursor: default; }
+.training-key:hover:not(:disabled), .training-chord:hover:not(:disabled) { box-shadow: inset 0 0 0 3px white; }
+.training-key.selected, .training-chord.selected { box-shadow: inset 0 0 0 3px white; z-index: 1; }
+.training-key.selected::after, .training-chord.selected::after {
+  content: "✓";
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 24px;
+  height: 24px;
+  line-height: 24px;
+  border-radius: 50%;
+  background: var(--ink);
+  color: white;
+  font-size: .9rem;
+}
+
+.training-tools { margin-top: 8px; }
+.training-feedback { min-height: 3.6em; margin-top: 20px; font-size: 1.15rem; font-weight: 700; }
+.training-feedback p { margin: 4px 0; }
+.training-quit { margin-top: 16px; }
+.training-quit-confirm { margin: 16px 0 0; text-align: left; }
+.training-quit-title { margin: 0 0 4px; font-weight: 700; }
+.training-quit-confirm p { margin: 4px 0; }
+.training-quit-confirm .training-quit-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+
+@media (max-width: 400px) {
+  .training-keyboard { gap: 3px; }
+  .training-key { font-size: .95rem; }
+}

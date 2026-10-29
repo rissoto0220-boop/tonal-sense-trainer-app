@@ -48,6 +48,23 @@ import { hasCompletedSession } from "./src/relative-pitch/practice-history.js";
 import { showHistoryScreen as showRelativePitchHistoryScreen } from "./src/relative-pitch/history-screen.js";
 import { syncPendingSessions } from "./src/shared/session-uploader.js";
 import { resolveSessionEndpoint } from "./src/shared/server-config.js";
+import { runFunctionalPitchSession } from "./src/functional-pitch/functional-session.js";
+import { resolveFunctionalPitchOptions } from "./src/functional-pitch/dev-flag.js";
+import {
+  createSessionRecorder as createFunctionalPitchRecorder,
+  loadParticipantData as loadFunctionalPitchParticipantData,
+} from "./src/functional-pitch/session-store.js";
+import { showHistoryScreen as showFunctionalPitchHistoryScreen } from "./src/functional-pitch/history-screen.js";
+import { resolveTrainingOptions } from "./src/training/dev-flag.js";
+import { TRAINING_MENUS } from "./src/training/menus.js";
+import { showTrainingMenuScreen } from "./src/training/menu-screen.js";
+import { runTrainingSession } from "./src/training/training-session.js";
+import {
+  createSessionRecorder as createTrainingRecorder,
+  loadParticipantData as loadTrainingParticipantData,
+} from "./src/training/session-store.js";
+import { showHistoryScreen as showTrainingHistoryScreen } from "./src/training/history-screen.js";
+import { enableUnloadGuard } from "./src/functional-pitch/unload-guard.js";
 
 const QUESTION_MS = 3000;
 const INTER_QUESTION_GAP_MS = 1000; // 問題間の間隔(仕様13.4)
@@ -130,6 +147,11 @@ function showIdConfirm() {
 
 // テスト選択画面に並べるテストの一覧。テストを追加するときはここに1件足す。
 function availableTests() {
+  // 機能的音感は未完成のため、URLに ?functional=dev があるときだけ選べる(本番では「準備中」のまま)。
+  const functionalPitchOptions = resolveFunctionalPitchOptions(window.location);
+  // 音感訓練も未完成のため、URLに ?training=dev があるときだけ選べる(本番では「準備中」のまま)。
+  // 完成形のトップページ(訓練/テスト/設定)を作るまでの仮の置き場所として、テスト選択の一覧に並べる。
+  const trainingOptions = resolveTrainingOptions(window.location);
   return [
     {
       id: "absolute-pitch",
@@ -148,8 +170,16 @@ function availableTests() {
     {
       id: "functional-pitch",
       title: "機能的音感テスト",
-      description: "現在準備中です。",
-      available: false,
+      description: functionalPitchOptions.enabled ? "2つのフレーズの印象の変化を評定します(開発確認用)。" : "現在準備中です。",
+      available: functionalPitchOptions.enabled,
+      onStart: startFunctionalPitchTest,
+    },
+    {
+      id: "training",
+      title: "音感訓練",
+      description: trainingOptions.enabled ? "メロディの音や和音を答えて練習します(開発確認用)。" : "現在準備中です。",
+      available: trainingOptions.enabled,
+      onStart: showTrainingMenus,
     },
   ];
 }
@@ -225,6 +255,88 @@ function startRelativePitchTest() {
           });
         },
       });
+    },
+  });
+}
+
+// --- 機能的音感測定(開発確認用。URLに ?functional=dev があるときだけ選べる) ---
+
+// 測定本体は参加者IDに依存しない。結果はメモリ上で受け取るだけで、保存・送信はしない(仕様未確定)。
+// 結果は参加者IDごとにブラウザ(localStorage)へ1試行ずつ保存し、履歴・CSVで出力できる。
+// サーバーへの送信はしない(送信処理は functional-pitch: のキーを対象にしていない)。
+function startFunctionalPitchTest() {
+  const { practiceRequired, trialLimit } = resolveFunctionalPitchOptions(window.location);
+  const recorder = createFunctionalPitchRecorder(participantId, { storage: localStorage });
+  runFunctionalPitchSession({
+    screenEl,
+    practiceRequired,
+    trialLimit,
+    onExit: showTestSelection,
+    onSessionStarted: recorder.onSessionStarted,
+    onTrialStarted: recorder.onTrialStarted,
+    onTrialConfirmed: recorder.onTrialConfirmed,
+    onKeyMeasured: (result) => {
+      recorder.onKeyMeasured(result);
+      console.info("機能的音感の測定結果(ブラウザに保存済み・送信なし)", result);
+    },
+    onShowHistory: (backToKeySelect) => showFunctionalPitchHistoryScreen({
+      screenEl,
+      participantId,
+      participantData: loadFunctionalPitchParticipantData(participantId, localStorage),
+      onBack: backToKeySelect,
+    }),
+  });
+}
+
+// --- 音感訓練(開発確認用。URLに ?training=dev があるときだけ選べる) ---
+
+// 結果は参加者IDごとにブラウザ(localStorage)へ、回答を確定するたびに保存し、履歴・CSVで出力できる。
+// サーバーへの送信はしない(送信処理は training: のキーを対象にしていない。サーバーでの種別は未決定)。
+function showTrainingMenus() {
+  showTrainingMenuScreen({
+    screenEl,
+    menus: TRAINING_MENUS,
+    onSelect: startTraining,
+    onShowHistory: () => showTrainingHistoryScreen({
+      screenEl,
+      participantId,
+      participantData: loadTrainingParticipantData(participantId, localStorage),
+      onBack: showTrainingMenus,
+    }),
+    onBack: showTestSelection,
+  });
+}
+
+// メニューのボタンを押した操作の中で、音声(AudioContext)を有効化してから始める。
+async function startTraining(menu) {
+  const { replayMode, questionCount } = resolveTrainingOptions(window.location);
+  await resumeAudioContext();
+  const recorder = createTrainingRecorder(participantId, { storage: localStorage });
+  // 訓練の最中に誤ってページを閉じないよう、ブラウザの確認を出す(終われば解除する)。
+  const releaseUnloadGuard = enableUnloadGuard();
+  runTrainingSession({
+    screenEl,
+    menu,
+    replayMode,
+    questionCount,
+    onSessionStarted: recorder.onSessionStarted,
+    onTrialConfirmed: recorder.onTrialConfirmed,
+    onTrialUpdated: recorder.onTrialUpdated,
+    onFinished: (trials) => {
+      recorder.onFinished(trials);
+      releaseUnloadGuard();
+    },
+    onInterrupted: (trials) => {
+      recorder.onInterrupted(trials);
+      releaseUnloadGuard();
+    },
+    onAudioError: () => {
+      recorder.onAudioError();
+      releaseUnloadGuard();
+    },
+    onExit: () => {
+      releaseUnloadGuard();
+      showTrainingMenus();
     },
   });
 }
