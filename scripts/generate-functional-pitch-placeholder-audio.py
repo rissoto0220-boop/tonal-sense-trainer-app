@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """機能的音感測定用の開発用代替音(仮音源)を生成する一時的なスクリプト。
 
-正式な音源(リコーダー+ピアノのミックス済みWAV)はまだなく、フレーズ内の旋律の構成も
-未確定なため、音声タイムライン(2フレーズ・1秒間隔・回答有効化)を耳と数値で確認できるように、
-サイン波の仮音源をここで生成する。研究本番では使用できない
+正式な音源(リコーダー+ピアノのミックス済みWAV)はまだないため、研究者が共有した楽譜(a)(b)
+(2026-10-29)のフレーズ構成を、サイン波の仮音源としてここで生成する。研究本番では使用できない
 (scripts/generate-relative-pitch-placeholder-audio.py と同じ位置付け)。
 
 生成するファイル(public/sounds/functional-pitch/ 内。Git管理外で、.gitignoreに記載済み):
@@ -17,9 +16,14 @@
 - 0.8〜4.0秒: 4拍(各0.8秒。開始は 0.8 / 1.6 / 2.4 / 3.2秒)
 - 4.0〜4.8秒: 後余白(無音)
 
-仮音源の中身(正式音源の構成とは無関係):
-- 和音: 4拍を通して鳴らし続ける(和音の根音度と品質に応じた三和音または属七和音)
-- 旋律: 刺激の旋律音度を、4拍すべてで鳴らす(拍ごとに区切る)
+仮音源の中身(楽譜(a)(b)の内容。Key C の音名で書く。Key Es・Fis は全体を平行移調する):
+- 1拍に旋律1音+和音1つ。第1・2・4音は固定で、第3音だけが刺激によって変わる
+    第1音: ド(C5) + I       第2音: ミ(E5) + I
+    第3音: 刺激の旋律音度 + 刺激の和音
+    第4音: ド(C5) + I + 低音C2
+- 和音の配置: I = E3 G3 C4、IV = F3 A3 C4、V7 = D3 F3 G3 B3
+- 旋律の音域: ソ・ラ・シ(n5〜n7)はドの下(G4〜B4)、レ・ミ・ファ(n2〜n4)はドの上(D5〜F5)
+- 第4音の低音は、楽譜では高さがはっきりしないため C2 とした
 - 音の大きさは、ファイルごとにピークを同じ値にそろえる
 
 正式音源が揃ったら、このスクリプトで生成したファイルを正式WAVに差し替え、
@@ -37,7 +41,6 @@ SAMPLE_RATE = 44100
 TOTAL_SECONDS = 4.8
 BEAT_SECONDS = 0.8
 FIRST_BEAT_SECONDS = 0.8
-BEATS = 4
 PEAK = 0.5  # 全ファイルでピークをこの値(満点=1.0)にそろえる
 EDGE_FADE_SECONDS = 0.01  # 音の出入りのクリック音を防ぐ
 
@@ -45,9 +48,17 @@ OUTPUT_DIR = Path(__file__).resolve().parent.parent / "public" / "sounds" / "fun
 
 KEY_SEMITONES = {"C": 0, "Es": 3, "Fis": 6}
 FILENAME_PREFIX = {"C": "c", "Es": "es", "Fis": "fis"}
-# 長音階の各音度(半音数)。
-DEGREE_SEMITONES = {"n1": 0, "n2": 2, "n3": 4, "n4": 5, "n5": 7, "n6": 9, "n7": 11}
-CHORD_INTERVALS = {"maj": [0, 4, 7], "dom7": [0, 4, 7, 10]}
+# 以下の音の高さは、Key C での C4 からの半音数(楽譜(a)(b)の配置)。
+# 旋律: ソ・ラ・シはドの下、レ・ミ・ファはドの上。
+MELODY_SEMITONES = {"n1": 12, "n2": 14, "n3": 16, "n4": 17, "n5": 7, "n6": 9, "n7": 11}
+# 和音(根音度, 品質) → 構成音。I = E3 G3 C4、IV = F3 A3 C4、V7 = D3 F3 G3 B3。
+CHORD_VOICINGS = {
+    ("n1", "maj"): [-8, -5, 0],
+    ("n4", "maj"): [-7, -3, 0],
+    ("n5", "dom7"): [-10, -7, -5, -1],
+}
+FINAL_BASS = -24  # 第4音の低音 C2
+TONIC = ("n1", "maj")
 
 # (刺激ID, 和音根音度, 和音品質, 旋律音度)。src/functional-pitch/stimuli.js と同じ内容。
 STIMULI = [
@@ -84,16 +95,21 @@ def beat_start(beat_index):
     return FIRST_BEAT_SECONDS + BEAT_SECONDS * beat_index
 
 
-def add_chord(samples, key, root_degree, quality, start_seconds, length_seconds):
-    root = KEY_SEMITONES[key] + DEGREE_SEMITONES[root_degree] - 12  # 1オクターブ下(C3付近)
-    notes = [root + interval for interval in CHORD_INTERVALS[quality]]
+def add_chord(samples, key, chord, beat_index, with_bass=False):
+    notes = CHORD_VOICINGS[chord] + ([FINAL_BASS] if with_bass else [])
     for semitones in notes:
-        add_note(samples, frequency(semitones), start_seconds, length_seconds, 1.0 / len(notes))
+        add_note(samples, frequency(KEY_SEMITONES[key] + semitones), beat_start(beat_index),
+                 BEAT_SECONDS - 0.05, 1.0 / len(notes))
 
 
 def add_melody_note(samples, key, degree, beat_index):
-    semitones = KEY_SEMITONES[key] + DEGREE_SEMITONES[degree] + 12  # 1オクターブ上(C5付近)
+    semitones = KEY_SEMITONES[key] + MELODY_SEMITONES[degree]
     add_note(samples, frequency(semitones), beat_start(beat_index), BEAT_SECONDS - 0.05, 0.8)
+
+
+def phrase_beats(chord, melody):
+    # 楽譜(a): (旋律音度, 和音, 低音の有無) を4拍分。第3音だけが刺激によって変わる。
+    return [("n1", TONIC, False), ("n3", TONIC, False), (melody, chord, False), ("n1", TONIC, True)]
 
 
 def write_wav(path, samples):
@@ -114,22 +130,24 @@ def new_buffer():
 def generate_phrase(key, stimulus):
     stimulus_id, chord_root, quality, melody = stimulus
     samples = new_buffer()
-    add_chord(samples, key, chord_root, quality, FIRST_BEAT_SECONDS, BEAT_SECONDS * BEATS)
-    for beat in range(BEATS):
-        add_melody_note(samples, key, melody, beat)
+    for beat, (degree, chord, with_bass) in enumerate(phrase_beats((chord_root, quality), melody)):
+        add_melody_note(samples, key, degree, beat)
+        add_chord(samples, key, chord, beat, with_bass)
     write_wav(OUTPUT_DIR / f"{FILENAME_PREFIX[key]}-phr-{stimulus_id}-v01.wav", samples)
 
 
 def generate_tone_checks():
-    # リコーダー単独(旋律のみ): 1・3・5・3度。ピアノ単独(和音のみ): I・IV・V7・I。
+    # 楽譜(a)そのまま(第3音 = レ + V7)を、旋律だけ・和音だけに分けて鳴らす。
+    # リコーダー単独: ド・ミ・レ・ド。ピアノ単独: I・I・V7・I(最後は低音つき)。
+    beats = phrase_beats(("n5", "dom7"), "n2")
     recorder = new_buffer()
-    for beat, degree in enumerate(["n1", "n3", "n5", "n3"]):
+    for beat, (degree, _, _) in enumerate(beats):
         add_melody_note(recorder, "Es", degree, beat)
     write_wav(OUTPUT_DIR / "es-practice-recorder-only-v01.wav", recorder)
 
     piano = new_buffer()
-    for beat, (root, quality) in enumerate([("n1", "maj"), ("n4", "maj"), ("n5", "dom7"), ("n1", "maj")]):
-        add_chord(piano, "Es", root, quality, beat_start(beat), BEAT_SECONDS - 0.05)
+    for beat, (_, chord, with_bass) in enumerate(beats):
+        add_chord(piano, "Es", chord, beat, with_bass)
     write_wav(OUTPUT_DIR / "es-practice-piano-only-v01.wav", piano)
 
 
