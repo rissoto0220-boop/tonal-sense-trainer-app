@@ -569,7 +569,8 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 **処理**（1つのトランザクション）
 
 1. 所属している家族の数を数える。
-2. `organizations` の行を削除する（`families.organization_id` は `ON DELETE SET NULL` で NULL になり、`organization_*` のテーブルは `ON DELETE CASCADE` で削除される）。
+2. 所属していた家族の `organization_id` と `organization_joined_at` を NULL にする（外部キーの `ON DELETE SET NULL` は、`organization_joined_at` を NULL にしないため。TableSpec_Account.md 2.3）。
+3. `organizations` の行を削除する（`organization_*` のテーブルは `ON DELETE CASCADE` で削除される）。
 
 **レスポンス** `200 OK`
 

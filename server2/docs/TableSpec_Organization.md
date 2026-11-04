@@ -77,6 +77,7 @@ organizations 1 ──── 0..n organization_invitations
   - 研究者の組織は削除できない（アプリケーションで保証する）。`is_super` の値は、アプリケーションからは変更しない。
 - 組織の削除
   - 物理削除とする。`families.organization_id` は `ON DELETE SET NULL` で NULL になり、所属していた家族は個人ユーザになる（TableSpec_Account.md 2.2）。
+  - `families.organization_joined_at` は、外部キーの動作では NULL にならない。削除の前に、アプリケーションが、所属していた家族の `organization_id` と `organization_joined_at` を NULL にする（同じトランザクション。TableSpec_Account.md 2.3）。
   - `organization_passkeys`・`organization_sessions`・`organization_invitations` は `ON DELETE CASCADE` で削除される。
   - 利用データは、削除しない（TableSpec_Account.md 5.2）。
 

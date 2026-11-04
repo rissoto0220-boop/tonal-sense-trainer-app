@@ -215,10 +215,11 @@ CREATE TABLE pending_registrations (
   INSERT INTO rate_limit_counters (key_hash, hit_count, expires_at)
   VALUES (?, 1, DATE_ADD(UTC_TIMESTAMP(6), INTERVAL ? SECOND)) AS new
   ON DUPLICATE KEY UPDATE
-      hit_count  = IF(expires_at <= UTC_TIMESTAMP(6), 1, hit_count + 1),
-      expires_at = IF(expires_at <= UTC_TIMESTAMP(6), new.expires_at, expires_at);
+      hit_count  = IF(rate_limit_counters.expires_at <= UTC_TIMESTAMP(6), 1, rate_limit_counters.hit_count + 1),
+      expires_at = IF(rate_limit_counters.expires_at <= UTC_TIMESTAMP(6), new.expires_at, rate_limit_counters.expires_at);
   ```
 
+  - 行の別名（`AS new`）を付けると、修飾なしの列名（`expires_at`・`hit_count`）は、別名の列と区別できず、エラー（1052 `Column ... in field list is ambiguous`）になる。更新の式の中の、既存の行の列は、テーブル名で修飾すること。
   - `ON DUPLICATE KEY UPDATE` の代入は左から順に評価され、後の代入は先の代入の結果を見る。`hit_count` の代入を `expires_at` より先に書くこと（順序を変えると、窓の判定が狂う）。
   - 行の別名（`AS new`）による書き方は、MySQL 8.0.19 以降で使える。
 - 超えた場合の `Retry-After` は、`expires_at` までの秒数とする。

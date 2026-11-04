@@ -95,6 +95,7 @@ organizations 0..1 ──── 0..n families（所属。組織を削除する�
   - 所属の変更・解除は、家族向けの重要な操作（基本方針 9.2）として、確認の後に行う。
   - 組織が参照できる利用データは、現在の `organization_id` で決まる（TableSpec_Organization.md 6.）。
   - `families` の行を削除（退会）すると、所属の情報も一緒に消える。
+  - 組織の削除では、外部キーの `ON DELETE SET NULL` は `organization_id` だけを NULL にし、`organization_joined_at` は残る。そのため、組織を削除する処理は、同じトランザクションの中で、先に所属家族の2つのカラムを NULL にしてから、組織の行を削除する（ApiSpec_Organization.md 6.5）。`organization_joined_at` は、`organization_id` が NULL でないときだけ意味を持つ。
   - `organizations` を `families` より先に作成すること（外部キーの参照先のため）。
 
 ### 2.4 DDL
