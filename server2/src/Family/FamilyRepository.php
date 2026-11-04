@@ -12,7 +12,7 @@ use UecTst\Support\Time;
 /** families テーブルの操作（TableSpec_Account.md 2.）。 */
 final class FamilyRepository
 {
-    private const COLUMNS = 'id, recovery_code_hash, recovery_code_key_id, superuser_password_hash, organization_id, organization_joined_at';
+    private const COLUMNS = 'id, recovery_code_hash, recovery_code_key_id, superuser_password_hash, organization_id, organization_joined_at, superuser_password_failed_count, superuser_password_locked_until';
 
     public function __construct(private readonly PDO $pdo)
     {
@@ -100,6 +100,27 @@ final class FamilyRepository
         $stmt->execute([$id]);
     }
 
+    /** パスワードを保存し、失敗回数とロックを初期値に戻す（設定・変更・再設定）。 */
+    public function setPassword(string $id, string $hash): void
+    {
+        $stmt = $this->pdo->prepare('UPDATE families SET superuser_password_hash = ?, superuser_password_failed_count = 0, superuser_password_locked_until = NULL WHERE id = ?');
+        $stmt->execute([$hash, $id]);
+    }
+
+    /** パスワードを未設定に戻す（3つのカラムを、NULL・0・NULL に）。 */
+    public function clearPassword(string $id): void
+    {
+        $stmt = $this->pdo->prepare('UPDATE families SET superuser_password_hash = NULL, superuser_password_failed_count = 0, superuser_password_locked_until = NULL WHERE id = ?');
+        $stmt->execute([$id]);
+    }
+
+    /** パスワードの失敗回数とロックの状態を更新する。 */
+    public function setPasswordAttempts(string $id, int $failedCount, ?DateTimeImmutable $lockedUntil): void
+    {
+        $stmt = $this->pdo->prepare('UPDATE families SET superuser_password_failed_count = ?, superuser_password_locked_until = ? WHERE id = ?');
+        $stmt->execute([$failedCount, $lockedUntil === null ? null : Time::toDb($lockedUntil), $id]);
+    }
+
     public function hasPasskeys(string $id): bool
     {
         $stmt = $this->pdo->prepare('SELECT 1 FROM passkeys WHERE family_id = ? LIMIT 1');
@@ -132,6 +153,9 @@ final class FamilyRepository
             superuserPasswordSet: $row['superuser_password_hash'] !== null,
             organizationId: $row['organization_id'] === null ? null : (string) $row['organization_id'],
             organizationJoinedAt: $row['organization_joined_at'] === null ? null : (string) $row['organization_joined_at'],
+            superuserPasswordHash: $row['superuser_password_hash'] === null ? null : (string) $row['superuser_password_hash'],
+            passwordFailedCount: (int) $row['superuser_password_failed_count'],
+            passwordLockedUntil: $row['superuser_password_locked_until'] === null ? null : Time::fromDb((string) $row['superuser_password_locked_until']),
         );
     }
 

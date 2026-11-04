@@ -7,6 +7,8 @@ namespace UecTst;
 use PDO;
 use UecTst\Auth\Authenticator;
 use UecTst\Auth\RecoveryAttempts;
+use UecTst\Auth\RecoveryCodeVerifier;
+use UecTst\Auth\SuperuserPasswordService;
 use UecTst\Auth\CookieFactory;
 use UecTst\Auth\SessionService;
 use UecTst\Captcha\CaptchaVerifier;
@@ -17,6 +19,10 @@ use UecTst\Family\PendingRegistrationRepository;
 use UecTst\Family\UserRepository;
 use UecTst\Log\Logger;
 use UecTst\Mail\Mailer;
+use UecTst\Passkey\ChallengeStore;
+use UecTst\Passkey\PasskeyRepository;
+use UecTst\Passkey\WebAuthnService;
+use UecTst\Security\PasswordHasher;
 use UecTst\RateLimit\RateLimiter;
 use UecTst\Security\RecoveryCodeHasher;
 use UecTst\Support\Clock;
@@ -36,6 +42,12 @@ final class Services
     public readonly UserRepository $users;
     public readonly PendingRegistrationRepository $pending;
     public readonly FamilyView $familyView;
+    public readonly PasswordHasher $passwordHasher;
+    public readonly SuperuserPasswordService $superuserPassword;
+    public readonly RecoveryCodeVerifier $recoveryVerifier;
+    public readonly PasskeyRepository $passkeys;
+    public readonly ChallengeStore $challenges;
+    public readonly WebAuthnService $webauthn;
 
     public function __construct(
         public readonly AppConfig $config,
@@ -55,5 +67,11 @@ final class Services
         $this->users = new UserRepository($pdo);
         $this->pending = new PendingRegistrationRepository($pdo);
         $this->familyView = new FamilyView($this->families, $this->users);
+        $this->passwordHasher = new PasswordHasher();
+        $this->superuserPassword = new SuperuserPasswordService($pdo, $clock, $this->families, $this->passwordHasher);
+        $this->recoveryVerifier = new RecoveryCodeVerifier($this->recoveryAttempts, $this->recoveryHasher);
+        $this->passkeys = new PasskeyRepository($pdo);
+        $this->challenges = new ChallengeStore($pdo, $clock);
+        $this->webauthn = new WebAuthnService($config);
     }
 }

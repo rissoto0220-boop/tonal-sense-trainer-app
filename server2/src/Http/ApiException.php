@@ -89,6 +89,16 @@ class ApiException extends RuntimeException
         return new self(429, 'RATE_LIMITED', 'しばらく時間をおいてから、もう一度お試しください。', [], ['Retry-After' => (string) max(1, $retryAfterSeconds)]);
     }
 
+    public static function passkeyVerificationFailed(): self
+    {
+        return new self(401, 'PASSKEY_VERIFICATION_FAILED', 'パスキーを確認できませんでした。もう一度お試しください。');
+    }
+
+    public static function passwordLocked(int $retryAfterSeconds): self
+    {
+        return new self(429, 'SUPERUSER_PASSWORD_LOCKED', 'パスワードの入力が続けて失敗したため、しばらく入力できません。', [], ['Retry-After' => (string) max(1, $retryAfterSeconds)]);
+    }
+
     public static function internal(): self
     {
         return new self(500, 'INTERNAL_ERROR', 'サーバでエラーが発生しました。しばらくしてから、もう一度お試しください。');

@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace UecTst\Api;
 
 use UecTst\Auth\AuthContext;
-use UecTst\Auth\RecoveryAttempts;
+use UecTst\Auth\SuperuserPasswordService;
+use UecTst\Family\FamilyRecord;
+use UecTst\Passkey\ChallengeStore;
 use UecTst\Db\Transaction;
 use UecTst\Http\ApiException;
 use UecTst\Http\Request;
@@ -19,8 +21,7 @@ use UecTst\Validation\Params;
  *   #15 重要な操作の確認 POST /elevation
  *   #16 復旧コードの再発行 POST /recovery-code（確認が必要）
  *   #21 退会 DELETE /family（確認が必要）
- *
- * 段階1では、確認は「復旧コード」のみ実装する（スーパーユーザのパスワード・パスキーは、段階2）。
+ *   #23 パスキーによる確認の開始 POST /elevation/passkey-options
  */
 final class AccountController extends AuthenticatedController
 {
@@ -39,32 +40,71 @@ final class AccountController extends AuthenticatedController
         return $this->authenticated($request, function (AuthContext $c) use ($data, $methods, $request): Response {
             $family = $this->services->families->find($c->familyId()) ?? throw ApiException::unauthenticated();
 
-            if ($methods[0] !== 'recoveryCode') {
-                // パスワードが未設定の家族は、パスワードでは確認できない。設定済みの家族のパスワード・パスキーの確認は、段階2で実装する。
-                if (!$family->superuserPasswordSet) {
-                    throw ApiException::conflict('SUPERUSER_PASSWORD_NOT_SET', 'スーパーユーザのパスワードが設定されていません。復旧コードで確認してください。');
-                }
-                throw ApiException::notImplemented();
-            }
+            switch ($methods[0]) {
+                case 'recoveryCode':
+                    // パスワードが設定済みの家族では、復旧コードによる確認を認めない（日常の確認は、パスワードで行うため）。
+                    if ($family->superuserPasswordSet) {
+                        throw ApiException::conflict('SUPERUSER_PASSWORD_ALREADY_SET', 'パスワードが設定されています。パスワードで確認してください。');
+                    }
+                    $verifier = $this->services->recoveryVerifier;
+                    $normalized = $verifier->normalize(Params::string($data, 'recoveryCode'));
+                    $verifier->assertMatches($family, $normalized, $request->clientIp);
+                    break;
 
-            // パスワードが設定済みの家族では、復旧コードによる確認を認めない（日常の確認は、パスワードで行うため）。
-            if ($family->superuserPasswordSet) {
-                throw ApiException::conflict('SUPERUSER_PASSWORD_ALREADY_SET', 'パスワードが設定されています。パスワードで確認してください。');
-            }
+                case 'superuserPassword':
+                    $password = Params::string($data, 'superuserPassword');
+                    SuperuserPasswordService::assertValidFormat($password, 'superuserPassword');
+                    $this->services->superuserPassword->verify($family->id, $password);
+                    break;
 
-            $input = Params::string($data, 'recoveryCode');
-            $this->services->recoveryAttempts->assertAllowed($request->clientIp);
-            $normalized = RecoveryAttempts::normalize($input);
-
-            $expected = $this->services->recoveryHasher->hash($normalized, $family->recoveryCodeKeyId);
-            if (!hash_equals($family->recoveryCodeHash, $expected)) {
-                $this->services->recoveryAttempts->recordFailure($request->clientIp);
-                throw new ApiException(401, 'INVALID_RECOVERY_CODE', '復旧コードが正しくありません。');
+                default:
+                    $this->verifyPasskey($c, $family, $data['passkey']);
             }
 
             $until = $this->services->sessions->elevate($c->session->id);
             return Response::json(200, ['elevatedUntil' => Time::toIso($until)]);
         });
+    }
+
+    /** #23 パスキーによる確認の開始（challenge の発行） */
+    public function passkeyOptions(Request $request): Response
+    {
+        return $this->authenticated($request, function (AuthContext $c): Response {
+            $family = $this->services->families->find($c->familyId()) ?? throw ApiException::unauthenticated();
+            if (!$family->superuserPasswordSet) {
+                throw ApiException::conflict('SUPERUSER_PASSWORD_NOT_SET', 'パスキーが登録されていません。復旧コードで確認してください。');
+            }
+            $passkeys = $this->services->passkeys->listByFamily($family->id);
+            if ($passkeys === []) {
+                throw ApiException::notFound('パスキーが登録されていません。');
+            }
+            $this->limitChallenges($c);
+
+            $challenge = $this->services->challenges->issue($c->session->id, ChallengeStore::FAMILY_ELEVATION);
+            return Response::json(200, $this->services->webauthn->requestOptions($challenge, $passkeys));
+        });
+    }
+
+    /** @param mixed $credential リクエストの passkey */
+    private function verifyPasskey(AuthContext $c, FamilyRecord $family, mixed $credential): void
+    {
+        if (!$family->superuserPasswordSet) {
+            throw ApiException::conflict('SUPERUSER_PASSWORD_NOT_SET', 'パスキーが登録されていません。復旧コードで確認してください。');
+        }
+        if (!is_array($credential)) {
+            throw ApiException::badRequest('「passkey」の形式が正しくありません。');
+        }
+        // challenge は、検証の成否にかかわらず、ここで使い切る（使い回しを防ぐ）。
+        $challenge = $this->services->challenges->take($c->session->id, ChallengeStore::FAMILY_ELEVATION)
+            ?? throw ApiException::passkeyVerificationFailed();
+
+        $webauthn = $this->services->webauthn;
+        $credentialId = $webauthn->credentialIdOf($credential) ?? throw ApiException::passkeyVerificationFailed();
+        $stored = $this->services->passkeys->findByCredentialId($family->id, $credentialId) ?? throw ApiException::passkeyVerificationFailed();
+        $all = $this->services->passkeys->listByFamily($family->id);
+
+        $signCount = $webauthn->verifyAssertion($credential, $challenge, $stored, $all);
+        $this->services->passkeys->recordUse($stored->id, $signCount, $this->services->clock->now());
     }
 
     /** #16 復旧コードの再発行（旧コードの無効化と、操作中の端末以外のセッションの失効） */

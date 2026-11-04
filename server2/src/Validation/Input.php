@@ -11,6 +11,8 @@ final class Input
 {
     public const USER_NAME_MAX = 20;
     public const EMAIL_MAX = 254;
+    public const PASSWORD_MIN = 4;
+    public const PASSWORD_MAX = 64;
 
     /** メールアドレス。問題がなければ null、あれば理由。 */
     public static function emailError(string $email): ?string
@@ -46,5 +48,19 @@ final class Input
             return 'TOO_LONG';
         }
         return null;
+    }
+
+    /**
+     * スーパーユーザのパスワード（4〜64文字。文字の種類は問わない。前後の空白も含めて、そのまま扱う）。
+     *
+     * @return string|null 問題がなければ null。あれば、TOO_SHORT・TOO_LONG
+     */
+    public static function passwordError(string $password): ?string
+    {
+        $length = mb_strlen($password, 'UTF-8');
+        if ($length < self::PASSWORD_MIN) {
+            return 'TOO_SHORT';
+        }
+        return $length > self::PASSWORD_MAX ? 'TOO_LONG' : null;
     }
 }

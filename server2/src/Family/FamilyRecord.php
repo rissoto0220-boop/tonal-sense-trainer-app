@@ -14,6 +14,9 @@ final class FamilyRecord
         public readonly bool $superuserPasswordSet,
         public readonly ?string $organizationId,
         public readonly ?string $organizationJoinedAt,
+        public readonly ?string $superuserPasswordHash = null,
+        public readonly int $passwordFailedCount = 0,
+        public readonly ?\DateTimeImmutable $passwordLockedUntil = null,
     ) {
     }
 }

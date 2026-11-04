@@ -187,4 +187,27 @@ final class AppConfigTest extends TestCase
         $this->assertStringNotContainsString(self::DEV_KEY_2, $dump);
         $this->assertStringNotContainsString(base64_decode(self::DEV_KEY_1), $dump);
     }
+
+    public function testWebauthnDefaultsToPublicBaseUrlHost(): void
+    {
+        $config = AppConfig::fromArray(self::dev());
+        $this->assertSame('localhost', $config->webauthnRpId);
+        $this->assertSame('TonalSenseTrainer', $config->webauthnRpName);
+    }
+
+    public function testWebauthnCanBeConfiguredAndIsValidated(): void
+    {
+        $config = AppConfig::fromArray(['webauthn' => ['rpId' => 'Example.COM', 'rpName' => 'テスト']] + self::dev());
+        $this->assertSame('example.com', $config->webauthnRpId);
+        $this->assertSame('テスト', $config->webauthnRpName);
+
+        foreach ([['rpId' => 'bad host'], ['rpId' => 'https://example.com'], ['rpName' => ' ']] as $bad) {
+            try {
+                AppConfig::fromArray(['webauthn' => $bad] + self::dev());
+                $this->fail('拒否されるはずです: ' . json_encode($bad));
+            } catch (ConfigException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
 }

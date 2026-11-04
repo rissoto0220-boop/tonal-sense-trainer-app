@@ -55,6 +55,12 @@ final class UserRepository
         $stmt->execute([$displayOrder, $userId]);
     }
 
+    public function setSuperuser(string $userId, bool $isSuperuser): void
+    {
+        $stmt = $this->pdo->prepare('UPDATE users SET is_superuser = ? WHERE id = ?');
+        $stmt->execute([$isSuperuser ? 1 : 0, $userId]);
+    }
+
     public function delete(string $userId): void
     {
         $stmt = $this->pdo->prepare('DELETE FROM users WHERE id = ?');

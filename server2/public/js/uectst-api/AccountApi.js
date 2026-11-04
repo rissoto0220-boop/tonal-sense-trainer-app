@@ -6,7 +6,12 @@ export class AccountApi {
     this.client = client;
   }
 
-  /** #15 復旧コードによる確認（5分間、重要な操作ができる） @param {string} recoveryCode @returns {Promise<{elevatedUntil: string}>} */
+  /** #15 スーパーユーザのパスワードによる確認（パスワードが設定済みの家族。5回続けて間違えると15分ロック） @param {string} superuserPassword @returns {Promise<{elevatedUntil: string}>} */
+  elevateWithPassword(superuserPassword) {
+    return this.client.post("/elevation", { superuserPassword });
+  }
+
+  /** #15 復旧コードによる確認（パスワード未設定の家族。5分間、重要な操作ができる） @param {string} recoveryCode @returns {Promise<{elevatedUntil: string}>} */
   elevateWithRecoveryCode(recoveryCode) {
     return this.client.post("/elevation", { recoveryCode });
   }

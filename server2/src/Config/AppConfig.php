@@ -38,6 +38,8 @@ final class AppConfig
         private readonly string $rateLimitKey,
         public readonly ?string $trustedProxyHeader,
         public readonly string $logFile,
+        public readonly string $webauthnRpId,
+        public readonly string $webauthnRpName,
     ) {
     }
 
@@ -154,6 +156,19 @@ final class AppConfig
             throw new ConfigException('AppConfig: logFile は空でない文字列である必要があります');
         }
 
+        $webauthn = $data['webauthn'] ?? [];
+        if (!is_array($webauthn)) {
+            throw new ConfigException('AppConfig: webauthn はオブジェクトである必要があります');
+        }
+        $rpId = $webauthn['rpId'] ?? parse_url($publicBaseUrl, PHP_URL_HOST);
+        if (!is_string($rpId) || !preg_match('/^[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?$/', $rpId)) {
+            throw new ConfigException('AppConfig: webauthn.rpId はドメイン名である必要があります（省略時は publicBaseUrl のホスト名）');
+        }
+        $rpName = $webauthn['rpName'] ?? 'TonalSenseTrainer';
+        if (!is_string($rpName) || trim($rpName) === '') {
+            throw new ConfigException('AppConfig: webauthn.rpName は空でない文字列である必要があります');
+        }
+
         return new self(
             environment: $environment,
             allowedOrigins: array_values($origins),
@@ -170,6 +185,8 @@ final class AppConfig
             rateLimitKey: $rateLimitKey,
             trustedProxyHeader: $proxyHeader,
             logFile: self::absolutePath($logFile),
+            webauthnRpId: strtolower($rpId),
+            webauthnRpName: $rpName,
         );
     }
 

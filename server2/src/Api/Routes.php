@@ -42,8 +42,20 @@ final class Routes
         self::patch($router, '/api/v1/users/{userId}', $services, fn (Services $s, Request $r, array $p) => (new UserController($s))->rename($r, $p));  // #12
         self::delete($router, '/api/v1/users/{userId}', $services, fn (Services $s, Request $r, array $p) => (new UserController($s))->delete($r, $p)); // #14
 
+        // スーパーユーザ・パスワード・パスキー
+        self::get($router, '/api/v1/superuser', $services, fn (Services $s, Request $r) => (new SuperuserController($s))->show($r));                                // #17
+        self::put($router, '/api/v1/superuser', $services, fn (Services $s, Request $r) => (new SuperuserController($s))->transfer($r));                           // #20
+        self::put($router, '/api/v1/superuser/password', $services, fn (Services $s, Request $r) => (new SuperuserController($s))->setPassword($r));               // #18
+        self::delete($router, '/api/v1/superuser/password', $services, fn (Services $s, Request $r) => (new SuperuserController($s))->deletePassword($r));         // #19
+        self::post($router, '/api/v1/superuser/password/reset', $services, fn (Services $s, Request $r) => (new SuperuserController($s))->resetPassword($r));       // #22
+        self::get($router, '/api/v1/superuser/passkeys', $services, fn (Services $s, Request $r) => (new SuperuserController($s))->passkeys($r));                  // #24
+        self::post($router, '/api/v1/superuser/passkeys/registration-options', $services, fn (Services $s, Request $r) => (new SuperuserController($s))->registrationOptions($r)); // #25
+        self::post($router, '/api/v1/superuser/passkeys', $services, fn (Services $s, Request $r) => (new SuperuserController($s))->register($r));                 // #26
+        self::delete($router, '/api/v1/superuser/passkeys/{passkeyId}', $services, fn (Services $s, Request $r, array $p) => (new SuperuserController($s))->deletePasskey($r, $p)); // #27
+
         // 確認・復旧コード・退会
         self::post($router, '/api/v1/elevation', $services, fn (Services $s, Request $r) => (new AccountController($s))->elevate($r));                 // #15
+        self::post($router, '/api/v1/elevation/passkey-options', $services, fn (Services $s, Request $r) => (new AccountController($s))->passkeyOptions($r));  // #23
         self::post($router, '/api/v1/recovery-code', $services, fn (Services $s, Request $r) => (new AccountController($s))->reissueRecoveryCode($r)); // #16
         self::delete($router, '/api/v1/family', $services, fn (Services $s, Request $r) => (new AccountController($s))->withdraw($r));                 // #21
     }

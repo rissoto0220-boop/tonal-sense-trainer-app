@@ -64,6 +64,7 @@ npm test                      # JavaScript
 | `captcha` | `driver`（`none`／`turnstile`）、`secretKey`。本番では `turnstile` を使う |
 | `secrets.recoveryCodeKeys` | 復旧コードの HMAC 鍵（ID → Base64）。鍵を増やしても、古い鍵のコードでログインできる。`currentRecoveryCodeKeyId` が新規発行に使う鍵 |
 | `secrets.rateLimitKey` | 回数制限のキー（IP など）をハッシュする鍵 |
+| `webauthn` | パスキーの `rpId`（サイトのドメイン。省略時は `publicBaseUrl` のホスト名）と `rpName`（サービス名）。**運用開始後に `rpId` を変えると、登録済みのパスキーがすべて使えなくなる**。パスキーが使えるのは HTTPS または `localhost` のみ（IP アドレスは不可） |
 | `trustedProxyHeader` | リバースプロキシ配下のとき、クライアント IP を入れるヘッダ名（例: `X-Forwarded-For`）。直接公開なら `null` |
 
 **`secrets` の開発用の値は、本番で絶対に使わないこと**（本番では、乱数で作った別の値にする）。

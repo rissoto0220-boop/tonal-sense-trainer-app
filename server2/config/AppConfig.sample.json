@@ -20,6 +20,10 @@
     "currentRecoveryCodeKeyId": 1,
     "rateLimitKey": "ZGV2LW9ubHktcmF0ZS1saW1pdC1obWFjLWtleS0wMDAx"
   },
+  "webauthn": {
+    "rpId": "localhost",
+    "rpName": "TonalSenseTrainer"
+  },
   "trustedProxyHeader": null,
   "logFile": "storage/logs/app.log"
 }

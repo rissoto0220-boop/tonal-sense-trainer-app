@@ -41,4 +41,13 @@ abstract class AuthenticatedController
             throw ApiException::elevationRequired();
         }
     }
+
+    /** パスキーの challenge の発行は、セッション単位で 30回／10分まで（ApiSpec_Auth.md 9.）。 */
+    protected function limitChallenges(AuthContext $context): void
+    {
+        $hit = $this->services->rateLimiter->hit('webauthn:challenge:' . bin2hex($context->session->id), 600);
+        if ($hit->count > 30) {
+            throw ApiException::rateLimited($hit->retryAfterSeconds);
+        }
+    }
 }
