@@ -1,0 +1,17 @@
+# 環境ごとの設定（パスワード・鍵を含む）。サンプル（*.sample.json）だけを管理する。
+/config/DBConfig.json
+/config/AppConfig.json
+
+# Composer
+/vendor/
+
+# ログなど（実行時に作られる）
+/storage/*
+!/storage/.gitkeep
+!/storage/logs/
+/storage/logs/*
+!/storage/logs/.gitkeep
+
+.phpunit.cache/
+.phpunit.result.cache
+.DS_Store

@@ -1,0 +1,5 @@
+# server2/ 全体への、Web からの直接アクセスを拒否する（多重の防御）。
+# 本番では、公開ディレクトリは public/ だけだが、リポジトリ全体が公開される配置になっても、
+# 設定ファイル（config/）やソースコード（src/、vendor/）が、URL で取得されないようにする。
+# 公開する public/ だけは、public/.htaccess で許可する。
+Require all denied

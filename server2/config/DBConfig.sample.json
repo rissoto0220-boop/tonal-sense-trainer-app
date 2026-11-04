@@ -1,0 +1,15 @@
+{
+  "host": "127.0.0.1",
+  "port": 3307,
+  "database": "UECTSTDB",
+  "user": "root",
+  "password": "",
+  "charset": "utf8mb4",
+  "timezone": "+00:00",
+  "connectTimeoutSeconds": 5,
+  "ssl": {
+    "enabled": false,
+    "caFile": "",
+    "verifyServerCert": true
+  }
+}

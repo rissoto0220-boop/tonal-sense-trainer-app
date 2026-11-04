@@ -1,0 +1,17 @@
+# public/ は公開するディレクトリ。親（server2/.htaccess）の「全面拒否」を、ここだけ解除する。
+Require all granted
+
+# 存在しないファイル・ディレクトリへのアクセスは、すべて index.php（front controller）に渡す。
+# mod_rewrite が有効な Apache の場合に動く（無効な環境では、この設定は無視される）。
+# nginx の場合は、同等の設定（try_files $uri /index.php）を、nginx 側に書く。
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# 隠しファイル（.htaccess など）へは、直接アクセスさせない。
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

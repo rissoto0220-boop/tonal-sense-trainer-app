@@ -1,0 +1,138 @@
+// API 呼び出しの共通の土台。fetch・JSON・エラーの変換・共通のイベント（未ログイン、確認が必要）を扱う。
+// 家族・ユーザ用（FamilyClient）と、研究者・組織用（OrgClient）の、どちらも、これを使う。
+//
+// 認証は HttpOnly Cookie で行うため、このクラスはトークンを扱わない（credentials: "same-origin" で、Cookie が自動で付く）。
+// Origin ヘッダは、ブラウザが自動で付ける。Content-Type: application/json は、本文があるときにこのクラスが付ける
+// （サーバの CSRF 対策が、これを求める。ApiSpec_Auth.md 0.3）。
+
+import { ApiError } from "./ApiError.js";
+
+/**
+ * @typedef {object} ApiClientOptions
+ * @property {string} [basePath] API のベースパス（既定: "/api/v1"）。研究者・組織用は "/api/v1/org" を、それぞれのクライアントで付ける
+ * @property {typeof fetch} [fetchFn] テスト用に、fetch を差し替える
+ * @property {() => Promise<boolean>|boolean} [onElevationRequired]
+ *   403 ELEVATION_REQUIRED のときに呼ばれる。確認の画面を出して、確認に成功したら true を返すと、同じ操作を、1回だけ自動でやり直す
+ * @property {(error: ApiError) => void} [onUnauthenticated] 401 UNAUTHENTICATED のときに呼ばれる（ログイン画面へ戻すなど）
+ */
+
+export class ApiClient {
+  /** @param {ApiClientOptions} [options] */
+  constructor(options = {}) {
+    this.basePath = options.basePath ?? "/api/v1";
+    this.fetchFn = options.fetchFn ?? ((...args) => globalThis.fetch(...args));
+    this.onElevationRequired = options.onElevationRequired ?? null;
+    this.onUnauthenticated = options.onUnauthenticated ?? null;
+  }
+
+  /**
+   * @param {string} path basePath からの相対パス（"/users" など）
+   * @param {object} [options]
+   * @param {object} [options.query] クエリパラメータ（null・undefined は付けない）
+   */
+  get(path, options = {}) {
+    return this.#request("GET", path, undefined, options);
+  }
+
+  /** @param {string} path @param {object} [body] */
+  post(path, body = {}) {
+    return this.#request("POST", path, body, {});
+  }
+
+  /** @param {string} path @param {object} [body] */
+  put(path, body = {}) {
+    return this.#request("PUT", path, body, {});
+  }
+
+  /** @param {string} path @param {object} [body] */
+  patch(path, body = {}) {
+    return this.#request("PATCH", path, body, {});
+  }
+
+  /** @param {string} path */
+  delete(path) {
+    return this.#request("DELETE", path, undefined, {});
+  }
+
+  /**
+   * @param {string} method
+   * @param {string} path
+   * @param {object|undefined} body
+   * @param {{ query?: Record<string, string|number|boolean|null|undefined> }} options
+   * @param {boolean} [retried] 確認の後のやり直しか（無限にやり直さないため）
+   * @returns {Promise<any>} 成功時はレスポンスの JSON（204 は null）
+   */
+  async #request(method, path, body, options, retried = false) {
+    const url = this.#url(path, options.query);
+    /** @type {RequestInit} */
+    const init = { method, credentials: "same-origin", headers: { Accept: "application/json" } };
+    if (body !== undefined) {
+      init.headers["Content-Type"] = "application/json";
+      init.body = JSON.stringify(body);
+    }
+
+    let response;
+    try {
+      response = await this.fetchFn(url, init);
+    } catch {
+      throw new ApiError({ status: 0, code: "NETWORK_ERROR", message: "通信に失敗しました。接続を確認して、もう一度お試しください。" });
+    }
+
+    if (response.ok) {
+      if (response.status === 204) return null;
+      return this.#readJson(response);
+    }
+
+    const error = await this.#toError(response);
+
+    if (error.is("ELEVATION_REQUIRED") && !retried && this.onElevationRequired) {
+      const confirmed = await this.onElevationRequired();
+      if (confirmed) return this.#request(method, path, body, options, true);
+    }
+    if (error.is("UNAUTHENTICATED") && this.onUnauthenticated) {
+      this.onUnauthenticated(error);
+    }
+    throw error;
+  }
+
+  /** @param {string} path @param {Record<string, any>} [query] */
+  #url(path, query) {
+    let url = this.basePath + path;
+    const entries = Object.entries(query ?? {}).filter(([, v]) => v !== null && v !== undefined);
+    if (entries.length > 0) {
+      url += "?" + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
+    }
+    return url;
+  }
+
+  /** @param {Response} response */
+  async #readJson(response) {
+    try {
+      return await response.json();
+    } catch {
+      throw new ApiError({ status: response.status, code: "INVALID_RESPONSE", message: "サーバの応答を読み取れませんでした。" });
+    }
+  }
+
+  /** @param {Response} response */
+  async #toError(response) {
+    const retryAfterHeader = response.headers?.get?.("Retry-After");
+    const retryAfter = retryAfterHeader && /^\d+$/.test(retryAfterHeader) ? Number(retryAfterHeader) : null;
+    try {
+      const data = await response.json();
+      const e = data?.error;
+      if (e && typeof e.code === "string") {
+        return new ApiError({
+          status: response.status,
+          code: e.code,
+          message: typeof e.message === "string" ? e.message : "エラーが発生しました。",
+          details: Array.isArray(e.details) ? e.details : [],
+          retryAfter,
+        });
+      }
+    } catch {
+      // JSON でない応答（プロキシのエラーページなど）は、下で、汎用のエラーにする。
+    }
+    return new ApiError({ status: response.status, code: "HTTP_ERROR", message: "サーバでエラーが発生しました。しばらくしてから、もう一度お試しください。", retryAfter });
+  }
+}

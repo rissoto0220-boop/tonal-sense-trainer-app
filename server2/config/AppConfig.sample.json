@@ -1,0 +1,9 @@
+{
+  "environment": "development",
+  "allowedOrigins": ["http://localhost:8888"],
+  "cookie": {
+    "secure": false,
+    "useHostPrefix": false
+  },
+  "logFile": "storage/logs/app.log"
+}

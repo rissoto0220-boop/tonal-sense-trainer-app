@@ -91,7 +91,8 @@
 | 401 | `PASSKEY_VERIFICATION_FAILED` | パスキーの検証に失敗した（署名・challenge・オリジンの不一致、未登録のパスキーなど） |
 | 403 | `FORBIDDEN_ORIGIN` | CSRF 対策の検証に失敗した（0.3） |
 | 403 | `ELEVATION_REQUIRED` | 家族向けの重要な操作の確認（0.4）が必要 |
-| 404 | `NOT_FOUND` | 対象が存在しない、またはログイン中の家族に属していない |
+| 404 | `NOT_FOUND` | 対象が存在しない、またはログイン中の家族に属していない。API のパスが存在しない場合も同じ |
+| 405 | `METHOD_NOT_ALLOWED` | そのパスで使えないメソッド。`Allow` ヘッダに、使えるメソッドを付ける |
 | 409 | `USER_LIMIT_REACHED` | ユーザが4名に達している |
 | 409 | `LAST_USER` | 最後の1名のため削除できない |
 | 409 | `SUPERUSER_CANNOT_BE_DELETED` | スーパーユーザは削除できない（先に他のユーザへ移す） |
