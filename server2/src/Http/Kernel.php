@@ -45,6 +45,6 @@ final class Kernel
         if ($e->details !== []) {
             $error['details'] = $e->details;
         }
-        return Response::json($e->status, ['error' => $error], $e->headers);
+        return Response::json($e->status, ['error' => $error], $e->headers, $e->setCookies);
     }
 }

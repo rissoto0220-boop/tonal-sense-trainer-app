@@ -5,6 +5,8 @@
     "license": "proprietary",
     "require": {
         "php": ">=8.2",
+        "ext-curl": "*",
+        "ext-intl": "*",
         "ext-json": "*",
         "ext-pdo": "*",
         "ext-pdo_mysql": "*",

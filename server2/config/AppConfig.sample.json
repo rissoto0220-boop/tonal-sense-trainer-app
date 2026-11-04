@@ -1,9 +1,25 @@
 {
   "environment": "development",
-  "allowedOrigins": ["http://localhost:8888"],
+  "allowedOrigins": ["http://localhost:8888", "http://127.0.0.1:8890"],
+  "publicBaseUrl": "http://127.0.0.1:8890",
   "cookie": {
     "secure": false,
     "useHostPrefix": false
   },
+  "mail": {
+    "driver": "log",
+    "from": "no-reply@example.com",
+    "logFile": "storage/logs/mail.log"
+  },
+  "captcha": {
+    "driver": "none",
+    "secretKey": ""
+  },
+  "secrets": {
+    "recoveryCodeKeys": { "1": "ZGV2LW9ubHktcmVjb3ZlcnktY29kZS1obWFjLWtleS0wMQ==" },
+    "currentRecoveryCodeKeyId": 1,
+    "rateLimitKey": "ZGV2LW9ubHktcmF0ZS1saW1pdC1obWFjLWtleS0wMDAx"
+  },
+  "trustedProxyHeader": null,
   "logFile": "storage/logs/app.log"
 }

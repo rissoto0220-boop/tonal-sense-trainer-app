@@ -22,6 +22,7 @@ try {
         array_map('strval', $_COOKIE),
         array_map('strval', array_filter($_GET, 'is_string')),
         (string) file_get_contents('php://input'),
+        $config->trustedProxyHeader,
     );
     $kernel->handle($request)->send();
 } catch (Throwable $e) {

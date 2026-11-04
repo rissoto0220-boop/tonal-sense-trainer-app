@@ -17,7 +17,7 @@ TonalSenseTrainer のユーザ・組織の管理と認証の API（素の PHP）
 
 ## 開発環境の準備
 
-必要なもの: PHP 8.2 以上（pdo_mysql、sodium、mbstring）、Composer、MySQL 8.4、Node.js（JavaScript のテスト用）。
+必要なもの: PHP 8.2 以上（pdo_mysql、sodium、mbstring、intl、curl）、Composer、MySQL 8.4、Node.js（JavaScript のテスト用）。
 
 ```bash
 composer install
@@ -53,7 +53,20 @@ npm test                      # JavaScript
 | ファイル | 内容 | 環境変数で場所を指定 |
 |---|---|---|
 | `config/DBConfig.json` | DB の接続情報（ホスト、ポート、データベース、ユーザ、パスワード、SSL） | `UECTST_DB_CONFIG` |
-| `config/AppConfig.json` | 動作環境、許可するオリジン（CSRF 対策）、Cookie の属性、ログの出力先 | `UECTST_APP_CONFIG` |
+| `config/AppConfig.json` | 動作環境、許可するオリジン（CSRF 対策）、メールのリンクの基準 URL、Cookie の属性、メール・CAPTCHA の設定、秘密の鍵、プロキシのヘッダ、ログの出力先 | `UECTST_APP_CONFIG` |
+
+`AppConfig.json` の主な項目（`config/AppConfig.sample.json` が開発用の例）:
+
+| 項目 | 内容 |
+|---|---|
+| `publicBaseUrl` | メールに書く、画面の基準 URL（本登録のリンクなど） |
+| `mail` | `driver`（`log`: ファイルに書くだけ／本番用の送信方式）、`from`（送信元）、`logFile` |
+| `captcha` | `driver`（`none`／`turnstile`）、`secretKey`。本番では `turnstile` を使う |
+| `secrets.recoveryCodeKeys` | 復旧コードの HMAC 鍵（ID → Base64）。鍵を増やしても、古い鍵のコードでログインできる。`currentRecoveryCodeKeyId` が新規発行に使う鍵 |
+| `secrets.rateLimitKey` | 回数制限のキー（IP など）をハッシュする鍵 |
+| `trustedProxyHeader` | リバースプロキシ配下のとき、クライアント IP を入れるヘッダ名（例: `X-Forwarded-For`）。直接公開なら `null` |
+
+**`secrets` の開発用の値は、本番で絶対に使わないこと**（本番では、乱数で作った別の値にする）。
 
 - 本番では、`public/` の外に置き、リリースを切り替えても引き継がれる場所（`shared/`）へのシンボリックリンクにする。
 - `production` では、Cookie の `secure`・`useHostPrefix` を `true` にし、オリジンは `https` のみとする（満たさない設定は、起動時に拒否される）。

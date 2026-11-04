@@ -21,6 +21,7 @@ final class Request
         public readonly array $cookies = [],
         public readonly array $query = [],
         private readonly string $rawBody = '',
+        public readonly string $clientIp = '0.0.0.0',
     ) {
     }
 
@@ -28,9 +29,10 @@ final class Request
      * @param array<string, mixed> $server
      * @param array<string, string> $cookies
      * @param array<string, string> $query
-     * @param string $basePath ドキュメントルートからのアプリのパス（例: /uec-tst/server2/public。本番は空）
+     * @param string|null $trustedProxyHeader クライアントの IP アドレスを、リバースプロキシが付けるヘッダから取る場合のヘッダ名（最後の値を使う）。
+     *                                        信頼できるプロキシの背後でだけ指定する（偽装できてしまうため）。null なら、接続元の IP アドレスを使う
      */
-    public static function fromGlobals(array $server, array $cookies, array $query, string $rawBody): self
+    public static function fromGlobals(array $server, array $cookies, array $query, string $rawBody, ?string $trustedProxyHeader = null): self
     {
         $headers = [];
         foreach ($server as $key => $value) {
@@ -60,7 +62,27 @@ final class Request
         }
 
         $method = is_string($server['REQUEST_METHOD'] ?? null) ? strtoupper($server['REQUEST_METHOD']) : 'GET';
-        return new self($method, $path, $headers, $cookies, $query, $rawBody);
+        return new self($method, $path, $headers, $cookies, $query, $rawBody, self::resolveClientIp($server, $headers, $trustedProxyHeader));
+    }
+
+    /**
+     * @param array<string, mixed> $server
+     * @param array<string, string> $headers
+     */
+    private static function resolveClientIp(array $server, array $headers, ?string $trustedProxyHeader): string
+    {
+        $remote = is_string($server['REMOTE_ADDR'] ?? null) ? $server['REMOTE_ADDR'] : '0.0.0.0';
+        if ($trustedProxyHeader !== null) {
+            $value = $headers[strtolower($trustedProxyHeader)] ?? null;
+            if ($value !== null) {
+                $parts = array_map('trim', explode(',', $value));
+                $last = end($parts);
+                if (is_string($last) && filter_var($last, FILTER_VALIDATE_IP) !== false) {
+                    return $last;
+                }
+            }
+        }
+        return filter_var($remote, FILTER_VALIDATE_IP) !== false ? $remote : '0.0.0.0';
     }
 
     public function header(string $name): ?string

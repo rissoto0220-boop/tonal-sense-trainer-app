@@ -14,6 +14,7 @@ class ApiException extends RuntimeException
     /**
      * @param list<array{field: string, code: string}> $details 入力エラーの項目ごとの詳細
      * @param array<string, string> $headers 追加のレスポンスヘッダ（Retry-After など）
+     * @param list<string> $setCookies Set-Cookie ヘッダの値（セッションが無効なときの Cookie の削除など）
      */
     public function __construct(
         public readonly int $status,
@@ -21,6 +22,7 @@ class ApiException extends RuntimeException
         string $message,
         public readonly array $details = [],
         public readonly array $headers = [],
+        public readonly array $setCookies = [],
     ) {
         parent::__construct($message);
     }
@@ -30,9 +32,33 @@ class ApiException extends RuntimeException
         return new self(400, 'BAD_REQUEST', $message);
     }
 
-    public static function unauthenticated(string $message = 'ログインしていません。'): self
+    /**
+     * @param list<string> $setCookies
+     */
+    public static function unauthenticated(string $message = 'ログインしていません。', array $setCookies = []): self
     {
-        return new self(401, 'UNAUTHENTICATED', $message);
+        return new self(401, 'UNAUTHENTICATED', $message, [], [], $setCookies);
+    }
+
+    public static function elevationRequired(): self
+    {
+        return new self(403, 'ELEVATION_REQUIRED', 'この操作を行うには、確認が必要です。');
+    }
+
+    public static function conflict(string $code, string $message): self
+    {
+        return new self(409, $code, $message);
+    }
+
+    public static function gone(string $code, string $message): self
+    {
+        return new self(410, $code, $message);
+    }
+
+    /** まだ実装していない機能（段階的に実装するための、一時的なもの）。 */
+    public static function notImplemented(): self
+    {
+        return new self(501, 'NOT_IMPLEMENTED', 'この機能は、まだ利用できません。');
     }
 
     public static function forbiddenOrigin(): self

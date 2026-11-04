@@ -10,10 +10,53 @@ use UecTst\Config\ConfigException;
 
 final class AppConfigTest extends TestCase
 {
+    private const DEV_KEY_1 = 'ZGV2LW9ubHktcmVjb3ZlcnktY29kZS1obWFjLWtleS0wMQ==';
+    private const DEV_KEY_2 = 'ZGV2LW9ubHktcmF0ZS1saW1pdC1obWFjLWtleS0wMDAx';
+
     /** @return array<string, mixed> */
-    private static function dev(): array
+    public static function dev(): array
     {
-        return ['environment' => 'development', 'allowedOrigins' => ['http://localhost:8888'], 'cookie' => ['secure' => false, 'useHostPrefix' => false]];
+        return [
+            'environment' => 'development',
+            'allowedOrigins' => ['http://localhost:8888'],
+            'publicBaseUrl' => 'http://localhost:8888',
+            'cookie' => ['secure' => false, 'useHostPrefix' => false],
+            'mail' => ['driver' => 'log', 'from' => 'no-reply@example.com'],
+            'captcha' => ['driver' => 'none', 'secretKey' => ''],
+            'secrets' => [
+                'recoveryCodeKeys' => ['1' => self::DEV_KEY_1],
+                'currentRecoveryCodeKeyId' => 1,
+                'rateLimitKey' => self::DEV_KEY_2,
+            ],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private static function production(): array
+    {
+        $data = self::dev();
+        $data['environment'] = 'production';
+        $data['allowedOrigins'] = ['https://uec-tst.koto.jp'];
+        $data['publicBaseUrl'] = 'https://uec-tst.koto.jp';
+        $data['cookie'] = ['secure' => true, 'useHostPrefix' => true];
+        $data['captcha'] = ['driver' => 'turnstile', 'secretKey' => 'turnstile-secret'];
+        $data['secrets'] = [
+            'recoveryCodeKeys' => ['1' => base64_encode(random_bytes(32)), '2' => base64_encode(random_bytes(32))],
+            'currentRecoveryCodeKeyId' => 2,
+            'rateLimitKey' => base64_encode(random_bytes(32)),
+        ];
+        return $data;
+    }
+
+    /** @param array<string, mixed> $data */
+    private function assertRejected(array $data, string $why): void
+    {
+        try {
+            AppConfig::fromArray($data);
+            $this->fail("拒否されるはず: {$why}");
+        } catch (ConfigException) {
+            $this->addToAssertionCount(1);
+        }
     }
 
     public function testDevelopmentConfigIsLoaded(): void
@@ -21,24 +64,71 @@ final class AppConfigTest extends TestCase
         $config = AppConfig::fromArray(self::dev());
         $this->assertFalse($config->isProduction());
         $this->assertSame(['http://localhost:8888'], $config->allowedOrigins);
+        $this->assertSame('http://localhost:8888', $config->publicBaseUrl);
         $this->assertStringEndsWith('/storage/logs/app.log', $config->logFile);
+        $this->assertStringEndsWith('/storage/logs/mail.log', $config->mailLogFile);
+        $this->assertNull($config->trustedProxyHeader);
+        $this->assertSame(1, $config->currentRecoveryCodeKeyId);
+        $this->assertGreaterThanOrEqual(32, strlen($config->recoveryCodeKeys()[1]));
+        $this->assertGreaterThanOrEqual(32, strlen($config->rateLimitKey()));
     }
 
-    public function testProductionRequiresSecureCookiesAndHttps(): void
+    public function testProductionConfigIsAccepted(): void
     {
-        $prod = ['environment' => 'production', 'allowedOrigins' => ['https://uec-tst.koto.jp'], 'cookie' => ['secure' => true, 'useHostPrefix' => true]];
-        $this->assertTrue(AppConfig::fromArray($prod)->isProduction());
+        $config = AppConfig::fromArray(self::production());
+        $this->assertTrue($config->isProduction());
+        $this->assertSame(2, $config->currentRecoveryCodeKeyId);
+        $this->assertCount(2, $config->recoveryCodeKeys());
+    }
 
-        $insecureCookie = $prod;
+    public function testProductionRequiresSecureCookiesHttpsAndTurnstile(): void
+    {
+        $insecureCookie = self::production();
         $insecureCookie['cookie']['secure'] = false;
-        $this->expectException(ConfigException::class);
-        AppConfig::fromArray($insecureCookie);
+        $this->assertRejected($insecureCookie, 'Secure でない Cookie');
+
+        $noPrefix = self::production();
+        $noPrefix['cookie']['useHostPrefix'] = false;
+        $this->assertRejected($noPrefix, '__Host- なし');
+
+        $httpOrigin = self::production();
+        $httpOrigin['allowedOrigins'] = ['http://uec-tst.koto.jp'];
+        $this->assertRejected($httpOrigin, 'http のオリジン');
+
+        $httpBase = self::production();
+        $httpBase['publicBaseUrl'] = 'http://uec-tst.koto.jp';
+        $this->assertRejected($httpBase, 'http の公開 URL');
+
+        $noCaptcha = self::production();
+        $noCaptcha['captcha'] = ['driver' => 'none', 'secretKey' => ''];
+        $this->assertRejected($noCaptcha, 'CAPTCHA なし');
     }
 
-    public function testProductionRejectsHttpOrigin(): void
+    public function testProductionRejectsTheSampleDevelopmentKeys(): void
     {
-        $this->expectException(ConfigException::class);
-        AppConfig::fromArray(['environment' => 'production', 'allowedOrigins' => ['http://uec-tst.koto.jp'], 'cookie' => ['secure' => true, 'useHostPrefix' => true]]);
+        $recovery = self::production();
+        $recovery['secrets']['recoveryCodeKeys']['2'] = self::DEV_KEY_1;
+        $this->assertRejected($recovery, 'サンプルの復旧コードの鍵');
+
+        $rate = self::production();
+        $rate['secrets']['rateLimitKey'] = self::DEV_KEY_2;
+        $this->assertRejected($rate, 'サンプルの回数制限の鍵');
+    }
+
+    public function testKeysMustBeLongBase64(): void
+    {
+        foreach (['', 'not base64 !!!', base64_encode('short')] as $bad) {
+            $data = self::dev();
+            $data['secrets']['rateLimitKey'] = $bad;
+            $this->assertRejected($data, "鍵: {$bad}");
+        }
+    }
+
+    public function testCurrentKeyIdMustExist(): void
+    {
+        $data = self::dev();
+        $data['secrets']['currentRecoveryCodeKeyId'] = 9;
+        $this->assertRejected($data, '存在しない鍵の識別子');
     }
 
     public function testOriginWithPathOrTrailingSlashIsRejected(): void
@@ -46,20 +136,55 @@ final class AppConfigTest extends TestCase
         foreach (['https://uec-tst.koto.jp/', 'https://uec-tst.koto.jp/app', 'uec-tst.koto.jp'] as $origin) {
             $data = self::dev();
             $data['allowedOrigins'] = [$origin];
-            try {
-                AppConfig::fromArray($data);
-                $this->fail("拒否されるはず: {$origin}");
-            } catch (ConfigException) {
-                $this->addToAssertionCount(1);
-            }
+            $this->assertRejected($data, $origin);
         }
     }
 
-    public function testInvalidEnvironmentIsRejected(): void
+    public function testPublicBaseUrlMayHaveAPathButNotATrailingSlash(): void
     {
         $data = self::dev();
-        $data['environment'] = 'staging';
-        $this->expectException(ConfigException::class);
-        AppConfig::fromArray($data);
+        $data['publicBaseUrl'] = 'https://uec-tst.koto.jp/server';
+        $this->assertSame('https://uec-tst.koto.jp/server', AppConfig::fromArray($data)->publicBaseUrl);
+
+        $data['publicBaseUrl'] = 'https://uec-tst.koto.jp/';
+        $this->assertRejected($data, '末尾の /');
+    }
+
+    public function testInvalidEnvironmentAndMailAndCaptchaAreRejected(): void
+    {
+        $env = self::dev();
+        $env['environment'] = 'staging';
+        $this->assertRejected($env, 'environment');
+
+        $mail = self::dev();
+        $mail['mail']['driver'] = 'smtp';
+        $this->assertRejected($mail, 'mail.driver');
+
+        $from = self::dev();
+        $from['mail']['from'] = 'not-an-email';
+        $this->assertRejected($from, 'mail.from');
+
+        $captcha = self::dev();
+        $captcha['captcha'] = ['driver' => 'turnstile', 'secretKey' => ''];
+        $this->assertRejected($captcha, 'turnstile の秘密鍵なし');
+    }
+
+    public function testTrustedProxyHeaderMustBeAHeaderName(): void
+    {
+        $data = self::dev();
+        $data['trustedProxyHeader'] = 'X-Forwarded-For';
+        $this->assertSame('X-Forwarded-For', AppConfig::fromArray($data)->trustedProxyHeader);
+
+        $data['trustedProxyHeader'] = "X-Forwarded-For\r\nSet-Cookie: x";
+        $this->assertRejected($data, 'ヘッダの注入');
+    }
+
+    public function testSecretsNeverAppearInDebugOutput(): void
+    {
+        $config = AppConfig::fromArray(self::dev());
+        $dump = print_r($config, true) . var_export($config->__debugInfo(), true);
+        $this->assertStringNotContainsString(self::DEV_KEY_1, $dump);
+        $this->assertStringNotContainsString(self::DEV_KEY_2, $dump);
+        $this->assertStringNotContainsString(base64_decode(self::DEV_KEY_1), $dump);
     }
 }

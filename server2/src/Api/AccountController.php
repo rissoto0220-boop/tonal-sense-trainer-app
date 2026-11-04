@@ -1,0 +1,116 @@
+<?php
+
+declare(strict_types=1);
+
+namespace UecTst\Api;
+
+use UecTst\Auth\AuthContext;
+use UecTst\Auth\RecoveryAttempts;
+use UecTst\Db\Transaction;
+use UecTst\Http\ApiException;
+use UecTst\Http\Request;
+use UecTst\Http\Response;
+use UecTst\Security\RecoveryCode;
+use UecTst\Support\Time;
+use UecTst\Validation\Params;
+
+/**
+ * 家族のアカウントの操作。
+ *   #15 重要な操作の確認 POST /elevation
+ *   #16 復旧コードの再発行 POST /recovery-code（確認が必要）
+ *   #21 退会 DELETE /family（確認が必要）
+ *
+ * 段階1では、確認は「復旧コード」のみ実装する（スーパーユーザのパスワード・パスキーは、段階2）。
+ */
+final class AccountController extends AuthenticatedController
+{
+    private const REISSUE_LIMIT = 3;     // 家族単位 3回／1時間
+    private const REISSUE_WINDOW = 3600;
+
+    /** #15 家族向けの重要な操作の確認（この端末で、5分間） */
+    public function elevate(Request $request): Response
+    {
+        $data = $request->json();
+        $methods = array_values(array_filter(['superuserPassword', 'passkey', 'recoveryCode'], static fn (string $k): bool => array_key_exists($k, $data)));
+        if (count($methods) !== 1) {
+            throw ApiException::badRequest('「superuserPassword」「passkey」「recoveryCode」のうち、1つだけを指定してください。');
+        }
+
+        return $this->authenticated($request, function (AuthContext $c) use ($data, $methods, $request): Response {
+            $family = $this->services->families->find($c->familyId()) ?? throw ApiException::unauthenticated();
+
+            if ($methods[0] !== 'recoveryCode') {
+                // パスワードが未設定の家族は、パスワードでは確認できない。設定済みの家族のパスワード・パスキーの確認は、段階2で実装する。
+                if (!$family->superuserPasswordSet) {
+                    throw ApiException::conflict('SUPERUSER_PASSWORD_NOT_SET', 'スーパーユーザのパスワードが設定されていません。復旧コードで確認してください。');
+                }
+                throw ApiException::notImplemented();
+            }
+
+            // パスワードが設定済みの家族では、復旧コードによる確認を認めない（日常の確認は、パスワードで行うため）。
+            if ($family->superuserPasswordSet) {
+                throw ApiException::conflict('SUPERUSER_PASSWORD_ALREADY_SET', 'パスワードが設定されています。パスワードで確認してください。');
+            }
+
+            $input = Params::string($data, 'recoveryCode');
+            $this->services->recoveryAttempts->assertAllowed($request->clientIp);
+            $normalized = RecoveryAttempts::normalize($input);
+
+            $expected = $this->services->recoveryHasher->hash($normalized, $family->recoveryCodeKeyId);
+            if (!hash_equals($family->recoveryCodeHash, $expected)) {
+                $this->services->recoveryAttempts->recordFailure($request->clientIp);
+                throw new ApiException(401, 'INVALID_RECOVERY_CODE', '復旧コードが正しくありません。');
+            }
+
+            $until = $this->services->sessions->elevate($c->session->id);
+            return Response::json(200, ['elevatedUntil' => Time::toIso($until)]);
+        });
+    }
+
+    /** #16 復旧コードの再発行（旧コードの無効化と、操作中の端末以外のセッションの失効） */
+    public function reissueRecoveryCode(Request $request): Response
+    {
+        return $this->authenticated($request, function (AuthContext $c): Response {
+            $this->requireElevation($c);
+            $familyId = $c->familyId();
+
+            // 回数制限（家族単位）。
+            $hit = $this->services->rateLimiter->hit('recovery:reissue:' . bin2hex($familyId), self::REISSUE_WINDOW);
+            if ($hit->count > self::REISSUE_LIMIT) {
+                throw ApiException::rateLimited($hit->retryAfterSeconds);
+            }
+
+            [$code, $revoked] = Transaction::run($this->services->pdo, function () use ($c, $familyId): array {
+                $this->services->families->lock($familyId) ?? throw ApiException::unauthenticated();
+                $now = $this->services->clock->now();
+                $hasher = $this->services->recoveryHasher;
+
+                $code = null;
+                for ($attempt = 0; $attempt < 5 && $code === null; $attempt++) {
+                    $candidate = RecoveryCode::generate();
+                    if ($this->services->families->updateRecoveryCode($familyId, $hasher->hashWithCurrentKey($candidate), $hasher->currentKeyId(), $now)) {
+                        $code = $candidate;
+                    }
+                }
+                if ($code === null) {
+                    throw new \RuntimeException('復旧コードの重複が続いたため、再発行できませんでした');
+                }
+                $revoked = $this->services->sessions->deleteOthers($familyId, $c->session->id);
+                return [$code, $revoked];
+            });
+
+            return Response::json(200, ['recoveryCode' => RecoveryCode::format($code), 'revokedSessionCount' => $revoked]);
+        });
+    }
+
+    /** #21 退会（家族・ユーザ・セッション・パスキー・所属を削除する。利用データは削除しない。基本方針 10.7） */
+    public function withdraw(Request $request): Response
+    {
+        return $this->authenticated($request, function (AuthContext $c): Response {
+            $this->requireElevation($c);
+            // ON DELETE CASCADE で、ユーザ・パスキー・セッションが削除される。利用データは、外部キーを持たないため、そのまま残る。
+            $this->services->families->delete($c->familyId());
+            return Response::noContent([], [$this->services->cookies->clear()]);
+        });
+    }
+}
