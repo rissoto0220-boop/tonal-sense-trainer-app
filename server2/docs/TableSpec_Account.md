@@ -18,6 +18,7 @@
   - MySQL 8.4 の既定（`utf8mb4_0900_ai_ci`）は大文字・小文字やアクセントを区別せず、UNIQUE 制約での重複判定がアプリケーションの意図とずれるため。
   - 大文字・小文字や全角・半角を同一とみなすかどうかは、アプリケーションの正規化で決める（3.3 参照）。
 - メールアドレスなど個人情報に繋がる項目は持たない（基本方針 1.）。
+- DDL を実行するための SQL（データベース `UECTSTDB` の作成、テーブルごとの個別のファイル、一括のファイル）は、`sql/` にある。DDL を変更したときは、本仕様書（TableSpec_Account.md・TableSpec_Auth.md・TableSpec_Organization.md）と、`sql/` のすべてのファイルを更新すること。
 - 本仕様書の対象外：
   - セッション（認証トークン）・仮登録・回数制限・WebAuthn の challenge：TableSpec_Auth.md を参照
   - 組織・組織のパスキー・組織のセッション・招待：TableSpec_Organization.md を参照
