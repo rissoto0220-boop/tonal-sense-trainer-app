@@ -24,6 +24,9 @@
     "rpId": "localhost",
     "rpName": "TonalSenseTrainer"
   },
+  "testData": {
+    "exportMaxSessions": 5000
+  },
   "trustedProxyHeader": null,
   "logFile": "storage/logs/app.log"
 }

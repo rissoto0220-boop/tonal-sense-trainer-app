@@ -18,6 +18,10 @@ final class AppConfig
 
     private const MIN_KEY_BYTES = 32;
 
+    /** 利用データの1回のダウンロードで取り出せるセッション数の、初期値と許容範囲（ApiSpec_TestData.md 4.2）。 */
+    public const DEFAULT_EXPORT_MAX_SESSIONS = 5000;
+    public const MAX_EXPORT_MAX_SESSIONS = 100000;
+
     /**
      * @param list<string> $allowedOrigins
      * @param array<int, string> $recoveryCodeKeys 鍵の識別子 => 鍵（バイナリ）
@@ -40,6 +44,7 @@ final class AppConfig
         public readonly string $logFile,
         public readonly string $webauthnRpId,
         public readonly string $webauthnRpName,
+        public readonly int $exportMaxSessions = self::DEFAULT_EXPORT_MAX_SESSIONS,
     ) {
     }
 
@@ -169,6 +174,15 @@ final class AppConfig
             throw new ConfigException('AppConfig: webauthn.rpName は空でない文字列である必要があります');
         }
 
+        $testData = $data['testData'] ?? [];
+        if (!is_array($testData)) {
+            throw new ConfigException('AppConfig: testData はオブジェクトである必要があります');
+        }
+        $exportMax = $testData['exportMaxSessions'] ?? self::DEFAULT_EXPORT_MAX_SESSIONS;
+        if (!is_int($exportMax) || $exportMax < 1 || $exportMax > self::MAX_EXPORT_MAX_SESSIONS) {
+            throw new ConfigException('AppConfig: testData.exportMaxSessions は 1〜' . self::MAX_EXPORT_MAX_SESSIONS . ' の整数である必要があります（省略時は ' . self::DEFAULT_EXPORT_MAX_SESSIONS . '）');
+        }
+
         return new self(
             environment: $environment,
             allowedOrigins: array_values($origins),
@@ -187,6 +201,7 @@ final class AppConfig
             logFile: self::absolutePath($logFile),
             webauthnRpId: strtolower($rpId),
             webauthnRpName: $rpName,
+            exportMaxSessions: $exportMax,
         );
     }
 

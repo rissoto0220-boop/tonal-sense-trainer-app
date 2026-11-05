@@ -210,4 +210,22 @@ final class AppConfigTest extends TestCase
             }
         }
     }
+
+    public function testExportMaxSessionsDefaultsAndIsValidated(): void
+    {
+        $this->assertSame(5000, AppConfig::fromArray(self::dev())->exportMaxSessions);
+        $config = AppConfig::fromArray(['testData' => ['exportMaxSessions' => 20000]] + self::dev());
+        $this->assertSame(20000, $config->exportMaxSessions);
+
+        foreach ([0, -1, 100001, '5000', 1.5, true] as $bad) {
+            try {
+                AppConfig::fromArray(['testData' => ['exportMaxSessions' => $bad]] + self::dev());
+                $this->fail('拒否されるはずです: ' . json_encode($bad));
+            } catch (ConfigException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+        $this->expectException(ConfigException::class);
+        AppConfig::fromArray(['testData' => 'x'] + self::dev());
+    }
 }

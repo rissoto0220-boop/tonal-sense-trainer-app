@@ -584,13 +584,13 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 
 **エラー**：`401 UNAUTHENTICATED`、`403 SUPER_ONLY`、`403 ELEVATION_REQUIRED`、`404 NOT_FOUND`、`409 SUPER_ORGANIZATION_PROTECTED`
 
-## 7. 利用データの参照（別途定義）
+## 7. 利用データの参照
 
-- 利用データ（テスト結果）の参照・ダウンロードの API は、利用データのテーブルの設計（別途）の後に定義する。
+- 利用データ（テスト結果）の参照・ダウンロード・削除の API（O22〜O26）は、ApiSpec_TestData.md で定義する。
 - 参照できる範囲は、TableSpec_Organization.md 6. に従う。
   - 通常の組織：現在その組織に所属している家族の、現存するユーザのデータのみ。
   - 研究者：すべて（個人ユーザ・退会した家族・削除されたユーザのデータを含む）。
-- パスは、`/api/v1/org/` の下に置く（例：`/api/v1/org/users/{userId}/...`、`/api/v1/org/exports/...`）。
+- パスは、`/api/v1/org/` の下に置く（`/api/v1/org/users/{userId}/...`、`/api/v1/org/test-exports` など）。
 - 参照の可否は、リクエストのたびに、組織の所属関係で判定する（セッションに保持した値は使わない）。参照できないユーザの `userId` を指定された場合は、存在しない場合と区別せず `404 NOT_FOUND` を返す。
 
 ## 8. 操作の記録
