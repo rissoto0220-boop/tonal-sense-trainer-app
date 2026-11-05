@@ -124,6 +124,16 @@ class ApiException extends RuntimeException
         return new self(403, 'SUPER_ONLY', 'この操作は、研究者の組織だけが実行できます。');
     }
 
+    public static function payloadTooLarge(): self
+    {
+        return new self(413, 'PAYLOAD_TOO_LARGE', 'データが大きすぎるため、受け付けられません。');
+    }
+
+    public static function exportTooLarge(int $count, int $limit): self
+    {
+        return new self(422, 'EXPORT_TOO_LARGE', "ダウンロードの範囲が大きすぎます（{$count}件。1回に取り出せるのは{$limit}件までです）。ユーザ・種類・期間を絞ってください。");
+    }
+
     public static function internal(): self
     {
         return new self(500, 'INTERNAL_ERROR', 'サーバでエラーが発生しました。しばらくしてから、もう一度お試しください。');

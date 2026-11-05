@@ -15,6 +15,8 @@ export { OrgAccountApi } from "./OrgAccountApi.js";
 export { OrgPasskeyApi } from "./OrgPasskeyApi.js";
 export { OrgInvitationApi } from "./OrgInvitationApi.js";
 export { OrgAdminApi } from "./OrgAdminApi.js";
+export { TestDataApi } from "./TestDataApi.js";
+export { OrgTestDataApi } from "./OrgTestDataApi.js";
 export { RecoveryCode } from "./RecoveryCode.js";
 export { readFragmentToken, clearFragment } from "./TokenFragment.js";
 export { isPasskeySupported, createCredential, getCredential, base64UrlToBuffer, bufferToBase64Url } from "./WebAuthnBrowser.js";

@@ -31,6 +31,9 @@ use UecTst\Security\PasswordHasher;
 use UecTst\RateLimit\RateLimiter;
 use UecTst\Security\RecoveryCodeHasher;
 use UecTst\Support\Clock;
+use UecTst\TestData\ExportWriter;
+use UecTst\TestData\SessionMetrics;
+use UecTst\TestData\TestSessionRepository;
 
 /**
  * アプリケーションの部品の組み立て。テストでは、時計・メール・CAPTCHA を、差し替えて組み立てる。
@@ -60,6 +63,9 @@ final class Services
     public readonly OrgAuthenticator $orgAuthenticator;
     public readonly OrgPasswordService $orgPasswords;
     public readonly PasskeyRepository $orgPasskeys;
+    public readonly TestSessionRepository $testSessions;
+    public readonly SessionMetrics $sessionMetrics;
+    public readonly ExportWriter $exportWriter;
 
     public function __construct(
         public readonly AppConfig $config,
@@ -93,5 +99,8 @@ final class Services
         $this->orgAuthenticator = new OrgAuthenticator($this->orgSessions, $this->organizations, $this->orgCookies);
         $this->orgPasswords = new OrgPasswordService($pdo, $clock, $this->organizations, $this->passwordHasher);
         $this->orgPasskeys = new PasskeyRepository($pdo, 'organization_passkeys', 'organization_id');
+        $this->testSessions = new TestSessionRepository($pdo);
+        $this->sessionMetrics = new SessionMetrics($pdo);
+        $this->exportWriter = new ExportWriter($this->testSessions, $this->sessionMetrics);
     }
 }

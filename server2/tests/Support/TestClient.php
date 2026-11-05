@@ -38,7 +38,14 @@ final class TestClient
             $raw = json_encode($body, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
             $baseHeaders['content-length'] = (string) strlen($raw);
         }
-        $request = new Request($method, $path, $headers + $baseHeaders, $this->cookies, [], $raw, $this->ip);
+        // パスにクエリ（?a=b）が付いていれば、分けて渡す。
+        $query = [];
+        if (str_contains($path, '?')) {
+            [$path, $queryString] = explode('?', $path, 2);
+            parse_str($queryString, $query);
+            $query = array_map('strval', $query);
+        }
+        $request = new Request($method, $path, $headers + $baseHeaders, $this->cookies, $query, $raw, $this->ip);
         $response = new TestResponse($this->kernel->handle($request));
         $this->absorbCookies($response);
         return $response;

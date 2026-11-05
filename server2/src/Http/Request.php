@@ -90,6 +90,12 @@ final class Request
         return $this->headers[strtolower($name)] ?? null;
     }
 
+    /** 本文の大きさ（バイト）。 */
+    public function bodyLength(): int
+    {
+        return strlen($this->rawBody);
+    }
+
     public function cookie(string $name): ?string
     {
         return $this->cookies[$name] ?? null;

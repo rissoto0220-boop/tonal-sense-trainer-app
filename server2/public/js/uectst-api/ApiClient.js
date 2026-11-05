@@ -34,6 +34,18 @@ export class ApiClient {
     return this.#request("GET", path, undefined, options);
   }
 
+  /**
+   * ファイルとして受け取る GET（CSV・ZIP のダウンロード）。成功時は { blob, filename, contentType } を返す。
+   * エラーは、get と同じ ApiError。
+   * @param {string} path
+   * @param {object} [options]
+   * @param {object} [options.query]
+   * @returns {Promise<{blob: Blob, filename: string|null, contentType: string|null}>}
+   */
+  getFile(path, options = {}) {
+    return this.#request("GET", path, undefined, { ...options, file: true });
+  }
+
   /** @param {string} path @param {object} [body] */
   post(path, body = {}) {
     return this.#request("POST", path, body, {});
@@ -58,14 +70,14 @@ export class ApiClient {
    * @param {string} method
    * @param {string} path
    * @param {object|undefined} body
-   * @param {{ query?: Record<string, string|number|boolean|null|undefined> }} options
+   * @param {{ query?: Record<string, string|number|boolean|null|undefined>, file?: boolean }} options
    * @param {boolean} [retried] 確認の後のやり直しか（無限にやり直さないため）
    * @returns {Promise<any>} 成功時はレスポンスの JSON（204 は null）
    */
   async #request(method, path, body, options, retried = false) {
     const url = this.#url(path, options.query);
     /** @type {RequestInit} */
-    const init = { method, credentials: "same-origin", headers: { Accept: "application/json" } };
+    const init = { method, credentials: "same-origin", headers: { Accept: options.file ? "*/*" : "application/json" } };
     if (body !== undefined) {
       init.headers["Content-Type"] = "application/json";
       init.body = JSON.stringify(body);
@@ -79,6 +91,7 @@ export class ApiClient {
     }
 
     if (response.ok) {
+      if (options.file) return this.#readFile(response);
       if (response.status === 204) return null;
       return this.#readJson(response);
     }
@@ -103,6 +116,17 @@ export class ApiClient {
       url += "?" + new URLSearchParams(entries.map(([k, v]) => [k, String(v)])).toString();
     }
     return url;
+  }
+
+  /** @param {Response} response */
+  async #readFile(response) {
+    const disposition = response.headers?.get?.("Content-Disposition") ?? "";
+    const match = /filename="([^"]+)"/.exec(disposition);
+    try {
+      return { blob: await response.blob(), filename: match ? match[1] : null, contentType: response.headers?.get?.("Content-Type") ?? null };
+    } catch {
+      throw new ApiError({ status: response.status, code: "INVALID_RESPONSE", message: "ダウンロードしたデータを読み取れませんでした。" });
+    }
   }
 
   /** @param {Response} response */

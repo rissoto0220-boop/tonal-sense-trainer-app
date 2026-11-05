@@ -28,5 +28,9 @@ try {
 } catch (Throwable $e) {
     // 設定の不備などで起動できない場合。利用者には内部の情報を返さず、原因はサーバのエラーログにだけ残す。
     error_log(sprintf('[uec-tst] boot failure: %s in %s:%d', $e::class, basename($e->getFile()), $e->getLine()));
+    if (headers_sent()) {
+        // ダウンロードの途中でエラーになった場合。ステータスは変えられないため、接続を切って、失敗を伝える。
+        exit(1);
+    }
     Response::json(500, ['error' => ['code' => 'INTERNAL_ERROR', 'message' => 'サーバでエラーが発生しました。しばらくしてから、もう一度お試しください。']])->send();
 }

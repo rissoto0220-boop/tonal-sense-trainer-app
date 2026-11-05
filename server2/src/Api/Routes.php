@@ -82,6 +82,17 @@ final class Routes
         self::post($router, '/api/v1/org/organizations/{organizationId}/password-reset', $services, fn (Services $s, Request $r, array $p) => (new OrgAdminController($s))->resetPassword($r, $p)); // O20
         self::delete($router, '/api/v1/org/organizations/{organizationId}', $services, fn (Services $s, Request $r, array $p) => (new OrgAdminController($s))->delete($r, $p)); // O21
 
+        // 利用データ（ApiSpec_TestData.md）
+        self::post($router, '/api/v1/users/{userId}/test-sessions', $services, fn (Services $s, Request $r, array $p) => (new TestDataController($s))->submit($r, $p));            // #32
+        self::get($router, '/api/v1/users/{userId}/test-sessions', $services, fn (Services $s, Request $r, array $p) => (new TestDataController($s))->list($r, $p));             // #33
+        self::get($router, '/api/v1/users/{userId}/test-sessions/{sessionId}', $services, fn (Services $s, Request $r, array $p) => (new TestDataController($s))->show($r, $p));  // #34
+        self::get($router, '/api/v1/users/{userId}/test-exports', $services, fn (Services $s, Request $r, array $p) => (new TestDataController($s))->export($r, $p));            // #35
+        self::get($router, '/api/v1/org/users', $services, fn (Services $s, Request $r) => (new OrgTestDataController($s))->users($r));                                          // O22
+        self::get($router, '/api/v1/org/users/{userId}/test-sessions', $services, fn (Services $s, Request $r, array $p) => (new OrgTestDataController($s))->sessions($r, $p));   // O23
+        self::get($router, '/api/v1/org/users/{userId}/test-sessions/{sessionId}', $services, fn (Services $s, Request $r, array $p) => (new OrgTestDataController($s))->session($r, $p)); // O24
+        self::get($router, '/api/v1/org/test-exports', $services, fn (Services $s, Request $r) => (new OrgTestDataController($s))->export($r));                                 // O25
+        self::delete($router, '/api/v1/org/test-sessions/{sessionId}', $services, fn (Services $s, Request $r, array $p) => (new OrgTestDataController($s))->delete($r, $p));   // O26
+
         // 確認・復旧コード・退会
         self::post($router, '/api/v1/elevation', $services, fn (Services $s, Request $r) => (new AccountController($s))->elevate($r));                 // #15
         self::post($router, '/api/v1/elevation/passkey-options', $services, fn (Services $s, Request $r) => (new AccountController($s))->passkeyOptions($r));  // #23

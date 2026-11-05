@@ -20,13 +20,13 @@ final class TestResponse
 
     public function body(): string
     {
-        return $this->response->body;
+        return $this->response->bodyContents();
     }
 
     /** @return array<string, mixed> */
     public function json(): array
     {
-        $data = json_decode($this->response->body, true, 32, JSON_THROW_ON_ERROR);
+        $data = json_decode($this->response->bodyContents(), true, 32, JSON_THROW_ON_ERROR);
         return is_array($data) ? $data : [];
     }
 

@@ -38,7 +38,7 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 |---|---|---|
 | 409 | `SESSION_ID_CONFLICT` | 同じ `sessionId` が、別のユーザのデータとして保存されている（#32） |
 | 413 | `PAYLOAD_TOO_LARGE` | リクエスト本文が上限（1 MiB）を超えた（#32） |
-| 422 | `EXPORT_TOO_LARGE` | ダウンロードの範囲が大きすぎる（5.2）。`details` に該当するセッション数と上限を入れる |
+| 422 | `EXPORT_TOO_LARGE` | ダウンロードの範囲が大きすぎる（4.2）。`message` に、該当するセッション数と上限を含める |
 
 ### 0.4 API 一覧
 
@@ -280,8 +280,8 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 | クエリ | 既定値 | 説明 |
 |---|---|---|
 | `format` | `zip` | `zip` / `csv` |
-| `userId` | 参照できるすべてのユーザ | 1 人のユーザ。複数のユーザは、`userId` を繰り返して指定する（最大 100 人） |
-| `testType` | すべて | 1 種類を指定する。複数の種類は、`testType` を繰り返す |
+| `userId` | 参照できるすべてのユーザ | ユーザの ID。複数のユーザは、カンマ区切りで指定する（最大 100 人） |
+| `testType` | すべて | 種類。複数の種類は、カンマ区切りで指定する |
 | `kind` | すべて | `responses` / `sessions` |
 | `from`、`to` | なし | `startedAt` の範囲（0.5 と同じ） |
 | `includeInterrupted` | `false` | 0.5 と同じ |
@@ -314,7 +314,7 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 
 - 1 回のダウンロードで取り出せるセッション数に、上限を設ける。初期値は **5,000 件**。
 - 上限は、`AppConfig.json` の `testData.exportMaxSessions` で指定する（1〜100000 の整数。省略時は 5,000）。
-- 本文を送り始める前に、範囲内のセッション数を数え、上限を超えていれば `422 EXPORT_TOO_LARGE` を返す（`details` に、`count` と `limit` を入れる）。クライアントは、ユーザ・種類・期間を絞って再度要求する。
+- 本文を送り始める前に、範囲内のセッション数を数え、上限を超えていれば `422 EXPORT_TOO_LARGE` を返す（`message` に、該当するセッション数と上限を含める）。クライアントは、ユーザ・種類・期間を絞って再度要求する。
 - 上限は、運用して調整する。
 
 **上限を設ける理由**
