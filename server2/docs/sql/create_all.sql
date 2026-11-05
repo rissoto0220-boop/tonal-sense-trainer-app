@@ -1,8 +1,8 @@
 -- データベース UECTSTDB と、すべてのテーブルを作成する。
 -- 警告: UECTSTDB がすでに存在する場合は、中のテーブルとデータをすべて削除してから作り直す。
--- このファイルは、00_database.sql と、01_〜11_ の各テーブルのファイルを、この順に連結したもの。
+-- このファイルは、00_database.sql と、01_〜17_ の各テーブルのファイルを、この順に連結したもの。
 -- DDL を変更したときは、仕様書（TableSpec_*.md）、個別のファイル、このファイルのすべてを更新すること。
--- テーブルを1つだけ作り直す場合は、個別のファイル（01_〜11_）を実行する。
+-- テーブルを1つだけ作り直す場合は、個別のファイル（01_〜17_）を実行する。
 -- 注意: Linux の MySQL（本番など）では、データベース名・テーブル名の大文字・小文字が区別される。UECTSTDB は大文字で指定すること。
 
 DROP DATABASE IF EXISTS UECTSTDB;
@@ -222,5 +222,155 @@ CREATE TABLE organization_invitations (
     KEY ix_organization_invitations_organization (organization_id),
     KEY ix_organization_invitations_expires_at   (expires_at),
     CONSTRAINT fk_organization_invitations_organization FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 12 test_sessions（テスト・訓練のセッション）  出典: TableSpec_TestData.md 2.4
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS test_sessions;
+CREATE TABLE test_sessions (
+    id                 BINARY(16)        NOT NULL,
+    user_id            BINARY(16)        NOT NULL,
+    test_type          VARCHAR(20)       NOT NULL,
+    session_status     VARCHAR(20)       NOT NULL,
+    variant            VARCHAR(32)       NULL,
+    attempt_number     SMALLINT UNSIGNED NULL,
+    planned_count      SMALLINT UNSIGNED NULL,
+    started_at         DATETIME(3)       NOT NULL,
+    ended_at           DATETIME(3)       NOT NULL,
+    utc_offset_minutes SMALLINT          NOT NULL,
+    attributes         JSON              NOT NULL,
+    received_at        DATETIME(6)       NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (id),
+    KEY ix_test_sessions_user_started (user_id, started_at),
+    KEY ix_test_sessions_type_started (test_type, started_at),
+    CONSTRAINT ck_test_sessions_test_type CHECK (test_type IN ('absolute_pitch', 'relative_pitch', 'functional_pitch', 'training')),
+    CONSTRAINT ck_test_sessions_status CHECK (session_status IN ('completed', 'forced_termination', 'audio_error', 'interrupted')),
+    CONSTRAINT ck_test_sessions_status_type CHECK (
+        session_status IN ('completed', 'interrupted')
+        OR (session_status = 'forced_termination' AND test_type = 'absolute_pitch')
+        OR (session_status = 'audio_error' AND test_type IN ('functional_pitch', 'training'))
+    ),
+    CONSTRAINT ck_test_sessions_period CHECK (ended_at >= started_at),
+    CONSTRAINT ck_test_sessions_utc_offset CHECK (utc_offset_minutes BETWEEN -720 AND 840)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 13 absolute_pitch_responses（絶対音感の回答）  出典: TableSpec_TestData.md 3.3
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS absolute_pitch_responses;
+CREATE TABLE absolute_pitch_responses (
+    session_id                    BINARY(16)        NOT NULL,
+    seq                           SMALLINT UNSIGNED NOT NULL,
+    phase                         VARCHAR(8)        NOT NULL,
+    question_number               SMALLINT UNSIGNED NOT NULL,
+    stimulus_number               SMALLINT UNSIGNED NOT NULL,
+    stimulus_note                 VARCHAR(8)        NOT NULL,
+    stimulus_filename             VARCHAR(64)       NOT NULL,
+    stimulus_started_at           DATETIME(3)       NULL,
+    correct_response              VARCHAR(8)        NOT NULL,
+    response_note                 VARCHAR(8)        NULL,
+    response_at                   DATETIME(3)       NULL,
+    response_time_ms              INT UNSIGNED      NULL,
+    outcome                       VARCHAR(12)       NOT NULL,
+    incorrect_total_after_question SMALLINT UNSIGNED NULL,
+    PRIMARY KEY (session_id, seq),
+    CONSTRAINT fk_absolute_pitch_responses_session FOREIGN KEY (session_id) REFERENCES test_sessions (id) ON DELETE CASCADE,
+    CONSTRAINT ck_absolute_pitch_responses_phase   CHECK (phase IN ('practice', 'test')),
+    CONSTRAINT ck_absolute_pitch_responses_outcome CHECK (outcome IN ('correct', 'incorrect', 'timeout', 'interrupted'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 14 relative_pitch_responses（相対音感の回答）  出典: TableSpec_TestData.md 4.3
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS relative_pitch_responses;
+CREATE TABLE relative_pitch_responses (
+    session_id           BINARY(16)        NOT NULL,
+    seq                  SMALLINT UNSIGNED NOT NULL,
+    phase                VARCHAR(8)        NOT NULL,
+    question_number      SMALLINT UNSIGNED NOT NULL,
+    key_block_number     SMALLINT UNSIGNED NULL,
+    key_code             VARCHAR(8)        NOT NULL,
+    cadence_filename     VARCHAR(64)       NOT NULL,
+    reference_note       VARCHAR(8)        NOT NULL,
+    target_note          VARCHAR(8)        NOT NULL,
+    interval_semitones   SMALLINT          NOT NULL,
+    syllable_code        VARCHAR(16)       NOT NULL,
+    display_label        VARCHAR(16)       NOT NULL,
+    interval_label       VARCHAR(16)       NULL,
+    scale_label          VARCHAR(16)       NULL,
+    cadence_started_at   DATETIME(3)       NULL,
+    reference_started_at DATETIME(3)       NULL,
+    target_started_at    DATETIME(3)       NULL,
+    response_code        SMALLINT          NULL,
+    response_at          DATETIME(3)       NULL,
+    response_time_ms     INT UNSIGNED      NULL,
+    outcome              VARCHAR(12)       NOT NULL,
+    PRIMARY KEY (session_id, seq),
+    CONSTRAINT fk_relative_pitch_responses_session FOREIGN KEY (session_id) REFERENCES test_sessions (id) ON DELETE CASCADE,
+    CONSTRAINT ck_relative_pitch_responses_phase   CHECK (phase IN ('practice', 'test')),
+    CONSTRAINT ck_relative_pitch_responses_outcome CHECK (outcome IN ('correct', 'incorrect', 'interrupted'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 15 functional_pitch_responses（調性感の回答）  出典: TableSpec_TestData.md 5.3
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS functional_pitch_responses;
+CREATE TABLE functional_pitch_responses (
+    session_id            BINARY(16)        NOT NULL,
+    trial_number          SMALLINT UNSIGNED NOT NULL,
+    first_stimulus_id     VARCHAR(64)       NOT NULL,
+    second_stimulus_id    VARCHAR(64)       NOT NULL,
+    change_condition      VARCHAR(24)       NOT NULL,
+    trial_started_at      DATETIME(3)       NULL,
+    melody_change_rating  TINYINT UNSIGNED  NULL,
+    harmony_change_rating TINYINT UNSIGNED  NULL,
+    overall_change_rating TINYINT UNSIGNED  NULL,
+    response_enabled_at   DATETIME(3)       NULL,
+    response_confirmed_at DATETIME(3)       NULL,
+    response_time_ms      INT UNSIGNED      NULL,
+    outcome               VARCHAR(12)       NOT NULL,
+    PRIMARY KEY (session_id, trial_number),
+    CONSTRAINT fk_functional_pitch_responses_session FOREIGN KEY (session_id) REFERENCES test_sessions (id) ON DELETE CASCADE,
+    CONSTRAINT ck_functional_pitch_responses_outcome CHECK (outcome IN ('answered', 'interrupted'))
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 16 training_trials（訓練の試行）  出典: TableSpec_TestData.md 6.3
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS training_trials;
+CREATE TABLE training_trials (
+    session_id            BINARY(16)        NOT NULL,
+    trial_number          SMALLINT UNSIGNED NOT NULL,
+    stimulus_id           VARCHAR(64)       NOT NULL,
+    stimulus_version      VARCHAR(8)        NOT NULL,
+    task_template_id      VARCHAR(64)       NOT NULL,
+    key_code              VARCHAR(8)        NOT NULL,
+    question_replay_count SMALLINT UNSIGNED NOT NULL,
+    feedback_replay_count SMALLINT UNSIGNED NOT NULL,
+    audio_started_at      DATETIME(3)       NULL,
+    audio_ended_at        DATETIME(3)       NULL,
+    response_enabled_at   DATETIME(3)       NULL,
+    response_submitted_at DATETIME(3)       NULL,
+    response_time_ms      INT UNSIGNED      NULL,
+    PRIMARY KEY (session_id, trial_number),
+    CONSTRAINT fk_training_trials_session FOREIGN KEY (session_id) REFERENCES test_sessions (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
+SET FOREIGN_KEY_CHECKS = 1;
+
+-- 17 training_trial_responses（訓練の試行の回答（回答対象ごと））  出典: TableSpec_TestData.md 7.3
+SET FOREIGN_KEY_CHECKS = 0;
+DROP TABLE IF EXISTS training_trial_responses;
+CREATE TABLE training_trial_responses (
+    session_id          BINARY(16)        NOT NULL,
+    trial_number        SMALLINT UNSIGNED NOT NULL,
+    target_id           VARCHAR(32)       NOT NULL,
+    correct_answer_code VARCHAR(16)       NOT NULL,
+    response_code       VARCHAR(16)       NULL,
+    outcome             VARCHAR(10)       NOT NULL,
+    PRIMARY KEY (session_id, trial_number, target_id),
+    CONSTRAINT fk_training_trial_responses_trial FOREIGN KEY (session_id, trial_number) REFERENCES training_trials (session_id, trial_number) ON DELETE CASCADE,
+    CONSTRAINT ck_training_trial_responses_outcome CHECK (outcome IN ('correct', 'incorrect', 'giveup')),
+    CONSTRAINT ck_training_trial_responses_giveup  CHECK ((outcome = 'giveup') = (response_code IS NULL))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 SET FOREIGN_KEY_CHECKS = 1;

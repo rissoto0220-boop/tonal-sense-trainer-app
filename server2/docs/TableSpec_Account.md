@@ -22,7 +22,7 @@
 - 本仕様書の対象外：
   - セッション（認証トークン）・仮登録・回数制限・WebAuthn の challenge：TableSpec_Auth.md を参照
   - 組織・組織のパスキー・組織のセッション・招待：TableSpec_Organization.md を参照
-  - ユーザごとの利用データ：別途定義する（退会・ユーザの削除の後も保持する。5.2 の規則に従う）
+  - ユーザごとの利用データ（テスト結果）：TableSpec_TestData.md を参照（退会・ユーザの削除の後も保持する。5.2 の規則に従う）
 
 ## 1. テーブル一覧
 
@@ -289,7 +289,7 @@ CREATE TABLE passkeys (
 
 ### 5.2 利用データの保持の規則
 
-ユーザごとの利用データ（テスト結果。別途定義する）のテーブルは、次の規則に従う。
+ユーザごとの利用データ（テスト結果。TableSpec_TestData.md）のテーブルは、次の規則に従う。
 
 - ユーザの識別に、`user_id BINARY(16) NOT NULL` を持つ。値は `users.id` と同じ UUID とする。
 - **`users`・`families` への外部キーを定義しない**（`ON DELETE CASCADE` も `ON DELETE SET NULL` も使わない）。ユーザの削除・退会で、利用データが消えたり、書き換わったりしないようにするため。

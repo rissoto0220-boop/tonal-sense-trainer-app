@@ -297,7 +297,7 @@ CREATE TABLE organization_invitations (
 
 ## 6. 利用データの参照権限
 
-基本方針 10.4 の参照範囲を、データベースで実現する方法を定める。利用データのテーブル（別途定義する）は、`user_id`（`users.id` の値、外部キーなし）を持つ（TableSpec_Account.md 5.2）。
+基本方針 10.4 の参照範囲を、データベースで実現する方法を定める。利用データのテーブル（TableSpec_TestData.md の `test_sessions` など）は、`user_id`（`users.id` の値、外部キーなし）を持つ（TableSpec_Account.md 5.2）。
 
 | 参照する者 | 参照できる利用データ | 条件（`d` は利用データのテーブル） |
 |---|---|---|
