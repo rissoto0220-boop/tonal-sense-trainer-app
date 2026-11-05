@@ -1,13 +1,20 @@
-// uectst-api の入口。段階が進むごとに、OrgClient などを、ここから公開する。
+// uectst-api の入口。家族・ユーザ用の FamilyClient と、研究者・組織用の OrgClient を公開する。
 export { ApiClient } from "./ApiClient.js";
 export { ApiError } from "./ApiError.js";
 export { FamilyClient } from "./FamilyClient.js";
+export { OrgClient } from "./OrgClient.js";
 export { RegistrationApi } from "./RegistrationApi.js";
 export { SessionApi } from "./SessionApi.js";
 export { UserApi } from "./UserApi.js";
 export { AccountApi } from "./AccountApi.js";
 export { SuperuserApi } from "./SuperuserApi.js";
 export { PasskeyApi } from "./PasskeyApi.js";
+export { MembershipApi } from "./MembershipApi.js";
+export { OrgSessionApi } from "./OrgSessionApi.js";
+export { OrgAccountApi } from "./OrgAccountApi.js";
+export { OrgPasskeyApi } from "./OrgPasskeyApi.js";
+export { OrgInvitationApi } from "./OrgInvitationApi.js";
+export { OrgAdminApi } from "./OrgAdminApi.js";
 export { RecoveryCode } from "./RecoveryCode.js";
 export { readFragmentToken, clearFragment } from "./TokenFragment.js";
 export { isPasskeySupported, createCredential, getCredential, base64UrlToBuffer, bufferToBase64Url } from "./WebAuthnBrowser.js";

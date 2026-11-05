@@ -16,6 +16,8 @@ final class ChallengeStore
 {
     public const FAMILY_ELEVATION = 'family_elevation';
     public const FAMILY_REGISTRATION = 'family_registration';
+    public const ORG_LOGIN = 'org_login';
+    public const ORG_REGISTRATION = 'org_registration';
     public const LIFETIME = '+5 minutes';
 
     public function __construct(private readonly PDO $pdo, private readonly Clock $clock)

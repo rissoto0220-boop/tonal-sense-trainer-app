@@ -6,13 +6,13 @@ namespace UecTst\Passkey;
 
 use DateTimeImmutable;
 
-/** パスキー（passkeys の1行）。ID・クレデンシャル ID・公開鍵はバイナリ。 */
+/** パスキー（passkeys または organization_passkeys の1行）。ID・クレデンシャル ID・公開鍵はバイナリ。持ち主は、家族または組織の ID。 */
 final class PasskeyRecord
 {
     /** @param list<string> $transports */
     public function __construct(
         public readonly string $id,
-        public readonly string $familyId,
+        public readonly string $ownerId,
         public readonly string $credentialId,
         public readonly string $publicKey,
         public readonly int $signCount,

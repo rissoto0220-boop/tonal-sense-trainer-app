@@ -19,6 +19,30 @@ final class InputTest extends TestCase
         }
     }
 
+    public function testOrganizationName(): void
+    {
+        $this->assertNull(Input::organizationNameError(str_repeat('あ', 100)));
+        $this->assertSame('TOO_LONG', Input::organizationNameError(str_repeat('あ', 101)));
+        $this->assertSame('REQUIRED', Input::organizationNameError(''));
+        $this->assertSame('INVALID_CHARACTER', Input::organizationNameError("a
+b"));
+        $this->assertSame('○○大学', Input::normalizeText("\u{3000}○○大学 "));
+    }
+
+    public function testLoginId(): void
+    {
+        foreach (['abcd', 'a.b_c-d', str_repeat('z', 64), '0123'] as $ok) {
+            $this->assertNull(Input::loginIdError($ok), $ok);
+        }
+        $this->assertSame('TOO_SHORT', Input::loginIdError('abc'));
+        $this->assertSame('TOO_SHORT', Input::loginIdError(''));
+        $this->assertSame('TOO_LONG', Input::loginIdError(str_repeat('a', 65)));
+        foreach (['ABCD', 'ab cd', 'ab@cd', 'ユーザー', "ab
+cd"] as $bad) {
+            $this->assertSame('INVALID_CHARACTER', Input::loginIdError($bad), $bad);
+        }
+    }
+
     public function testUserNameIsTrimmedIncludingFullWidthSpaces(): void
     {
         $this->assertSame('はなこ', Input::normalizeUserName("  \u{3000}はなこ\u{3000} "));

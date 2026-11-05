@@ -14,6 +14,16 @@ final class Logger
     }
 
     /**
+     * 操作の記録（ApiSpec_Organization.md 8.）など。パスワード・トークン・メールアドレスは、渡さないこと。
+     *
+     * @param array<string, scalar|null> $context
+     */
+    public function info(string $message, array $context = []): void
+    {
+        $this->write('INFO', $message, $context);
+    }
+
+    /**
      * @param array<string, scalar|null> $context
      */
     public function error(string $message, array $context = []): void

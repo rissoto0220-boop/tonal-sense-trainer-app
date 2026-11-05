@@ -21,14 +21,15 @@ final class FamilyRepository
     /**
      * 家族を作る。復旧コードのハッシュが、すでに使われている場合（ごくまれな偶然の衝突）は false を返す。
      */
-    public function insert(string $id, string $recoveryCodeHash, int $keyId, DateTimeImmutable $now): bool
+    public function insert(string $id, string $recoveryCodeHash, int $keyId, DateTimeImmutable $now, ?string $organizationId = null): bool
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO families (id, recovery_code_hash, recovery_code_key_id, recovery_code_issued_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)',
+            'INSERT INTO families (id, recovery_code_hash, recovery_code_key_id, recovery_code_issued_at, organization_id, organization_joined_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         );
         $nowDb = Time::toDb($now);
         try {
-            $stmt->execute([$id, $recoveryCodeHash, $keyId, $nowDb, $nowDb, $nowDb]);
+            // 招待経由の本登録では、招待した組織への所属を、同時に設定する。
+            $stmt->execute([$id, $recoveryCodeHash, $keyId, $nowDb, $organizationId, $organizationId === null ? null : $nowDb, $nowDb, $nowDb]);
         } catch (PDOException $e) {
             if ($this->isDuplicateKey($e)) {
                 return false;
@@ -119,6 +120,20 @@ final class FamilyRepository
     {
         $stmt = $this->pdo->prepare('UPDATE families SET superuser_password_failed_count = ?, superuser_password_locked_until = ? WHERE id = ?');
         $stmt->execute([$failedCount, $lockedUntil === null ? null : Time::toDb($lockedUntil), $id]);
+    }
+
+    /** 組織に所属する（別の組織から移る場合も含む）。 */
+    public function joinOrganization(string $id, string $organizationId, DateTimeImmutable $now): void
+    {
+        $stmt = $this->pdo->prepare('UPDATE families SET organization_id = ?, organization_joined_at = ? WHERE id = ?');
+        $stmt->execute([$organizationId, Time::toDb($now), $id]);
+    }
+
+    /** 組織への所属を解除する（個人ユーザに戻る）。 */
+    public function leaveOrganization(string $id): void
+    {
+        $stmt = $this->pdo->prepare('UPDATE families SET organization_id = NULL, organization_joined_at = NULL WHERE id = ?');
+        $stmt->execute([$id]);
     }
 
     public function hasPasskeys(string $id): bool

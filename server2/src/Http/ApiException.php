@@ -99,6 +99,31 @@ class ApiException extends RuntimeException
         return new self(429, 'SUPERUSER_PASSWORD_LOCKED', 'パスワードの入力が続けて失敗したため、しばらく入力できません。', [], ['Retry-After' => (string) max(1, $retryAfterSeconds)]);
     }
 
+    public static function invalidCredentials(): self
+    {
+        return new self(401, 'INVALID_CREDENTIALS', 'ログインIDまたはパスワードが正しくありません。');
+    }
+
+    public static function orgPasswordLocked(int $retryAfterSeconds): self
+    {
+        return new self(429, 'ORGANIZATION_PASSWORD_LOCKED', 'パスワードの入力が続けて失敗したため、しばらく入力できません。', [], ['Retry-After' => (string) max(1, $retryAfterSeconds)]);
+    }
+
+    public static function passkeyRequired(): self
+    {
+        return new self(403, 'PASSKEY_REQUIRED', 'パスキーの確認が必要です。');
+    }
+
+    public static function passwordChangeRequired(): self
+    {
+        return new self(403, 'PASSWORD_CHANGE_REQUIRED', 'パスワードを変更してください。');
+    }
+
+    public static function superOnly(): self
+    {
+        return new self(403, 'SUPER_ONLY', 'この操作は、研究者の組織だけが実行できます。');
+    }
+
     public static function internal(): self
     {
         return new self(500, 'INTERNAL_ERROR', 'サーバでエラーが発生しました。しばらくしてから、もう一度お試しください。');

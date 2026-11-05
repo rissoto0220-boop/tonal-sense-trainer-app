@@ -51,15 +51,17 @@ final class WebAuthnService
     /**
      * 登録の開始（navigator.credentials.create に渡す形式）。
      *
+     * @param string $ownerId 持ち主（家族または組織）の ID。WebAuthn の user handle になる（個人情報を含まない）
+     * @param string $userName 端末のパスキーの一覧に表示する名前（家族: 「家族の管理用」、組織: ログインID）
      * @param list<PasskeyRecord> $existing 登録済みのパスキー（二重登録を防ぐ）
      * @return array<string, mixed>
      */
-    public function registrationOptions(string $familyId, string $challenge, array $existing): array
+    public function registrationOptions(string $ownerId, string $userName, string $displayName, string $challenge, array $existing): array
     {
         return [
             'challenge' => Base64Url::encode($challenge),
             'rp' => ['id' => $this->config->webauthnRpId, 'name' => $this->config->webauthnRpName],
-            'user' => ['id' => Base64Url::encode($familyId), 'name' => '家族の管理用', 'displayName' => '家族の管理用'],
+            'user' => ['id' => Base64Url::encode($ownerId), 'name' => $userName, 'displayName' => $displayName],
             'pubKeyCredParams' => array_map(static fn (int $alg): array => ['type' => 'public-key', 'alg' => $alg], self::ALGORITHMS),
             'timeout' => self::TIMEOUT_MS,
             'attestation' => 'none',
@@ -109,7 +111,7 @@ final class WebAuthnService
      * @param array<string, mixed> $credential navigator.credentials.create() の結果（toJSON）
      * @throws ApiException 401 PASSKEY_VERIFICATION_FAILED
      */
-    public function verifyRegistration(array $credential, string $challenge, string $familyId): VerifiedRegistration
+    public function verifyRegistration(array $credential, string $challenge, string $ownerId, string $userName, string $displayName): VerifiedRegistration
     {
         try {
             $parsed = $this->parse($credential);
@@ -120,7 +122,7 @@ final class WebAuthnService
 
             $options = PublicKeyCredentialCreationOptions::create(
                 PublicKeyCredentialRpEntity::create($this->config->webauthnRpName, $this->config->webauthnRpId),
-                PublicKeyCredentialUserEntity::create('家族の管理用', $familyId, '家族の管理用'),
+                PublicKeyCredentialUserEntity::create($userName, $ownerId, $displayName),
                 $challenge,
                 array_map(static fn (int $alg): PublicKeyCredentialParameters => PublicKeyCredentialParameters::createPk($alg), self::ALGORITHMS),
                 AuthenticatorSelectionCriteria::create(userVerification: AuthenticatorSelectionCriteria::USER_VERIFICATION_REQUIREMENT_REQUIRED),
@@ -152,11 +154,11 @@ final class WebAuthnService
      * 確認の応答を検証する。
      *
      * @param array<string, mixed> $credential navigator.credentials.get() の結果（toJSON）
-     * @param list<PasskeyRecord> $familyPasskeys 家族のパスキーすべて（allowCredentials と同じ）
+     * @param list<PasskeyRecord> $ownerPasskeys 持ち主のパスキーすべて（allowCredentials と同じ）
      * @return int 新しい署名カウンタ
      * @throws ApiException 401 PASSKEY_VERIFICATION_FAILED
      */
-    public function verifyAssertion(array $credential, string $challenge, PasskeyRecord $stored, array $familyPasskeys): int
+    public function verifyAssertion(array $credential, string $challenge, PasskeyRecord $stored, array $ownerPasskeys): int
     {
         try {
             $parsed = $this->parse($credential);
@@ -170,7 +172,7 @@ final class WebAuthnService
                 $this->config->webauthnRpId,
                 array_map(
                     static fn (PasskeyRecord $p): PublicKeyCredentialDescriptor => PublicKeyCredentialDescriptor::create('public-key', $p->credentialId, $p->transports),
-                    $familyPasskeys,
+                    $ownerPasskeys,
                 ),
                 PublicKeyCredentialRequestOptions::USER_VERIFICATION_REQUIREMENT_REQUIRED,
                 self::TIMEOUT_MS,
@@ -183,7 +185,7 @@ final class WebAuthnService
                 EmptyTrustPath::create(),
                 Uuid::fromString('00000000-0000-0000-0000-000000000000'),
                 $stored->publicKey,
-                $stored->familyId,
+                $stored->ownerId,
                 $stored->signCount,
                 null,
                 $stored->backupEligible,
@@ -191,7 +193,7 @@ final class WebAuthnService
                 true,
             );
             $validator = AuthenticatorAssertionResponseValidator::create($this->factory()->requestCeremony());
-            $updated = $validator->check($record, $response, $options, $this->config->webauthnRpId, $stored->familyId);
+            $updated = $validator->check($record, $response, $options, $this->config->webauthnRpId, $stored->ownerId);
             return $updated->counter;
         } catch (ApiException $e) {
             throw $e;

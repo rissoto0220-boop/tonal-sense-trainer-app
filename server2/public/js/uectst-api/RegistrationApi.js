@@ -30,4 +30,15 @@ export class RegistrationApi {
   complete(token, userNames) {
     return this.client.post("/registrations/complete", { token, users: userNames.map((name) => ({ name })) });
   }
+
+  /**
+   * #3 招待経由の本登録。招待メールが届いたことがメールアドレスの確認になるため、仮登録（start）は不要。
+   * 登録と同時に、招待した組織に所属する。無効・期限切れは 410 INVITATION_INVALID
+   * @param {string} invitationToken 招待URLのトークン
+   * @param {string[]} userNames 1〜4名
+   * @returns {Promise<{recoveryCode: string, family: object}>}
+   */
+  completeWithInvitation(invitationToken, userNames) {
+    return this.client.post("/registrations/complete", { invitationToken, users: userNames.map((name) => ({ name })) });
+  }
 }

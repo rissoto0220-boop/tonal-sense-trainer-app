@@ -19,6 +19,11 @@ use UecTst\Family\PendingRegistrationRepository;
 use UecTst\Family\UserRepository;
 use UecTst\Log\Logger;
 use UecTst\Mail\Mailer;
+use UecTst\Organization\InvitationRepository;
+use UecTst\Organization\OrganizationRepository;
+use UecTst\Organization\OrgAuthenticator;
+use UecTst\Organization\OrgPasswordService;
+use UecTst\Organization\OrgSessionService;
 use UecTst\Passkey\ChallengeStore;
 use UecTst\Passkey\PasskeyRepository;
 use UecTst\Passkey\WebAuthnService;
@@ -48,6 +53,13 @@ final class Services
     public readonly PasskeyRepository $passkeys;
     public readonly ChallengeStore $challenges;
     public readonly WebAuthnService $webauthn;
+    public readonly OrganizationRepository $organizations;
+    public readonly InvitationRepository $invitations;
+    public readonly CookieFactory $orgCookies;
+    public readonly OrgSessionService $orgSessions;
+    public readonly OrgAuthenticator $orgAuthenticator;
+    public readonly OrgPasswordService $orgPasswords;
+    public readonly PasskeyRepository $orgPasskeys;
 
     public function __construct(
         public readonly AppConfig $config,
@@ -73,5 +85,13 @@ final class Services
         $this->passkeys = new PasskeyRepository($pdo);
         $this->challenges = new ChallengeStore($pdo, $clock);
         $this->webauthn = new WebAuthnService($config);
+        $this->organizations = new OrganizationRepository($pdo);
+        $this->invitations = new InvitationRepository($pdo);
+        // 組織の Cookie は、家族の Cookie とは別の名前で、有効期限を持たない（ブラウザを閉じると消える）。
+        $this->orgCookies = new CookieFactory($config->cookieSecure, $config->cookieUseHostPrefix, 'org-sid', null);
+        $this->orgSessions = new OrgSessionService($pdo, $clock);
+        $this->orgAuthenticator = new OrgAuthenticator($this->orgSessions, $this->organizations, $this->orgCookies);
+        $this->orgPasswords = new OrgPasswordService($pdo, $clock, $this->organizations, $this->passwordHasher);
+        $this->orgPasskeys = new PasskeyRepository($pdo, 'organization_passkeys', 'organization_id');
     }
 }

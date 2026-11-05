@@ -34,8 +34,10 @@ final class RegistrationController
     private const MAIL_GLOBAL_LIMIT = 1000;  // システム全体 1,000通／1時間
     private const MAIL_IP_LIMIT = 10;        // IP 単位 10通／1時間
     private const MAIL_WINDOW = 3600;
-    private const REGISTER_IP_LIMIT = 60;    // IP 単位 60回／10分（#2・#3）
-    private const REGISTER_WINDOW = 600;
+    /** IP 単位 60回／10分（#2・#3・#28・#30 の、共通のカウンター） */
+    public const REGISTER_IP_LIMIT = 60;
+    public const REGISTER_WINDOW = 600;
+    public const REGISTER_KEY = 'register:ip:';
 
     public function __construct(private readonly Services $services)
     {
@@ -121,30 +123,31 @@ final class RegistrationController
         // 入力値の検証は、トークンを消費する前に行う（入力をやり直せば、同じトークンで再試行できる）。
         $names = $this->validatedUserNames($data);
 
-        if ($hasInvitation) {
-            Params::string($data, 'invitationToken');
-            // 組織の招待は、組織の機能（段階3）で実装する。それまでは、有効な招待が存在しない。
-            throw ApiException::gone('INVITATION_INVALID', '招待のリンクが無効、または期限切れです。');
-        }
-        $token = Params::string($data, 'token');
+        // 招待経由（招待メールが届いたことがメールアドレスの確認になるため、仮登録は不要）か、仮登録経由か。
+        $tokenKey = $hasInvitation ? 'invitationToken' : 'token';
+        $token = Params::string($data, $tokenKey);
         $tokenHash = Tokens::isWellFormed($token) ? Tokens::hash($token) : null;
         if ($tokenHash === null) {
-            throw ApiException::gone('REGISTRATION_TOKEN_INVALID', 'リンクが無効、または期限切れです。もう一度、登録をやり直してください。');
+            throw $hasInvitation ? self::invitationInvalid() : self::registrationTokenInvalid();
         }
 
         $services = $this->services;
         $deviceLabel = DeviceLabel::fromUserAgent($request->header('user-agent'));
 
         /** @var array{string, array<string, mixed>, string} $result */
-        $result = Transaction::run($services->pdo, function () use ($services, $tokenHash, $names, $deviceLabel): array {
+        $result = Transaction::run($services->pdo, function () use ($services, $tokenHash, $hasInvitation, $names, $deviceLabel): array {
             $now = $services->clock->now();
             // 同じトークンで同時に実行されても、片方だけが 1 行を削除できる（二重登録にならない）。
-            if (!$services->pending->consume($tokenHash, $now)) {
-                throw ApiException::gone('REGISTRATION_TOKEN_INVALID', 'リンクが無効、または期限切れです。もう一度、登録をやり直してください。');
+            // 以降の処理に失敗すれば、ロールバックにより、トークン（招待）も元に戻る。
+            $organizationId = null;
+            if ($hasInvitation) {
+                $organizationId = $services->invitations->consume($tokenHash, $now) ?? throw self::invitationInvalid();
+            } elseif (!$services->pending->consume($tokenHash, $now)) {
+                throw self::registrationTokenInvalid();
             }
 
             $familyId = Uuid7::generateBinary();
-            $code = $this->insertFamilyWithNewCode($familyId, $now);
+            $code = $this->insertFamilyWithNewCode($familyId, $now, $organizationId);
 
             $firstUserId = null;
             foreach ($names as $index => $name) {
@@ -205,12 +208,12 @@ final class RegistrationController
      *
      * @return string 正規化済みの復旧コード（25文字）
      */
-    private function insertFamilyWithNewCode(string $familyId, \DateTimeImmutable $now): string
+    private function insertFamilyWithNewCode(string $familyId, \DateTimeImmutable $now, ?string $organizationId): string
     {
         for ($attempt = 0; $attempt < 5; $attempt++) {
             $code = RecoveryCode::generate();
             $hasher = $this->services->recoveryHasher;
-            if ($this->services->families->insert($familyId, $hasher->hashWithCurrentKey($code), $hasher->currentKeyId(), $now)) {
+            if ($this->services->families->insert($familyId, $hasher->hashWithCurrentKey($code), $hasher->currentKeyId(), $now, $organizationId)) {
                 return $code;
             }
         }
@@ -219,10 +222,20 @@ final class RegistrationController
 
     private function checkRegisterRateLimit(Request $request): void
     {
-        $hit = $this->services->rateLimiter->hit('register:ip:' . $request->clientIp, self::REGISTER_WINDOW);
+        $hit = $this->services->rateLimiter->hit(self::REGISTER_KEY . $request->clientIp, self::REGISTER_WINDOW);
         if ($hit->count > self::REGISTER_IP_LIMIT) {
             throw ApiException::rateLimited($hit->retryAfterSeconds);
         }
+    }
+
+    private static function registrationTokenInvalid(): ApiException
+    {
+        return ApiException::gone('REGISTRATION_TOKEN_INVALID', 'リンクが無効、または期限切れです。もう一度、登録をやり直してください。');
+    }
+
+    private static function invitationInvalid(): ApiException
+    {
+        return ApiException::gone('INVITATION_INVALID', '招待のリンクが無効、または期限切れです。');
     }
 
     private static function registrationMailBody(string $url): string

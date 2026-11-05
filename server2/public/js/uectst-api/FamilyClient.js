@@ -11,6 +11,7 @@ import { UserApi } from "./UserApi.js";
 import { AccountApi } from "./AccountApi.js";
 import { SuperuserApi } from "./SuperuserApi.js";
 import { PasskeyApi } from "./PasskeyApi.js";
+import { MembershipApi } from "./MembershipApi.js";
 
 export class FamilyClient {
   /** @param {import("./ApiClient.js").ApiClientOptions} [options] */
@@ -22,5 +23,6 @@ export class FamilyClient {
     this.account = new AccountApi(this.http);
     this.superuser = new SuperuserApi(this.http);
     this.passkeys = new PasskeyApi(this.http, { credentials: options.credentials });
+    this.membership = new MembershipApi(this.http);
   }
 }

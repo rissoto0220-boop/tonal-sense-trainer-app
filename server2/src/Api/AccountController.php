@@ -74,7 +74,7 @@ final class AccountController extends AuthenticatedController
             if (!$family->superuserPasswordSet) {
                 throw ApiException::conflict('SUPERUSER_PASSWORD_NOT_SET', 'パスキーが登録されていません。復旧コードで確認してください。');
             }
-            $passkeys = $this->services->passkeys->listByFamily($family->id);
+            $passkeys = $this->services->passkeys->listByOwner($family->id);
             if ($passkeys === []) {
                 throw ApiException::notFound('パスキーが登録されていません。');
             }
@@ -101,7 +101,7 @@ final class AccountController extends AuthenticatedController
         $webauthn = $this->services->webauthn;
         $credentialId = $webauthn->credentialIdOf($credential) ?? throw ApiException::passkeyVerificationFailed();
         $stored = $this->services->passkeys->findByCredentialId($family->id, $credentialId) ?? throw ApiException::passkeyVerificationFailed();
-        $all = $this->services->passkeys->listByFamily($family->id);
+        $all = $this->services->passkeys->listByOwner($family->id);
 
         $signCount = $webauthn->verifyAssertion($credential, $challenge, $stored, $all);
         $this->services->passkeys->recordUse($stored->id, $signCount, $this->services->clock->now());

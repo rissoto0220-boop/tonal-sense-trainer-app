@@ -29,7 +29,11 @@ cp config/AppConfig.sample.json config/AppConfig.json  # オリジン・Cookie �
 
 ```bash
 php bin/check-db.php        # DBConfig.json の接続を確認する（パスワードは表示しない）
+php bin/create-super-organization.php [ログインID] [組織名]   # 最初の研究者の組織を作る（初期パスワードは標準入力）
 ```
+
+研究者の組織は自己登録できない。上のスクリプトで最初の1つを作り、最初のログインでパスワードの変更とパスキーの登録を行う
+（`docs/TableSpec_Organization.md` 7.）。ほかの組織は、研究者の組織が API（O18）で登録する。
 
 ## 開発用サーバー
 

@@ -144,7 +144,7 @@ final class SuperuserController extends AuthenticatedController
     public function passkeys(Request $request): Response
     {
         return $this->authenticated($request, fn (AuthContext $c): Response => Response::json(200, [
-            'passkeys' => array_map($this->view(...), $this->services->passkeys->listByFamily($c->familyId())),
+            'passkeys' => array_map($this->view(...), $this->services->passkeys->listByOwner($c->familyId())),
         ]));
     }
 
@@ -157,14 +157,14 @@ final class SuperuserController extends AuthenticatedController
             if (!$family->superuserPasswordSet) {
                 throw ApiException::conflict('SUPERUSER_PASSWORD_NOT_SET', 'パスキーを登録するには、先にスーパーユーザのパスワードを設定してください。');
             }
-            $existing = $this->services->passkeys->listByFamily($family->id);
-            if (count($existing) >= PasskeyRepository::MAX_PER_FAMILY) {
+            $existing = $this->services->passkeys->listByOwner($family->id);
+            if (count($existing) >= PasskeyRepository::MAX_PER_OWNER) {
                 throw $this->limitReached();
             }
             $this->limitChallenges($c);
 
             $challenge = $this->services->challenges->issue($c->session->id, ChallengeStore::FAMILY_REGISTRATION);
-            return Response::json(200, $this->services->webauthn->registrationOptions($family->id, $challenge, $existing));
+            return Response::json(200, $this->services->webauthn->registrationOptions($family->id, '家族の管理用', '家族の管理用', $challenge, $existing));
         });
     }
 
@@ -182,7 +182,7 @@ final class SuperuserController extends AuthenticatedController
             // challenge は、検証の成否にかかわらず、ここで使い切る。
             $challenge = $this->services->challenges->take($c->session->id, ChallengeStore::FAMILY_REGISTRATION)
                 ?? throw ApiException::passkeyVerificationFailed();
-            $verified = $this->services->webauthn->verifyRegistration($credential, $challenge, $familyId);
+            $verified = $this->services->webauthn->verifyRegistration($credential, $challenge, $familyId, '家族の管理用', '家族の管理用');
 
             $now = $this->services->clock->now();
             $passkey = new PasskeyRecord(
@@ -203,7 +203,7 @@ final class SuperuserController extends AuthenticatedController
                 if (!$family->superuserPasswordSet) {
                     throw ApiException::conflict('SUPERUSER_PASSWORD_NOT_SET', 'パスキーを登録するには、先にスーパーユーザのパスワードを設定してください。');
                 }
-                if ($this->services->passkeys->countByFamily($familyId) >= PasskeyRepository::MAX_PER_FAMILY) {
+                if ($this->services->passkeys->countByOwner($familyId) >= PasskeyRepository::MAX_PER_OWNER) {
                     throw $this->limitReached();
                 }
                 if (!$this->services->passkeys->insert($passkey)) {
@@ -221,7 +221,7 @@ final class SuperuserController extends AuthenticatedController
         return $this->authenticated($request, function (AuthContext $c) use ($params): Response {
             $this->requireElevation($c);
             $id = (string) ($params['passkeyId'] ?? '');
-            $passkey = Uuid7::isValid($id) ? $this->services->passkeys->findInFamily($c->familyId(), Uuid7::toBinary($id)) : null;
+            $passkey = Uuid7::isValid($id) ? $this->services->passkeys->findInOwner($c->familyId(), Uuid7::toBinary($id)) : null;
             if ($passkey === null) {
                 throw ApiException::notFound('パスキーが見つかりません。');
             }

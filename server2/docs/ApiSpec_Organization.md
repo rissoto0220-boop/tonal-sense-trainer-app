@@ -169,7 +169,7 @@ ApiSpec_Auth.md 0.5 のコード（`BAD_REQUEST`、`UNAUTHENTICATED`、`FORBIDDE
 
 **処理**
 
-1. 研究者の組織でなければ `403 SUPER_ONLY`。パスキーが1件もなければ `404 NOT_FOUND`。
+1. 研究者の組織でなければ `403 SUPER_ONLY`。すでにログインが完了している（段階1）セッションなら `400 BAD_REQUEST`。パスキーが1件もなければ `404 NOT_FOUND`。
 2. 回数制限（セッション単位の challenge の発行回数。9.）を確認する。
 3. 32バイトの challenge を生成し、このセッションに紐付けて5分間保持する（`webauthn_challenges`、`purpose` は `org_login`。TableSpec_Auth.md 4.2）。
 
@@ -177,7 +177,7 @@ ApiSpec_Auth.md 0.5 のコード（`BAD_REQUEST`、`UNAUTHENTICATED`、`FORBIDDE
 
 ApiSpec_Auth.md 6.2 と同じ形式（`PublicKeyCredentialRequestOptions` の JSON 表現。`allowCredentials` には、組織のパスキーをすべて含める。`userVerification` は `required`）。
 
-**エラー**：`401 UNAUTHENTICATED`、`403 SUPER_ONLY`、`404 NOT_FOUND`、`429 RATE_LIMITED`
+**エラー**：`400 BAD_REQUEST`、`401 UNAUTHENTICATED`、`403 SUPER_ONLY`、`404 NOT_FOUND`、`429 RATE_LIMITED`
 
 ### 1.3 パスキーによるログインの確認 `POST /api/v1/org/sessions/passkey`（O3）
 
@@ -209,7 +209,9 @@ ApiSpec_Auth.md 6.2 と同じ形式（`PublicKeyCredentialRequestOptions` の JS
 }
 ```
 
-**エラー**：`401 UNAUTHENTICATED`、`401 PASSKEY_VERIFICATION_FAILED`、`403 SUPER_ONLY`
+- すでにログインが完了している（段階1）セッションでは、`400 BAD_REQUEST`（O2 と同じ）。
+
+**エラー**：`400 BAD_REQUEST`、`401 UNAUTHENTICATED`、`401 PASSKEY_VERIFICATION_FAILED`、`403 SUPER_ONLY`
 
 ### 1.4 ログイン状態の取得 `GET /api/v1/org/sessions/current`（O4）
 
