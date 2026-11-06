@@ -129,7 +129,9 @@ export class ApiClient {
   /** デバッグ状態のサーバが付ける debug.mailViewUrl（同じオリジンのパスだけ）を見て、メール表示ページを開く。 */
   #notifyDebugMail(data) {
     const url = data?.debug?.mailViewUrl;
-    if (typeof url === "string" && url.startsWith("/debug/") && this.onDebugMail) {
+    // 同じオリジンのパス（"/" で始まり "//" ではない）で、メール表示ページ（…/debug/mails?…）のものだけ開く。
+    // サーバをサブパスに置いている場合は、パスの前に接頭辞が付く（例: /uec-tst/server2/public/index.php/debug/mails?…）。
+    if (typeof url === "string" && /^(\/[^/?#][^?#]*)?\/debug\/mails\?/.test(url) && this.onDebugMail) {
       this.onDebugMail(url);
     }
   }

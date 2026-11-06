@@ -22,6 +22,8 @@ final class Request
         public readonly array $query = [],
         private readonly string $rawBody = '',
         public readonly string $clientIp = '0.0.0.0',
+        /** アプリの前にある、URL の接頭辞（例: /uec-tst/server2/public/index.php）。ルートに置いた場合は空。メールの表示ページの URL を作るために使う */
+        public readonly string $basePath = '',
     ) {
     }
 
@@ -55,14 +57,24 @@ final class Request
         // front controller（index.php）の置き場所を、アプリの基準パスとして取り除く。
         $script = is_string($server['SCRIPT_NAME'] ?? null) ? $server['SCRIPT_NAME'] : '/index.php';
         $base = rtrim(str_replace('\\', '/', dirname($script)), '/');
+        $fullPath = $path;
         if ($base !== '' && str_starts_with($path, $base . '/')) {
             $path = substr($path, strlen($base));
         } elseif ($path === $base) {
             $path = '/';
         }
+        // URL Rewrite が使えない環境では、index.php を含む形（/…/public/index.php/api/v1/...）で呼ばれる。その部分も取り除く。
+        $scriptName = '/' . basename($script);
+        if ($path === $scriptName) {
+            $path = '/';
+        } elseif (str_starts_with($path, $scriptName . '/')) {
+            $path = substr($path, strlen($scriptName));
+        }
+        $basePath = $path === '/' && $fullPath === $path ? '' : substr($fullPath, 0, strlen($fullPath) - strlen($path));
+        $basePath = rtrim($basePath, '/');
 
         $method = is_string($server['REQUEST_METHOD'] ?? null) ? strtoupper($server['REQUEST_METHOD']) : 'GET';
-        return new self($method, $path, $headers, $cookies, $query, $rawBody, self::resolveClientIp($server, $headers, $trustedProxyHeader));
+        return new self($method, $path, $headers, $cookies, $query, $rawBody, self::resolveClientIp($server, $headers, $trustedProxyHeader), $basePath);
     }
 
     /**

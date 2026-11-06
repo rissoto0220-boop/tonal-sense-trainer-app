@@ -159,6 +159,14 @@ test("デバッグ状態: レスポンスの debug.mailViewUrl を onDebugMail �
   assert.equal(result.sender, "no-reply@example.com");
 });
 
+test("デバッグ状態: サーバをサブパスに置いている場合は、接頭辞つきの URL を、そのまま渡す", async () => {
+  const urls = [];
+  const url = "/uec-tst/server2/public/index.php/debug/mails?highlight=a";
+  const f = fakeFetch(json(202, { debug: { mailViewUrl: url } }));
+  await new ApiClient({ fetchFn: f, onDebugMail: (u) => urls.push(u) }).post("/registrations", {});
+  assert.deepEqual(urls, [url]);
+});
+
 test("デバッグ状態: debug がない、または /debug/ 以外の URL のときは、開かない", async () => {
   const urls = [];
   const f = fakeFetch(

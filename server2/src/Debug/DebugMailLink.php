@@ -19,9 +19,10 @@ final class DebugMailLink
     public const PAGE_PATH = '/debug/mails';
 
     /**
+     * @param string $basePath アプリの前にある URL の接頭辞（Request::$basePath）。リンクに含める
      * @param callable(): Response $handle リクエストを処理する関数
      */
-    public static function around(Services $services, callable $handle): Response
+    public static function around(Services $services, string $basePath, callable $handle): Response
     {
         $mailer = $services->mailer;
         $active = $services->config->debug->isOn(DebugConfig::FEATURE_MAIL_VIEWER) && $mailer instanceof RecordsSentMail;
@@ -31,10 +32,10 @@ final class DebugMailLink
         $mailer->takeLastMailId(); // 前のリクエストの分は、忘れる。
         $response = $handle();
         $id = $mailer->takeLastMailId();
-        return $id === null ? $response : self::attach($response, $id);
+        return $id === null ? $response : self::attach($response, $basePath, $id);
     }
 
-    private static function attach(Response $response, string $mailId): Response
+    private static function attach(Response $response, string $basePath, string $mailId): Response
     {
         $isJson = str_starts_with($response->headers['Content-Type'] ?? '', 'application/json');
         if ($response->status < 200 || $response->status >= 300 || $response->isStreamed() || !$isJson) {
@@ -44,7 +45,7 @@ final class DebugMailLink
         if (!is_array($data) || array_is_list($data)) {
             return $response;
         }
-        $data['debug'] = ['mailViewUrl' => self::PAGE_PATH . '?highlight=' . rawurlencode($mailId)];
+        $data['debug'] = ['mailViewUrl' => $basePath . self::PAGE_PATH . '?highlight=' . rawurlencode($mailId)];
         return $response->withBody(json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
     }
 }

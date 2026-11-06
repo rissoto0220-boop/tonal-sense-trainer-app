@@ -20,6 +20,29 @@ final class RequestTest extends TestCase
         $this->assertSame('/api/v1/sessions', $request->path);
     }
 
+    public function testIndexPhpInTheUrlIsAlsoStripped(): void
+    {
+        // URL Rewrite が使えない環境（MAMP の初期設定など）では、index.php を含む URL で呼ばれる。
+        $server = ['REQUEST_METHOD' => 'GET', 'SCRIPT_NAME' => '/uec-tst/server2/public/index.php'];
+        $request = Request::fromGlobals($server + ['REQUEST_URI' => '/uec-tst/server2/public/index.php/api/v1/sessions?x=1'], [], [], '');
+        $this->assertSame('/api/v1/sessions', $request->path);
+        $this->assertSame('/uec-tst/server2/public/index.php', $request->basePath);
+
+        $rewritten = Request::fromGlobals($server + ['REQUEST_URI' => '/uec-tst/server2/public/debug/mails'], [], [], '');
+        $this->assertSame('/debug/mails', $rewritten->path);
+        $this->assertSame('/uec-tst/server2/public', $rewritten->basePath);
+
+        $root = Request::fromGlobals($server + ['REQUEST_URI' => '/uec-tst/server2/public/index.php'], [], [], '');
+        $this->assertSame('/', $root->path);
+    }
+
+    public function testBasePathIsEmptyAtDocumentRoot(): void
+    {
+        $request = Request::fromGlobals(['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/debug/mails', 'SCRIPT_NAME' => '/index.php'], [], [], '');
+        $this->assertSame('/debug/mails', $request->path);
+        $this->assertSame('', $request->basePath);
+    }
+
     public function testPathAtDocumentRootIsUnchanged(): void
     {
         $request = Request::fromGlobals(['REQUEST_METHOD' => 'GET', 'REQUEST_URI' => '/api/v1/users', 'SCRIPT_NAME' => '/index.php'], [], [], '');

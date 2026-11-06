@@ -121,7 +121,7 @@ final class Routes
         $router->add($method, $path, static function (Request $request, array $params) use ($services, $handler): Response {
             $s = $services();
             // デバッグ状態でメールを送った場合のみ、レスポンスにメール表示ページへのリンクを加える。
-            return DebugMailLink::around($s, static fn (): Response => $handler($s, $request, $params));
+            return DebugMailLink::around($s, $request->basePath, static fn (): Response => $handler($s, $request, $params));
         });
     }
 
