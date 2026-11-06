@@ -65,6 +65,7 @@ npm test                      # JavaScript
 |---|---|
 | `publicBaseUrl` | メールに書く、画面の基準 URL（本登録のリンクなど） |
 | `mail` | `driver`（`log`: ファイルに書くだけ／本番用の送信方式）、`from`（送信元）、`logFile` |
+| `debug` | デバッグ状態（下の「デバッグ状態」）。`enabled`（大元のスイッチ）と、`features`（機能ごとのスイッチ）。省略時は、すべて無効 |
 | `captcha` | `driver`（`none`／`turnstile`）、`secretKey`。本番では `turnstile` を使う |
 | `secrets.recoveryCodeKeys` | 復旧コードの HMAC 鍵（ID → Base64）。鍵を増やしても、古い鍵のコードでログインできる。`currentRecoveryCodeKeyId` が新規発行に使う鍵 |
 | `secrets.rateLimitKey` | 回数制限のキー（IP など）をハッシュする鍵 |
@@ -76,6 +77,22 @@ npm test                      # JavaScript
 
 - 本番では、`public/` の外に置き、リリースを切り替えても引き継がれる場所（`shared/`）へのシンボリックリンクにする。
 - `production` では、Cookie の `secure`・`useHostPrefix` を `true` にし、オリジンは `https` のみとする（満たさない設定は、起動時に拒否される）。
+
+### デバッグ状態
+
+開発中に便利な機能を、`AppConfig.json` の `debug` で有効にできる。**大元の `enabled` が `false`（または `debug` の記載なし）なら、`features` の値に関係なく、すべて無効**。`enabled` を `true` にしたうえで、使いたい機能だけを `true` にする。
+
+```json
+"debug": { "enabled": true, "features": { "mailViewer": true } }
+```
+
+- `production` では `enabled` を `true` にできない（起動時に拒否される）。`features` の名前を間違えたときも、起動時に拒否される。
+- `enabled` が `true` のとき、すべてのレスポンスに `X-Debug-Mode: on` ヘッダが付く（意図せず有効のまま公開していないか、確認できる）。
+- 接続元による制限は行わない（スマートフォンのブラウザからも使えるようにするため）。デバッグ状態のサーバは、**認証なしで機能が使える**ので、インターネットに公開しないこと。
+
+| 機能 | 内容 |
+|---|---|
+| `mailViewer` | メール表示ページ。仮登録の本登録URLや、組織の招待メールなど、送ったことにしたメールの内容を `GET /debug/mails` で表示する（新しい順。数秒おきに自動で更新される）。メールを送る API（#1・O12）のレスポンスには `debug.mailViewUrl`（`/debug/mails?highlight=<メールID>`）が加わり、クライアント（`ApiClient`）が、これを見て別タブ（名前: `uectst-debug-mail`）で自動的に開く。ポップアップブロックで開けない場合は、`/debug/mails` を一度開いておけばよい。メールの内容は `mail.logFile`（1行1件の JSON）に記録される |
 
 ## Web サーバの設定
 

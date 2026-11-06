@@ -17,10 +17,18 @@ final class Kernel
         private readonly Router $router,
         private readonly OriginGuard $originGuard,
         private readonly Logger $logger,
+        private readonly bool $debug = false,
     ) {
     }
 
     public function handle(Request $request): Response
+    {
+        $response = $this->dispatch($request);
+        // デバッグ状態で動いていることが、レスポンスから分かるようにする（意図せず有効のまま運用していないか確認できる）。
+        return $this->debug ? $response->withAddedHeaders(['X-Debug-Mode' => 'on']) : $response;
+    }
+
+    private function dispatch(Request $request): Response
     {
         try {
             $this->originGuard->check($request);

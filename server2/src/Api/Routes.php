@@ -4,9 +4,14 @@ declare(strict_types=1);
 
 namespace UecTst\Api;
 
+use UecTst\Config\AppConfig;
+use UecTst\Config\DebugConfig;
+use UecTst\Debug\DebugMailController;
+use UecTst\Debug\DebugMailLink;
 use UecTst\Http\Request;
 use UecTst\Http\Response;
 use UecTst\Http\Router;
+use UecTst\Mail\MailLog;
 use UecTst\Services;
 
 /**
@@ -19,9 +24,16 @@ final class Routes
 {
     /**
      * @param callable(): Services $services
+     * @param AppConfig|null $config デバッグ用のルート（debug.features で有効にした機能）を登録するために使う
      */
-    public static function register(Router $router, callable $services): void
+    public static function register(Router $router, callable $services, ?AppConfig $config = null): void
     {
+        if ($config !== null && $config->debug->isOn(DebugConfig::FEATURE_MAIL_VIEWER)) {
+            // メール表示ページ。DB を使わない（Services を作らない）。デバッグ状態でなければ、ルート自体がなく、404 になる。
+            $mailViewer = new DebugMailController(new MailLog($config->mailLogFile));
+            $router->add('GET', DebugMailLink::PAGE_PATH, static fn (Request $r, array $p): Response => $mailViewer->show($r));
+        }
+
         // 登録
         self::post($router, '/api/v1/registrations', $services, fn (Services $s, Request $r) => (new RegistrationController($s))->start($r));        // #1
         self::post($router, '/api/v1/registrations/verify', $services, fn (Services $s, Request $r) => (new RegistrationController($s))->verify($r));  // #2
@@ -106,7 +118,11 @@ final class Routes
      */
     private static function add(Router $router, string $method, string $path, callable $services, callable $handler): void
     {
-        $router->add($method, $path, static fn (Request $request, array $params): Response => $handler($services(), $request, $params));
+        $router->add($method, $path, static function (Request $request, array $params) use ($services, $handler): Response {
+            $s = $services();
+            // デバッグ状態でメールを送った場合のみ、レスポンスにメール表示ページへのリンクを加える。
+            return DebugMailLink::around($s, static fn (): Response => $handler($s, $request, $params));
+        });
     }
 
     private static function get(Router $router, string $path, callable $services, callable $handler): void

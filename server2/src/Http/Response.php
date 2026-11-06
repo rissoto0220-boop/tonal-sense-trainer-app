@@ -78,6 +78,12 @@ final class Response
         return new self($this->status, $this->body, $headers + $this->headers, [...$this->setCookies, ...$setCookies], $this->streamer);
     }
 
+    /** 本文だけを差し替える（ステータス・ヘッダ・Cookie はそのまま。ストリームでないレスポンス用）。 */
+    public function withBody(string $body): self
+    {
+        return new self($this->status, $body, $this->headers, $this->setCookies, $this->streamer);
+    }
+
     /** ヘッダと本文を出力する。 */
     public function send(): void
     {

@@ -149,3 +149,58 @@ test("onElevationRequired が未設定なら、ELEVATION_REQUIRED はそのま�
   await assert.rejects(new ApiClient({ fetchFn: f }).delete("/x"), (e) => e.code === "ELEVATION_REQUIRED");
   assert.equal(f.calls.length, 1);
 });
+
+test("デバッグ状態: レスポンスの debug.mailViewUrl を onDebugMail に渡す", async () => {
+  const urls = [];
+  const f = fakeFetch(json(202, { sender: "no-reply@example.com", debug: { mailViewUrl: "/debug/mails?highlight=20261106010203-abcd1234" } }));
+  const client = new ApiClient({ fetchFn: f, onDebugMail: (url) => urls.push(url) });
+  const result = await client.post("/registrations", { email: "a@example.com" });
+  assert.deepEqual(urls, ["/debug/mails?highlight=20261106010203-abcd1234"]);
+  assert.equal(result.sender, "no-reply@example.com");
+});
+
+test("デバッグ状態: debug がない、または /debug/ 以外の URL のときは、開かない", async () => {
+  const urls = [];
+  const f = fakeFetch(
+    json(200, { users: [] }),
+    json(200, { debug: { mailViewUrl: "https://evil.example.com/" } }),
+    json(200, { debug: { mailViewUrl: "//evil.example.com/debug/" } }),
+    json(200, { debug: { mailViewUrl: 5 } }),
+  );
+  const client = new ApiClient({ fetchFn: f, onDebugMail: (url) => urls.push(url) });
+  for (let i = 0; i < 4; i++) await client.get("/x");
+  assert.deepEqual(urls, []);
+});
+
+test("デバッグ状態: 既定では、名前付きのタブ（uectst-debug-mail）で開く。開けなくても失敗しない", async () => {
+  const opened = [];
+  const original = globalThis.window;
+  try {
+    globalThis.window = { open: (url, name) => opened.push([url, name]) };
+    const f = fakeFetch(json(202, { debug: { mailViewUrl: "/debug/mails?highlight=a" } }));
+    await new ApiClient({ fetchFn: f }).post("/registrations", {});
+    assert.deepEqual(opened, [["/debug/mails?highlight=a", "uectst-debug-mail"]]);
+
+    globalThis.window = { open: () => { throw new Error("blocked"); } };
+    const g = fakeFetch(json(202, { debug: { mailViewUrl: "/debug/mails?highlight=b" } }));
+    const result = await new ApiClient({ fetchFn: g }).post("/registrations", {});
+    assert.equal(result.debug.mailViewUrl, "/debug/mails?highlight=b");
+  } finally {
+    if (original === undefined) delete globalThis.window;
+    else globalThis.window = original;
+  }
+});
+
+test("デバッグ状態: onDebugMail に null を渡すと、何もしない", async () => {
+  const opened = [];
+  const original = globalThis.window;
+  try {
+    globalThis.window = { open: (...args) => opened.push(args) };
+    const f = fakeFetch(json(202, { debug: { mailViewUrl: "/debug/mails?highlight=a" } }));
+    await new ApiClient({ fetchFn: f, onDebugMail: null }).post("/registrations", {});
+    assert.deepEqual(opened, []);
+  } finally {
+    if (original === undefined) delete globalThis.window;
+    else globalThis.window = original;
+  }
+});

@@ -81,6 +81,51 @@ final class AppConfigTest extends TestCase
         $this->assertCount(2, $config->recoveryCodeKeys());
     }
 
+    public function testDebugIsOffUnlessEnabled(): void
+    {
+        $this->assertFalse(AppConfig::fromArray(self::dev())->debug->enabled);
+        $this->assertFalse(AppConfig::fromArray(self::dev())->debug->isOn('mailViewer'));
+
+        // 機能を true にしても、大元の enabled が false（または省略）なら、無効のまま
+        foreach ([['enabled' => false, 'features' => ['mailViewer' => true]], ['features' => ['mailViewer' => true]]] as $debug) {
+            $config = AppConfig::fromArray(['debug' => $debug] + self::dev());
+            $this->assertFalse($config->debug->enabled);
+            $this->assertFalse($config->debug->isOn('mailViewer'));
+        }
+        // enabled が true でも、機能ごとに true にしたものだけが有効
+        $enabledOnly = AppConfig::fromArray(['debug' => ['enabled' => true]] + self::dev());
+        $this->assertTrue($enabledOnly->debug->enabled);
+        $this->assertFalse($enabledOnly->debug->isOn('mailViewer'));
+        $on = AppConfig::fromArray(['debug' => ['enabled' => true, 'features' => ['mailViewer' => true]]] + self::dev());
+        $this->assertTrue($on->debug->isOn('mailViewer'));
+        $off = AppConfig::fromArray(['debug' => ['enabled' => true, 'features' => ['mailViewer' => false]]] + self::dev());
+        $this->assertFalse($off->debug->isOn('mailViewer'));
+    }
+
+    public function testDebugSettingsAreValidated(): void
+    {
+        foreach ([
+            ['enabled' => 'true'],
+            ['enabled' => 1],
+            ['features' => ['mailViewr' => true]],
+            ['features' => ['mailViewer' => 'yes']],
+            ['features' => ['mailViewer']],
+            ['unknown' => true],
+            'on',
+        ] as $debug) {
+            $this->assertRejected(['debug' => $debug] + self::dev(), 'debug: ' . json_encode($debug));
+        }
+    }
+
+    public function testDebugCannotBeEnabledInProduction(): void
+    {
+        $this->assertRejected(['debug' => ['enabled' => true, 'features' => ['mailViewer' => true]]] + self::production(), 'production のデバッグ状態');
+        $this->assertRejected(['debug' => ['enabled' => true]] + self::production(), 'production のデバッグ状態（機能なし）');
+        // enabled が false なら、production でも書いてよい
+        $config = AppConfig::fromArray(['debug' => ['enabled' => false, 'features' => ['mailViewer' => true]]] + self::production());
+        $this->assertFalse($config->debug->isOn('mailViewer'));
+    }
+
     public function testProductionRequiresSecureCookiesHttpsAndTurnstile(): void
     {
         $insecureCookie = self::production();

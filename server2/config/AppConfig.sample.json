@@ -24,6 +24,12 @@
     "rpId": "localhost",
     "rpName": "TonalSenseTrainer"
   },
+  "debug": {
+    "enabled": true,
+    "features": {
+      "mailViewer": true
+    }
+  },
   "testData": {
     "exportMaxSessions": 5000
   },

@@ -44,7 +44,8 @@ final class AppConfig
         public readonly string $logFile,
         public readonly string $webauthnRpId,
         public readonly string $webauthnRpName,
-        public readonly int $exportMaxSessions = self::DEFAULT_EXPORT_MAX_SESSIONS,
+        public readonly int $exportMaxSessions,
+        public readonly DebugConfig $debug,
     ) {
     }
 
@@ -183,6 +184,8 @@ final class AppConfig
             throw new ConfigException('AppConfig: testData.exportMaxSessions は 1〜' . self::MAX_EXPORT_MAX_SESSIONS . ' の整数である必要があります（省略時は ' . self::DEFAULT_EXPORT_MAX_SESSIONS . '）');
         }
 
+        $debug = DebugConfig::fromArray($data['debug'] ?? null, $isProduction);
+
         return new self(
             environment: $environment,
             allowedOrigins: array_values($origins),
@@ -202,6 +205,7 @@ final class AppConfig
             webauthnRpId: strtolower($rpId),
             webauthnRpName: $rpName,
             exportMaxSessions: $exportMax,
+            debug: $debug,
         );
     }
 

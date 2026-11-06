@@ -59,8 +59,8 @@ final class App
     private static function kernel(AppConfig $config, Logger $logger, callable $provider): Kernel
     {
         $router = new Router();
-        Routes::register($router, $provider);
-        return new Kernel($router, new OriginGuard($config->allowedOrigins), $logger);
+        Routes::register($router, $provider, $config);
+        return new Kernel($router, new OriginGuard($config->allowedOrigins), $logger, $config->debug->enabled);
     }
 
     private static function mailer(AppConfig $config): Mailer

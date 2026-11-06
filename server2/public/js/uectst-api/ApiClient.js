@@ -14,7 +14,22 @@ import { ApiError } from "./ApiError.js";
  * @property {() => Promise<boolean>|boolean} [onElevationRequired]
  *   403 ELEVATION_REQUIRED のときに呼ばれる。確認の画面を出して、確認に成功したら true を返すと、同じ操作を、1回だけ自動でやり直す
  * @property {(error: ApiError) => void} [onUnauthenticated] 401 UNAUTHENTICATED のときに呼ばれる（ログイン画面へ戻すなど）
+ * @property {((url: string) => void)|null} [onDebugMail]
+ *   サーバがデバッグ状態で、メールを送った（記録した）ときに、メール表示ページの URL（"/debug/mails?highlight=..."）を受け取る。
+ *   既定は、名前付きのタブ（uectst-debug-mail）で開く（2通目以降は、同じタブが更新される）。null を渡すと、何もしない。
+ *   ブラウザのポップアップブロックで開けない場合は、表示ページを一度開いておけば、新しいメールが自動で表示される
  */
+
+/** 既定のメール表示ページの開き方。開けなくても（ポップアップブロックなど）、通常の処理には影響させない。 */
+export const DEBUG_MAIL_TAB_NAME = "uectst-debug-mail";
+
+function openDebugMailTab(url) {
+  try {
+    globalThis.window?.open?.(url, DEBUG_MAIL_TAB_NAME);
+  } catch {
+    // 開けない場合は、何もしない。
+  }
+}
 
 export class ApiClient {
   /** @param {ApiClientOptions} [options] */
@@ -23,6 +38,7 @@ export class ApiClient {
     this.fetchFn = options.fetchFn ?? ((...args) => globalThis.fetch(...args));
     this.onElevationRequired = options.onElevationRequired ?? null;
     this.onUnauthenticated = options.onUnauthenticated ?? null;
+    this.onDebugMail = options.onDebugMail === undefined ? openDebugMailTab : options.onDebugMail;
   }
 
   /**
@@ -93,7 +109,9 @@ export class ApiClient {
     if (response.ok) {
       if (options.file) return this.#readFile(response);
       if (response.status === 204) return null;
-      return this.#readJson(response);
+      const data = await this.#readJson(response);
+      this.#notifyDebugMail(data);
+      return data;
     }
 
     const error = await this.#toError(response);
@@ -106,6 +124,14 @@ export class ApiClient {
       this.onUnauthenticated(error);
     }
     throw error;
+  }
+
+  /** デバッグ状態のサーバが付ける debug.mailViewUrl（同じオリジンのパスだけ）を見て、メール表示ページを開く。 */
+  #notifyDebugMail(data) {
+    const url = data?.debug?.mailViewUrl;
+    if (typeof url === "string" && url.startsWith("/debug/") && this.onDebugMail) {
+      this.onDebugMail(url);
+    }
   }
 
   /** @param {string} path @param {Record<string, any>} [query] */
