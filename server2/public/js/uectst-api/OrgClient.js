@@ -1,4 +1,4 @@
-// 研究者・組織が使うアプリ向けの入口。家族向けの FamilyClient とは別の Cookie（__Host-org-sid）・別のパス（/api/v1/org）を使う。
+// 運用担当者・組織が使うアプリ向けの入口。家族向けの FamilyClient とは別の Cookie（__Host-org-sid）・別のパス（/api/v1/org）を使う。
 //
 //   const api = new OrgClient({ onUnauthenticated: () => showLogin(), onElevationRequired: () => askPassword() });
 //   const login = await api.sessions.login(loginId, password);

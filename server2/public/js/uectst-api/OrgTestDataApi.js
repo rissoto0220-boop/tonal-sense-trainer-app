@@ -1,4 +1,4 @@
-// 利用データ（テスト結果）の API（研究者・組織向け。ApiSpec_TestData.md O22〜O26）。
+// 利用データ（テスト結果）の API（運用担当者・組織向け。ApiSpec_TestData.md O22〜O26）。
 // 参照できる範囲は、サーバが現在の所属で決める。参照できないユーザは 404 NOT_FOUND。
 
 /** 配列は、カンマ区切りにする（複数のユーザ・種類を指定するため）。 */
@@ -50,7 +50,7 @@ export class OrgTestDataApi {
     return this.client.getFile("/test-exports", { query: joinLists(query) });
   }
 
-  /** O26 セッション1件の削除（研究者のみ。確認が必要） @param {string} sessionId */
+  /** O26 セッション1件の削除（運用担当者のみ。確認が必要） @param {string} sessionId */
   deleteSession(sessionId) {
     return this.client.delete(`/test-sessions/${encodeURIComponent(sessionId)}`);
   }

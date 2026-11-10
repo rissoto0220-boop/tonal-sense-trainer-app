@@ -14,7 +14,7 @@ function recorder(responses) {
   return { calls, fetchFn };
 }
 
-test("研究者・組織の API が、仕様どおりのメソッド・パス・本文で呼ぶ（ベースパスは /api/v1/org）", async () => {
+test("運用担当者・組織の API が、仕様どおりのメソッド・パス・本文で呼ぶ（ベースパスは /api/v1/org）", async () => {
   const cases = [
     [(a) => a.sessions.login("example-univ", "pw"), "POST", "/api/v1/org/sessions", { loginId: "example-univ", password: "pw" }],
     [(a) => a.sessions.passkeyOptions(), "POST", "/api/v1/org/sessions/passkey-options", {}],
@@ -34,7 +34,9 @@ test("研究者・組織の API が、仕様どおりのメソッド・パス・
     [(a) => a.invitations.removeMember("f1"), "DELETE", "/api/v1/org/members/f1", undefined],
     [(a) => a.admin.list(), "GET", "/api/v1/org/organizations", undefined],
     [(a) => a.admin.create("○○大学", "example-univ"), "POST", "/api/v1/org/organizations", { name: "○○大学", loginId: "example-univ" }],
-    [(a) => a.admin.rename("o1", "新名称"), "PATCH", "/api/v1/org/organizations/o1", { name: "新名称" }],
+    [(a) => a.admin.create("○○大学", "example-univ", "まるまる"), "POST", "/api/v1/org/organizations", { name: "○○大学", nameKana: "まるまる", loginId: "example-univ" }],
+    [(a) => a.admin.update("o1", { name: "新名称" }), "PATCH", "/api/v1/org/organizations/o1", { name: "新名称" }],
+    [(a) => a.admin.update("o1", { nameKana: null }), "PATCH", "/api/v1/org/organizations/o1", { nameKana: null }],
     [(a) => a.admin.resetPassword("o1"), "POST", "/api/v1/org/organizations/o1/password-reset", {}],
     [(a) => a.admin.delete("o1"), "DELETE", "/api/v1/org/organizations/o1", undefined],
   ];
@@ -92,7 +94,7 @@ test("パスキーの登録: O9 → 端末 → O10", async () => {
   const options = {
     challenge: bufferToBase64Url(new Uint8Array([1, 2, 3]).buffer),
     rp: { id: "example.com", name: "n" },
-    user: { id: bufferToBase64Url(new Uint8Array([9]).buffer), name: "researcher", displayName: "研究者" },
+    user: { id: bufferToBase64Url(new Uint8Array([9]).buffer), name: "operator", displayName: "運用担当者" },
     excludeCredentials: [],
   };
   let received;

@@ -17,7 +17,7 @@ use UecTst\Passkey\PasskeyRepository;
 use UecTst\Support\Time;
 
 /**
- * 研究者の組織のパスキー（ApiSpec_Organization.md 3.）。通常の組織が呼び出した場合は 403 SUPER_ONLY。
+ * 運用担当者の組織のパスキー（ApiSpec_Organization.md 3.）。通常の組織が呼び出した場合は 403 SUPER_ONLY。
  *   O8 一覧 GET /org/passkeys
  *   O9 登録の開始 POST /org/passkeys/registration-options
  *   O10 登録 POST /org/passkeys

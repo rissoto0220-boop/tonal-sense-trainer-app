@@ -6,6 +6,7 @@ namespace UecTst\Api;
 
 use UecTst\Config\AppConfig;
 use UecTst\Config\DebugConfig;
+use UecTst\Debug\DebugIndexController;
 use UecTst\Debug\DebugMailController;
 use UecTst\Debug\DebugMailLink;
 use UecTst\Http\Request;
@@ -28,6 +29,11 @@ final class Routes
      */
     public static function register(Router $router, callable $services, ?AppConfig $config = null): void
     {
+        if ($config !== null && $config->debug->isOn(DebugConfig::FEATURE_INDEX_PAGE)) {
+            // 入口（/）の案内ページ。デバッグ状態でなければ、ルート自体がなく、404 になる。
+            $index = new DebugIndexController($config);
+            $router->add('GET', '/', static fn (Request $r, array $p): Response => $index->show($r));
+        }
         if ($config !== null && $config->debug->isOn(DebugConfig::FEATURE_MAIL_VIEWER)) {
             // メール表示ページ。DB を使わない（Services を作らない）。デバッグ状態でなければ、ルート自体がなく、404 になる。
             $mailViewer = new DebugMailController(new MailLog($config->mailLogFile));
@@ -71,7 +77,7 @@ final class Routes
         self::post($router, '/api/v1/organization-membership', $services, fn (Services $s, Request $r) => (new MembershipController($s))->join($r));        // #30
         self::delete($router, '/api/v1/organization-membership', $services, fn (Services $s, Request $r) => (new MembershipController($s))->leave($r));     // #31
 
-        // 研究者・組織（ApiSpec_Organization.md）
+        // 運用担当者・組織（ApiSpec_Organization.md）
         self::post($router, '/api/v1/org/sessions', $services, fn (Services $s, Request $r) => (new OrgSessionController($s))->login($r));                          // O1
         self::post($router, '/api/v1/org/sessions/passkey-options', $services, fn (Services $s, Request $r) => (new OrgSessionController($s))->passkeyOptions($r)); // O2
         self::post($router, '/api/v1/org/sessions/passkey', $services, fn (Services $s, Request $r) => (new OrgSessionController($s))->passkey($r));               // O3

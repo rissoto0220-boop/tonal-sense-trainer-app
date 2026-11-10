@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS organizations;
 CREATE TABLE organizations (
     id                       BINARY(16)       NOT NULL,
     name                     VARCHAR(100)     NOT NULL,
+    name_kana                VARCHAR(100)     NULL,
     login_id                 VARCHAR(64)      NOT NULL,
     password_hash            VARCHAR(255)     NOT NULL,
     password_change_required TINYINT(1)       NOT NULL DEFAULT 1,

@@ -1,4 +1,4 @@
-// 研究者・組織のログイン・ログアウトの API（ApiSpec_Organization.md O1〜O5）。
+// 運用担当者・組織のログイン・ログアウトの API（ApiSpec_Organization.md O1〜O5）。
 
 import { getCredential } from "./WebAuthnBrowser.js";
 
@@ -7,7 +7,7 @@ import { getCredential } from "./WebAuthnBrowser.js";
  * @property {string} id
  * @property {string} name
  * @property {string} loginId
- * @property {boolean} isSuper 研究者の組織か
+ * @property {boolean} isSuper 運用担当者の組織か
  * @property {boolean} passwordChangeRequired true ならパスワードの変更（OrgAccountApi.changePassword）を先に行う
  */
 
@@ -23,7 +23,7 @@ export class OrgSessionApi {
 
   /**
    * O1 ログイン（ログインID＋パスワード）。
-   * authStage が 0（研究者の組織）なら、passkeyRegistered が true ならパスキーの確認（loginWithPasskey）、
+   * authStage が 0（運用担当者の組織）なら、passkeyRegistered が true ならパスキーの確認（loginWithPasskey）、
    * false ならパスキーの登録（OrgPasskeyApi.registerNew）に進む。
    * 失敗: 401 INVALID_CREDENTIALS、429 ORGANIZATION_PASSWORD_LOCKED（ApiError.retryAfter が解除までの秒数）
    * @param {string} loginId
@@ -34,7 +34,7 @@ export class OrgSessionApi {
     return this.client.post("/sessions", { loginId, password });
   }
 
-  /** O2 パスキーによるログインの確認の開始（研究者の組織のみ）。navigator.credentials.get に渡す options を返す */
+  /** O2 パスキーによるログインの確認の開始（運用担当者の組織のみ）。navigator.credentials.get に渡す options を返す */
   passkeyOptions() {
     return this.client.post("/sessions/passkey-options", {});
   }

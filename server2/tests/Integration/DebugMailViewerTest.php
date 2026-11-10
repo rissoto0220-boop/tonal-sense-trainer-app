@@ -131,6 +131,40 @@ final class DebugMailViewerTest extends OrgApiTestCase
         $this->assertMatchesRegularExpression('#http://localhost:8888/invite\#token=[A-Za-z0-9_-]{43}#', $mails[0]['body']);
     }
 
+    public function testIndexPageIsShownOnlyWhenItsFeatureIsOn(): void
+    {
+        $this->assertError($this->client()->get('/'), 404, 'NOT_FOUND');
+
+        $this->useLogMailer(['enabled' => true, 'features' => ['mailViewer' => true]]);
+        $this->assertError($this->client()->get('/'), 404, 'NOT_FOUND');
+
+        $this->useLogMailer(['enabled' => false, 'features' => ['indexPage' => true]]);
+        $this->assertError($this->client()->get('/'), 404, 'NOT_FOUND');
+
+        $this->useLogMailer(['enabled' => true, 'features' => ['indexPage' => true, 'mailViewer' => true]]);
+        $page = $this->client()->get('/');
+        $this->assertSame(200, $page->status());
+        $this->assertStringStartsWith('text/html', (string) $page->header('Content-Type'));
+        $this->assertStringContainsString('href="/debug/mails"', $page->body());
+        $this->assertStringContainsString('/api/v1/org', $page->body());
+        // 秘密の値は表示しない
+        $this->assertStringNotContainsString('ZGV2LW9ubHkt', $page->body());
+
+        // メール表示ページが無効なら、リンクを出さない
+        $this->useLogMailer(['enabled' => true, 'features' => ['indexPage' => true]]);
+        $this->assertStringNotContainsString('/debug/mails', $this->client()->get('/')->body());
+    }
+
+    public function testIndexPageLinksIncludeTheBasePathAndAreEscaped(): void
+    {
+        $this->useLogMailer(['enabled' => true, 'features' => ['indexPage' => true, 'mailViewer' => true]]);
+        $controller = new \UecTst\Debug\DebugIndexController($this->services->config);
+        $request = new \UecTst\Http\Request('GET', '/', basePath: '/uec-tst/server2/public/index.php"><b>');
+        $body = $controller->show($request)->body;
+        $this->assertStringContainsString('href="/uec-tst/server2/public/index.php&quot;&gt;&lt;b&gt;/debug/mails"', $body);
+        $this->assertStringNotContainsString('<b>', $body);
+    }
+
     public function testViewerWithoutMailsIsEmpty(): void
     {
         $this->useLogMailer(['enabled' => true, 'features' => ['mailViewer' => true]]);

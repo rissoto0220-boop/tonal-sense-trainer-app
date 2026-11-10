@@ -37,7 +37,7 @@ final class OrgSessionService
     /**
      * 新しいセッションを作る。
      *
-     * @param int $authStage 0: パスキーの確認が未了（研究者の組織）、1: ログイン完了
+     * @param int $authStage 0: パスキーの確認が未了（運用担当者の組織）、1: ログイン完了
      * @return array{0: string, 1: OrgSession} [認証トークン本体（Cookie に入れる）, セッション]
      */
     public function create(string $organizationId, int $authStage): array

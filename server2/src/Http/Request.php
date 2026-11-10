@@ -57,21 +57,24 @@ final class Request
         // front controller（index.php）の置き場所を、アプリの基準パスとして取り除く。
         $script = is_string($server['SCRIPT_NAME'] ?? null) ? $server['SCRIPT_NAME'] : '/index.php';
         $base = rtrim(str_replace('\\', '/', dirname($script)), '/');
-        $fullPath = $path;
+        // 取り除いた接頭辞を覚えておく（メール表示ページなどの URL を作るときに、先頭に付ける）。
+        $basePath = '';
         if ($base !== '' && str_starts_with($path, $base . '/')) {
             $path = substr($path, strlen($base));
+            $basePath = $base;
         } elseif ($path === $base) {
             $path = '/';
+            $basePath = $base;
         }
         // URL Rewrite が使えない環境では、index.php を含む形（/…/public/index.php/api/v1/...）で呼ばれる。その部分も取り除く。
         $scriptName = '/' . basename($script);
         if ($path === $scriptName) {
             $path = '/';
+            $basePath .= $scriptName;
         } elseif (str_starts_with($path, $scriptName . '/')) {
             $path = substr($path, strlen($scriptName));
+            $basePath .= $scriptName;
         }
-        $basePath = $path === '/' && $fullPath === $path ? '' : substr($fullPath, 0, strlen($fullPath) - strlen($path));
-        $basePath = rtrim($basePath, '/');
 
         $method = is_string($server['REQUEST_METHOD'] ?? null) ? strtoupper($server['REQUEST_METHOD']) : 'GET';
         return new self($method, $path, $headers, $cookies, $query, $rawBody, self::resolveClientIp($server, $headers, $trustedProxyHeader), $basePath);

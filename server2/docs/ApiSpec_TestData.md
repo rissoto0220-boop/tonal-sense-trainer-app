@@ -3,7 +3,7 @@
 データフォーマット（DataFormat_TestData.md）とテーブル仕様書（TableSpec_TestData.md）に基づき、テスト・訓練の結果（利用データ）の Web API を定義する。
 
 - クライアントアプリ（家族・ユーザ）向け：#32〜#35（ApiSpec_Auth.md の番号の続き）
-- 研究者・組織向け：O22〜O26（ApiSpec_Organization.md の番号の続き）
+- 運用担当者・組織向け：O22〜O26（ApiSpec_Organization.md の番号の続き）
 
 家族・ユーザの認証は ApiSpec_Auth.md、組織の認証は ApiSpec_Organization.md を参照する。
 
@@ -11,7 +11,7 @@
 
 ### 0.1 基本
 
-- ベースパスは、クライアントアプリ向けが `/api/v1`、研究者・組織向けが `/api/v1/org`。
+- ベースパスは、クライアントアプリ向けが `/api/v1`、運用担当者・組織向けが `/api/v1/org`。
 - 通信、リクエスト・レスポンスの本文、ID、`Cache-Control: no-store`、CSRF 対策、エラーレスポンスの形式は、ApiSpec_Auth.md の 0.1〜0.3・0.5 に従う（組織向けは ApiSpec_Organization.md の 0.1〜0.3）。
 - 日時は、レスポンスでは UTC（`2026-10-29T08:54:03.875Z`）で返す。セッションの開始日時のオフセットは、`utcOffsetMinutes`（分。`+09:00` は `540`）で返す。
   - 送信（#32）の日時は、DataFormat_TestData.md のとおり、オフセット付き（`+09:00` など）で受け取る。
@@ -23,8 +23,8 @@
 | API | 認証 | 参照・書き込みできる範囲 |
 |---|---|---|
 | #32〜#35 | 家族の Cookie（`__Host-sid`） | パスの `userId` が、ログイン中の家族の、現存するユーザであること。そうでなければ `404 NOT_FOUND`（ApiSpec_Auth.md 3.2）。削除されたユーザの `userId` も `404` |
-| O22〜O25 | 組織の Cookie（`__Host-org-sid`）、段階1 | 通常の組織：現在その組織に所属している家族の、現存するユーザのみ。研究者：すべて（個人ユーザ・退会した家族・削除されたユーザを含む）。参照できない `userId` は、存在しない場合と区別せず `404 NOT_FOUND`（TableSpec_Organization.md 6.） |
-| O26 | 組織の Cookie、段階1 | 研究者のみ（`403 SUPER_ONLY`）。確認（O7）が必要 |
+| O22〜O25 | 組織の Cookie（`__Host-org-sid`）、段階1 | 通常の組織：現在その組織に所属している家族の、現存するユーザのみ。運用担当者：すべて（個人ユーザ・退会した家族・削除されたユーザを含む）。参照できない `userId` は、存在しない場合と区別せず `404 NOT_FOUND`（TableSpec_Organization.md 6.） |
+| O26 | 組織の Cookie、段階1 | 運用担当者のみ（`403 SUPER_ONLY`）。確認（O7）が必要 |
 
 - 参照の可否は、リクエストのたびに、データベース上の所属関係で判定する（セッションに保持した値は使わない）。
 - 組織は、利用データとユーザ名（ニックネーム）のみ参照できる。家族の ID・組織の ID・メールアドレス・復旧コードなどは返さない。
@@ -51,15 +51,15 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 | 34 | GET | `/api/v1/users/{userId}/test-sessions/{sessionId}` | 必要 | | セッション 1 件の詳細 |
 | 35 | GET | `/api/v1/users/{userId}/test-exports` | 必要 | | 自分のデータの CSV のダウンロード |
 
-**研究者・組織向け**
+**運用担当者・組織向け**
 
-| # | メソッド | パス | 認証 | 確認 | 研究者のみ | 概要 |
+| # | メソッド | パス | 認証 | 確認 | 運用担当者のみ | 概要 |
 |---|---|---|---|---|---|---|
 | O22 | GET | `/api/v1/org/users` | 段階1 | | | 参照できるユーザの一覧 |
 | O23 | GET | `/api/v1/org/users/{userId}/test-sessions` | 段階1 | | | ユーザのセッションの一覧 |
 | O24 | GET | `/api/v1/org/users/{userId}/test-sessions/{sessionId}` | 段階1 | | | セッション 1 件の詳細 |
 | O25 | GET | `/api/v1/org/test-exports` | 段階1 | | | CSV・ZIP のダウンロード |
-| O26 | DELETE | `/api/v1/org/test-sessions/{sessionId}` | 段階1 | 必要 | 研究者 | セッション 1 件の削除 |
+| O26 | DELETE | `/api/v1/org/test-sessions/{sessionId}` | 段階1 | 必要 | 運用担当者 | セッション 1 件の削除 |
 
 ### 0.5 共通のデータ形式
 
@@ -221,7 +221,7 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 
 **エラー**：`401 UNAUTHENTICATED`、`404 NOT_FOUND`、`422 VALIDATION_FAILED`、`422 EXPORT_TOO_LARGE`、`429 RATE_LIMITED`
 
-## 3. 研究者・組織の参照
+## 3. 運用担当者・組織の参照
 
 ### 3.1 参照できるユーザの一覧 `GET /api/v1/org/users`（O22）
 
@@ -248,12 +248,12 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 
 | 項目 | 説明 |
 |---|---|
-| `name` | ユーザ名（ニックネーム）。削除されたユーザ・退会した家族のユーザは `null`（研究者のみ） |
+| `name` | ユーザ名（ニックネーム）。削除されたユーザ・退会した家族のユーザは `null`（運用担当者のみ） |
 | `sessionCount`、`lastSessionAt` | そのユーザの保存済みセッションの数と、最後の開始日時。データがないユーザも一覧に含める（`0`、`null`） |
-| `organization` | 研究者のみ返す。現在所属している組織の名前。個人ユーザ・削除されたユーザは `null`。通常の組織には、この項目を返さない |
+| `organization` | 運用担当者のみ返す。現在所属している組織の名前。個人ユーザ・削除されたユーザは `null`。通常の組織には、この項目を返さない |
 
 - 通常の組織：所属している家族の、現存するユーザ（データのないユーザを含む）。
-- 研究者：現存するユーザと、`test_sessions` に `user_id` が残っている削除済みのユーザ。
+- 運用担当者：現存するユーザと、`test_sessions` に `user_id` が残っている削除済みのユーザ。
 
 **エラー**：`401 UNAUTHENTICATED`、`403 PASSKEY_REQUIRED`、`403 PASSWORD_CHANGE_REQUIRED`
 
@@ -338,7 +338,7 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 
 ### 5.1 セッションの削除 `DELETE /api/v1/org/test-sessions/{sessionId}`（O26）
 
-研究者が、利用データのセッション 1 件を削除する（基本方針 10.7、TableSpec_Account.md 5.2）。**確認（O7）が必要**。
+運用担当者が、利用データのセッション 1 件を削除する（基本方針 10.7、TableSpec_Account.md 5.2）。**確認（O7）が必要**。
 
 **処理**：`test_sessions` の行を削除する（回答のテーブルは、`ON DELETE CASCADE` で連鎖して削除される）。
 
@@ -346,7 +346,7 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 
 **エラー**：`401`、`403 PASSKEY_REQUIRED`、`403 PASSWORD_CHANGE_REQUIRED`、`403 SUPER_ONLY`、`403 ELEVATION_REQUIRED`、`404 NOT_FOUND`
 
-- ユーザごと・期間ごとなどの一括削除は、運用者の SQL で行う（6. 未決事項）。
+- ユーザごと・期間ごとなどの一括削除は、運用担当者の SQL で行う（6. 未決事項）。
 
 ## 6. 操作の記録
 

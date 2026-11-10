@@ -14,8 +14,8 @@
 
 | テーブル名 | 論理名 | 概要 |
 |---|---|---|
-| `organizations` | 組織 | 組織のログインアカウント。研究者（スーパー）の組織は `is_super = 1` |
-| `organization_passkeys` | 組織のパスキー | 研究者の組織のログインで、パスワードに加えて確認に使うパスキー（WebAuthn） |
+| `organizations` | 組織 | 組織のログインアカウント。運用担当者（スーパー）の組織は `is_super = 1` |
+| `organization_passkeys` | 組織のパスキー | 運用担当者の組織のログインで、パスワードに加えて確認に使うパスキー（WebAuthn） |
 | `organization_sessions` | 組織のセッション | 組織のログイン状態。認証トークンのハッシュを持つ |
 | `organization_invitations` | 招待 | 招待URLのトークンのハッシュと有効期限のみを持つ |
 
@@ -36,12 +36,13 @@ organizations 1 ──── 0..n organization_invitations
 |---|---|---|---|---|
 | `id` | `BINARY(16)` | NOT NULL | | 主キー（UUID v7） |
 | `name` | `VARCHAR(100)` | NOT NULL | | 組織名。招待ページに、所属先として表示する。文字数は文字単位で数える |
+| `name_kana` | `VARCHAR(100)` | NULL | | 組織名の読み仮名。一覧を、組織名の五十音順に並べるために使う。ひらがな（入力されたカタカナは、ひらがなに変換する）・長音符・半角の英数字・半角の空白のみ。未登録は NULL（並べ替えでは、読み仮名のある組織の後ろに、組織名の文字コード順で並べる）。重複してもよい |
 | `login_id` | `VARCHAR(64)` | NOT NULL | | ログインID。英小文字・数字・`.`・`_`・`-` のみ（ApiSpec_Organization.md 0.5） |
 | `password_hash` | `VARCHAR(255)` | NOT NULL | | パスワードのハッシュ（Argon2id の PHC 形式の文字列） |
 | `password_change_required` | `TINYINT(1)` | NOT NULL | `1` | 1なら、次のログインでパスワードの変更を求める。発行時・再発行時に1、変更後に0 |
 | `password_failed_count` | `TINYINT UNSIGNED` | NOT NULL | `0` | パスワードの連続失敗回数 |
 | `password_locked_until` | `DATETIME(6)` | NULL | | パスワードの入力をロックする期限。ロックしていなければ NULL |
-| `is_super` | `TINYINT(1)` | NOT NULL | `0` | 研究者（スーパー）の組織なら1。全体で1つだけ |
+| `is_super` | `TINYINT(1)` | NOT NULL | `0` | 運用担当者（スーパー）の組織なら1。全体で1つだけ |
 | `created_at` | `DATETIME(6)` | NOT NULL | `CURRENT_TIMESTAMP(6)` | 登録日時 |
 | `updated_at` | `DATETIME(6)` | NOT NULL | `CURRENT_TIMESTAMP(6)` | 更新日時（`ON UPDATE CURRENT_TIMESTAMP(6)`） |
 
@@ -52,7 +53,7 @@ organizations 1 ──── 0..n organization_invitations
 | PRIMARY KEY | | `id` | |
 | UNIQUE | `uq_organizations_login_id` | `login_id` | ログイン時に、ログインIDで検索する |
 | UNIQUE | `uq_organizations_name` | `name` | 組織名の重複を禁止する（招待ページで区別できなくなるため） |
-| UNIQUE | `uq_organizations_super` | `((IF(is_super = 1, 1, NULL)))` | 関数インデックス。研究者の組織が2つ以上にならないことを保証する（NULL は重複とみなされない） |
+| UNIQUE | `uq_organizations_super` | `((IF(is_super = 1, 1, NULL)))` | 関数インデックス。運用担当者の組織が2つ以上にならないことを保証する（NULL は重複とみなされない） |
 | CHECK | `ck_organizations_name` | `CHAR_LENGTH(TRIM(name)) >= 1` | 空白のみの組織名を禁止する |
 | CHECK | `ck_organizations_login_id` | `CHAR_LENGTH(login_id) >= 4` | |
 | CHECK | `ck_organizations_is_super` | `is_super IN (0, 1)` | |
@@ -70,11 +71,11 @@ organizations 1 ──── 0..n organization_invitations
     - ロック中（`password_locked_until` が現在時刻より後）は、パスワードを照合せずに拒否する。
     - 成功したら `password_failed_count` を0に戻す。
     - 同時に入力されても回数を正しく数えるため、照合時は組織の行を `SELECT ... FOR UPDATE` でロックする。
-  - 研究者の組織が、ロックされても、パスワードの再発行（運用者の SQL）で復旧できる（7.）。
+  - 運用担当者の組織が、ロックされても、パスワードの再発行（運用担当者の SQL）で復旧できる（7.）。
   - 発行時・再発行時は、ランダムな初期パスワードを作って保存し、`password_change_required = 1` にする。初期パスワードは、画面に1回だけ表示する。
-- 研究者（スーパー）の組織
-  - `is_super = 1` は、全体で1つだけ。最初の1つは、運用者が SQL で作成する（7.）。
-  - 研究者の組織は削除できない（アプリケーションで保証する）。`is_super` の値は、アプリケーションからは変更しない。
+- 運用担当者（スーパー）の組織
+  - `is_super = 1` は、全体で1つだけ。最初の1つは、運用担当者が SQL で作成する（7.）。
+  - 運用担当者の組織は削除できない（アプリケーションで保証する）。`is_super` の値は、アプリケーションからは変更しない。
 - 組織の削除
   - 物理削除とする。`families.organization_id` は `ON DELETE SET NULL` で NULL になり、所属していた家族は個人ユーザになる（TableSpec_Account.md 2.2）。
   - `families.organization_joined_at` は、外部キーの動作では NULL にならない。削除の前に、アプリケーションが、所属していた家族の `organization_id` と `organization_joined_at` を NULL にする（同じトランザクション。TableSpec_Account.md 2.3）。
@@ -87,6 +88,7 @@ organizations 1 ──── 0..n organization_invitations
 CREATE TABLE organizations (
     id                       BINARY(16)       NOT NULL,
     name                     VARCHAR(100)     NOT NULL,
+    name_kana                VARCHAR(100)     NULL,
     login_id                 VARCHAR(64)      NOT NULL,
     password_hash            VARCHAR(255)     NOT NULL,
     password_change_required TINYINT(1)       NOT NULL DEFAULT 1,
@@ -108,7 +110,7 @@ CREATE TABLE organizations (
 
 ## 3. organization_passkeys（組織のパスキー）
 
-基本方針 10.3 に基づき、研究者の組織のログインで、パスワードに加えて確認に使うパスキー（WebAuthn の公開鍵クレデンシャル）を管理する。家族のパスキー（TableSpec_Account.md 4.）と同じ考え方で、別のテーブルとする。
+基本方針 10.3 に基づき、運用担当者の組織のログインで、パスワードに加えて確認に使うパスキー（WebAuthn の公開鍵クレデンシャル）を管理する。家族のパスキー（TableSpec_Account.md 4.）と同じ考え方で、別のテーブルとする。
 
 ### 3.1 カラム
 
@@ -137,9 +139,9 @@ CREATE TABLE organizations (
 
 ### 3.3 補足
 
-- 現時点では、研究者の組織（`is_super = 1`）のみがパスキーを登録・使用する（基本方針 10.3）。通常の組織には、求めない。
+- 現時点では、運用担当者の組織（`is_super = 1`）のみがパスキーを登録・使用する（基本方針 10.3）。通常の組織には、求めない。
 - 上限は組織あたり10件とする（アプリケーションで保証する）。
-- 研究者の組織は、パスキーを1件以上登録していなければならない。最後の1件は削除できない（アプリケーションで保証する）。
+- 運用担当者の組織は、パスキーを1件以上登録していなければならない。最後の1件は削除できない（アプリケーションで保証する）。
 - WebAuthn のユーザ ID（user handle）には `organizations.id`（16バイト）を使う。個人情報を含まない。
 - 署名カウンタ・challenge の扱いは、家族のパスキーと同じ（TableSpec_Account.md 4.3、TableSpec_Auth.md 4.2。`purpose` は `org_login`・`org_registration`）。
 - パスキーはサイトのドメイン（RP ID）に結び付くため、運用開始後にドメインを変更すると、すべてのパスキーが使えなくなる。
@@ -196,7 +198,7 @@ CREATE TABLE organization_passkeys (
 
 - 発行
   - パスワードの確認に成功したときに、1行作成する。
-  - 通常の組織は `auth_stage = 1`（ログイン完了）で作成する。研究者の組織は `auth_stage = 0` で作成し、パスキーの確認に成功したら 1 に更新する（ApiSpec_Organization.md 1.）。
+  - 通常の組織は `auth_stage = 1`（ログイン完了）で作成する。運用担当者の組織は `auth_stage = 0` で作成し、パスキーの確認に成功したら 1 に更新する（ApiSpec_Organization.md 1.）。
   - 既存の Cookie に有効なセッションがある場合は、そのセッションを削除してから作成する。
 - 認証（リクエストごと）
   - Cookie のトークンを SHA-256 でハッシュ化し、`token_hash` で検索する。見つからない、または `expires_at` を過ぎている場合は、未ログインとして扱う。
@@ -303,7 +305,7 @@ CREATE TABLE organization_invitations (
 |---|---|---|
 | 家族のユーザ | 自分の家族の、現存するユーザのデータ | `d.user_id` が、ログイン中の家族の `users.id` のいずれか |
 | 通常の組織 | 現在その組織に所属している家族の、現存するユーザのデータ | 下記のクエリ |
-| 研究者（スーパー） | すべて（個人ユーザ・退会した家族・削除されたユーザのデータを含む） | 条件なし |
+| 運用担当者（スーパー） | すべて（個人ユーザ・退会した家族・削除されたユーザのデータを含む） | 条件なし |
 
 通常の組織の絞り込み：
 
@@ -315,18 +317,18 @@ SELECT d.*
  WHERE f.organization_id = :organization_id;
 ```
 
-- 内部結合のため、ユーザの削除・退会（`users` の行がない）のデータは、通常の組織の結果に含まれない。研究者のみが参照できる（基本方針 10.4）。
+- 内部結合のため、ユーザの削除・退会（`users` の行がない）のデータは、通常の組織の結果に含まれない。運用担当者のみが参照できる（基本方針 10.4）。
 - 個人ユーザ（`f.organization_id IS NULL`）のデータも、通常の組織の結果に含まれない。
 - 所属・解除・組織の削除は、`families.organization_id` の更新で反映される。過去のデータも、現在の所属で参照できる組織が決まる。
   - 所属前のデータを組織に見せない場合は、`d` の作成日時と `f.organization_joined_at` を比べる条件を足す（9. 未決事項）。
 - 利用データのテーブルには、`user_id` のインデックスが必要である（TableSpec_Account.md 5.2）。
 - 組織が参照できるのは、利用データと、ユーザ名（`users.name`）のみ。`families`・`sessions`・`passkeys` の内容は参照できない。
 
-## 7. 最初の研究者の組織の作成と運用の SQL
+## 7. 最初の運用担当者の組織の作成と運用の SQL
 
-研究者の組織は、自己登録できない。最初の1つは、運用者がデータベースに直接作成する。
+運用担当者の組織は、自己登録できない。最初の1つは、運用担当者がデータベースに直接作成する。
 
-1. 運用者の端末で、初期パスワードのハッシュを作る。パスワードをコマンドラインに直接書かない（シェルの履歴に残るため）。
+1. 運用担当者の端末で、初期パスワードのハッシュを作る。パスワードをコマンドラインに直接書かない（シェルの履歴に残るため）。
 
    ```bash
    php -r 'echo password_hash(trim(fgets(STDIN)), PASSWORD_ARGON2ID, ["memory_cost" => 19456, "time_cost" => 2, "threads" => 1]), PHP_EOL;'
@@ -338,19 +340,19 @@ SELECT d.*
 
    ```sql
    INSERT INTO organizations (id, name, login_id, password_hash, password_change_required, is_super)
-   VALUES (UUID_TO_BIN('<UUID v7>'), '研究者', 'researcher', '<ハッシュ>', 1, 1);
+   VALUES (UUID_TO_BIN('<UUID v7>'), '運用担当者', 'operator', '<ハッシュ>', 1, 1);
    ```
 
-4. 研究者の担当者が、最初にログインする。パスワードの変更、続いてパスキーの登録を行う（ApiSpec_Organization.md 1.）。
+4. 運用担当者の担当者が、最初にログインする。パスワードの変更、続いてパスキーの登録を行う（ApiSpec_Organization.md 1.）。
 
 運用で SQL を使う場面：
 
 | 場面 | SQL |
 |---|---|
-| 研究者がパスキーを紛失した | `DELETE FROM organization_passkeys WHERE organization_id = (SELECT id FROM organizations WHERE is_super = 1);`（次のログインで、パスキーの登録からやり直す） |
-| 研究者のパスワードの再発行・ロックの解除 | `UPDATE organizations SET password_hash = '<ハッシュ>', password_change_required = 1, password_failed_count = 0, password_locked_until = NULL WHERE is_super = 1;` |
+| 運用担当者がパスキーを紛失した | `DELETE FROM organization_passkeys WHERE organization_id = (SELECT id FROM organizations WHERE is_super = 1);`（次のログインで、パスキーの登録からやり直す） |
+| 運用担当者のパスワードの再発行・ロックの解除 | `UPDATE organizations SET password_hash = '<ハッシュ>', password_change_required = 1, password_failed_count = 0, password_locked_until = NULL WHERE is_super = 1;` |
 
-- パスキーの削除は、研究者のアカウントを守る最後の手段である。実行できる運用者を限定し、実行の記録を残す。
+- パスキーの削除は、運用担当者のアカウントを守る最後の手段である。実行できる運用担当者を限定し、実行の記録を残す。
 
 ## 8. 定期処理
 
@@ -363,4 +365,4 @@ SELECT d.*
 - 組織名の最大文字数（仮に100文字としている）
 - 招待の主キーを UUID v4 にするか（UUID v7 に含まれる生成時刻を避けるか）
 - 所属前に作られた利用データを、組織に参照させるか（6.。現状は参照できる）
-- 研究者の組織のパスワードがロックされた場合の運用（攻撃者がロックを繰り返すと、研究者がログインできなくなる。7. の SQL で復旧できるが、頻発する場合の対策）
+- 運用担当者の組織のパスワードがロックされた場合の運用（攻撃者がロックを繰り返すと、運用担当者がログインできなくなる。7. の SQL で復旧できるが、頻発する場合の対策）

@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<script>if (!location.pathname.endsWith("/")) location.replace(location.pathname + "/" + location.search + location.hash); // 末尾の / がない URL（/app/register など）でも、相対パスが正しく解決されるようにする（フラグメントは保たれる）</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>ログイン</title>
+<link rel="stylesheet" href="../app.css">
+</head>
+<body>
+<div class="provisional">仮実装の画面です（見た目・文言は、今後変更します）</div>
+<main>
+  <h1>ログイン</h1>
+  <p>登録のときに控えた<strong>復旧コード</strong>を入力してください。</p>
+  <form id="form" class="card" novalidate>
+    <label for="code">復旧コード</label>
+    <input id="code" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="XXXXX-XXXXX-XXXXX-XXXXX-XXXXX">
+    <p class="note">ハイフンや空白は、あってもなくても構いません。小文字でも入力できます。</p>
+    <p id="formError" class="error" role="alert" hidden></p>
+    <div class="row"><button id="submit" class="primary" type="submit">ログイン</button></div>
+  </form>
+  <p class="note">復旧コードを紛失し、Cookie も失った場合は、アカウントを復旧できません。</p>
+  <p class="links">はじめての方は、<a href="../signup/">新規登録</a>へ。</p>
+</main>
+<script type="module" src="login.js"></script>
+</body>
+</html>

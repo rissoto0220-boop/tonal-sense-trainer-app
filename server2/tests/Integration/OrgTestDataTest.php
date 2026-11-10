@@ -7,17 +7,17 @@ namespace UecTst\Tests\Integration;
 use UecTst\Tests\Support\TestClient;
 use ZipArchive;
 
-/** 研究者・組織の、利用データの API（O22〜O26）。 */
+/** 運用担当者・組織の、利用データの API（O22〜O26）。 */
 final class OrgTestDataTest extends TestDataApiTestCase
 {
     /** @var array{org: TestClient, a: TestClient, userA: string, b: TestClient, userB: string, super: TestClient} */
     private array $world;
 
-    /** 通常の組織(A大学)に所属する家族 A と、個人ユーザの家族 B、研究者を用意し、それぞれが各種のデータを送る。 */
+    /** 通常の組織(A大学)に所属する家族 A と、個人ユーザの家族 B、運用担当者を用意し、それぞれが各種のデータを送る。 */
     private function setUpWorld(): void
     {
         $this->createOrganization('A大学', 'example-univ');
-        $this->createOrganization('研究者', 'researcher', isSuper: true);
+        $this->createOrganization('運用担当者', 'operator', isSuper: true);
 
         $org = $this->client('203.0.113.1');
         $this->orgLogin($org, 'example-univ');
@@ -49,9 +49,9 @@ final class OrgTestDataTest extends TestDataApiTestCase
         $this->orgLogin($c, 'b-univ');
         $this->assertError($c->get('/api/v1/org/users'), 403, 'PASSWORD_CHANGE_REQUIRED');
 
-        $this->createOrganization('研究者', 'researcher', isSuper: true);
+        $this->createOrganization('運用担当者', 'operator', isSuper: true);
         $super = $this->client('203.0.113.10');
-        $this->orgLogin($super, 'researcher');
+        $this->orgLogin($super, 'operator');
         $this->assertError($super->get('/api/v1/org/users'), 403, 'PASSKEY_REQUIRED');
     }
 
@@ -94,7 +94,7 @@ final class OrgTestDataTest extends TestDataApiTestCase
         $this->assertSame(['name' => 'A大学'], $byId[$userA]['organization']);
         $this->assertNull($byId[$userB]['organization']);
 
-        // 家族 A が退会しても、研究者はデータを参照できる。通常の組織は参照できなくなる。
+        // 家族 A が退会しても、運用担当者はデータを参照できる。通常の組織は参照できなくなる。
         $family = $a->get('/api/v1/sessions/current')->json();
         $this->assertArrayHasKey('family', $family);
         $this->pdo->exec('DELETE FROM families');
@@ -209,7 +209,7 @@ final class OrgTestDataTest extends TestDataApiTestCase
         // 通常の組織は 403 SUPER_ONLY（確認の前に判定）
         $this->orgElevate($org);
         $this->assertError($org->delete('/api/v1/org/test-sessions/' . self::TR_ID), 403, 'SUPER_ONLY');
-        // 研究者でも、確認が必要
+        // 運用担当者でも、確認が必要
         $this->assertError($super->delete('/api/v1/org/test-sessions/' . self::TR_ID), 403, 'ELEVATION_REQUIRED');
         $this->orgElevate($super);
 

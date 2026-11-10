@@ -6,12 +6,12 @@ namespace UecTst\Tests\Integration;
 
 use UecTst\Tests\Support\TestClient;
 
-/** 組織の管理（O17〜O21）。研究者の組織だけが実行できる。 */
+/** 組織の管理（O17〜O21）。運用担当者の組織だけが実行できる。 */
 final class OrgAdminTest extends OrgApiTestCase
 {
     private function superClient(): TestClient
     {
-        $this->createOrganization('研究者', 'researcher', isSuper: true);
+        $this->createOrganization('運用担当者', 'operator', isSuper: true);
         $c = $this->client('203.0.113.10');
         $this->loginSuperWithPasskey($c);
         return $c;
@@ -72,9 +72,9 @@ final class OrgAdminTest extends OrgApiTestCase
 
         $this->assertError($super->post('/api/v1/org/organizations', ['name' => '別の名前', 'loginId' => 'EXAMPLE-univ']), 409, 'DUPLICATE_LOGIN_ID');
         $this->assertError($super->post('/api/v1/org/organizations', ['name' => '○○大学', 'loginId' => 'other-login']), 409, 'DUPLICATE_ORGANIZATION_NAME');
-        // 研究者の組織と同じ名前・ログインIDも使えない。
-        $this->assertError($super->post('/api/v1/org/organizations', ['name' => '研究者', 'loginId' => 'unique-login']), 409, 'DUPLICATE_ORGANIZATION_NAME');
-        $this->assertError($super->post('/api/v1/org/organizations', ['name' => '新しい名前', 'loginId' => 'researcher']), 409, 'DUPLICATE_LOGIN_ID');
+        // 運用担当者の組織と同じ名前・ログインIDも使えない。
+        $this->assertError($super->post('/api/v1/org/organizations', ['name' => '運用担当者', 'loginId' => 'unique-login']), 409, 'DUPLICATE_ORGANIZATION_NAME');
+        $this->assertError($super->post('/api/v1/org/organizations', ['name' => '新しい名前', 'loginId' => 'operator']), 409, 'DUPLICATE_LOGIN_ID');
 
         $cases = [
             [['name' => '', 'loginId' => 'valid-id'], 'name', 'REQUIRED'],
@@ -114,10 +114,48 @@ final class OrgAdminTest extends OrgApiTestCase
         $this->registerFamilyInto($org, $this->client('203.0.113.61'));
 
         $list = $super->get('/api/v1/org/organizations')->json()['organizations'];
-        $this->assertSame(['新しい組織', '古い組織', '研究者'], array_column($list, 'name'));
+        $this->assertSame(['新しい組織', '古い組織', '運用担当者'], array_column($list, 'name'));
         $this->assertSame([0, 2, 0], array_column($list, 'memberFamilyCount'));
         $this->assertSame([false, false, true], array_column($list, 'isSuper'));
-        $this->assertSame(['id', 'name', 'loginId', 'isSuper', 'memberFamilyCount', 'createdAt'], array_keys($list[0]));
+        $this->assertSame(['id', 'name', 'nameKana', 'loginId', 'isSuper', 'memberFamilyCount', 'createdAt'], array_keys($list[0]));
+    }
+
+    public function testNameKanaIsNormalizedValidatedAndChangeable(): void
+    {
+        $super = $this->superClient();
+        // カタカナ・全角英数・全角空白は、ひらがな・半角に正規化して保存する。重複してもよい。省略は未登録。
+        $r = $super->post('/api/v1/org/organizations', ['name' => 'A大学', 'nameKana' => ' エーダイガク　ＡＢ１ ', 'loginId' => 'a-univ']);
+        $this->assertSame(201, $r->status(), $r->body());
+        $a = $r->json()['organization']['id'];
+        $this->assertSame('えーだいがく ab1', $r->json()['organization']['nameKana']);
+        $this->assertSame(201, $super->post('/api/v1/org/organizations', ['name' => 'B大学', 'nameKana' => 'えーだいがく ab1', 'loginId' => 'b-univ'])->status());
+        $c = $super->post('/api/v1/org/organizations', ['name' => 'C大学', 'loginId' => 'c-univ']);
+        $this->assertNull($c->json()['organization']['nameKana']);
+        $this->assertSame(201, $super->post('/api/v1/org/organizations', ['name' => 'D大学', 'nameKana' => '   ', 'loginId' => 'd-univ'])->status());
+
+        // 漢字・記号・長すぎる読み仮名は拒否する。
+        $this->assertError($super->post('/api/v1/org/organizations', ['name' => 'E大学', 'nameKana' => '電通大', 'loginId' => 'e-univ']), 422, 'VALIDATION_FAILED');
+        $this->assertError($super->post('/api/v1/org/organizations', ['name' => 'E大学', 'nameKana' => 'あ!', 'loginId' => 'e-univ']), 422, 'VALIDATION_FAILED');
+        $this->assertError($super->post('/api/v1/org/organizations', ['name' => 'E大学', 'nameKana' => str_repeat('あ', 101), 'loginId' => 'e-univ']), 422, 'VALIDATION_FAILED');
+        $this->assertError($super->post('/api/v1/org/organizations', ['name' => 'E大学', 'nameKana' => 5, 'loginId' => 'e-univ']), 400, 'BAD_REQUEST');
+
+        // 読み仮名だけの変更では、組織名は変わらない。
+        $r = $super->patch("/api/v1/org/organizations/{$a}", ['nameKana' => 'エイ']);
+        $this->assertSame(200, $r->status(), $r->body());
+        $this->assertSame('A大学', $r->json()['organization']['name']);
+        $this->assertSame('えい', $r->json()['organization']['nameKana']);
+        // 組織名だけの変更では、読み仮名は変わらない。
+        $r = $super->patch("/api/v1/org/organizations/{$a}", ['name' => 'A大学院']);
+        $this->assertSame('えい', $r->json()['organization']['nameKana']);
+        $this->assertError($super->patch("/api/v1/org/organizations/{$a}", ['nameKana' => '漢字']), 422, 'VALIDATION_FAILED');
+        // 空文字・null で、未登録に戻す。
+        $this->assertNull($super->patch("/api/v1/org/organizations/{$a}", ['nameKana' => ''])->json()['organization']['nameKana']);
+        $super->patch("/api/v1/org/organizations/{$a}", ['nameKana' => 'えい']);
+        $this->assertNull($super->patch("/api/v1/org/organizations/{$a}", ['nameKana' => null])->json()['organization']['nameKana']);
+
+        $kanas = array_column($super->get('/api/v1/org/organizations')->json()['organizations'], 'nameKana', 'name');
+        $this->assertSame('えーだいがく ab1', $kanas['B大学']);
+        $this->assertNull($kanas['運用担当者']);
     }
 
     public function testRenameAndItsErrors(): void
@@ -134,7 +172,7 @@ final class OrgAdminTest extends OrgApiTestCase
         $this->assertSame(200, $super->patch("/api/v1/org/organizations/{$a}", ['name' => 'A大学 情報学部'])->status());
 
         $this->assertError($super->patch("/api/v1/org/organizations/{$a}", ['name' => 'B大学']), 409, 'DUPLICATE_ORGANIZATION_NAME');
-        $this->assertError($super->patch("/api/v1/org/organizations/{$a}", ['name' => '研究者']), 409, 'DUPLICATE_ORGANIZATION_NAME');
+        $this->assertError($super->patch("/api/v1/org/organizations/{$a}", ['name' => '運用担当者']), 409, 'DUPLICATE_ORGANIZATION_NAME');
         $this->assertError($super->patch("/api/v1/org/organizations/{$a}", ['name' => '  ']), 422, 'VALIDATION_FAILED');
         $this->assertError($super->patch('/api/v1/org/organizations/' . $this->idString(random_bytes(16)), ['name' => 'X']), 404, 'NOT_FOUND');
         $this->assertError($super->patch('/api/v1/org/organizations/bad-id', ['name' => 'X']), 404, 'NOT_FOUND');

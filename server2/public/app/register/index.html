@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<script>if (!location.pathname.endsWith("/")) location.replace(location.pathname + "/" + location.search + location.hash); // 末尾の / がない URL（/app/register など）でも、相対パスが正しく解決されるようにする（フラグメントは保たれる）</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- 本登録のリンクのトークンを含む URL を、外部に送らない。アクセス解析などのスクリプトも読み込まない（基本方針 3.2） -->
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>本登録</title>
+<link rel="stylesheet" href="../app.css">
+</head>
+<body>
+<div class="provisional no-print">仮実装の画面です（見た目・文言は、今後変更します）</div>
+<main>
+  <h1 class="no-print">本登録</h1>
+
+  <section data-screen="checking">
+    <p>リンクを確認しています…</p>
+  </section>
+
+  <!-- メールのリンクから開かれていない -->
+  <section data-screen="noToken" hidden>
+    <div class="card">
+      <p>本登録のリンクが見つかりません。メールに書かれたリンクを、開き直してください。</p>
+      <p class="note">メールをお持ちでない方は、<a href="../signup/">新規登録</a>からメールアドレスを入力してください。</p>
+    </div>
+  </section>
+
+  <!-- リンクが無効・期限切れ -->
+  <section data-screen="invalid" hidden>
+    <div class="card">
+      <p id="invalidMessage">リンクが無効、または期限切れです。もう一度、登録をやり直してください。</p>
+      <div class="row"><a class="button primary" href="../signup/">新規登録へ</a></div>
+    </div>
+  </section>
+
+  <!-- ユーザ名の入力 -->
+  <section data-screen="form" hidden>
+    <p>このアカウントで使う人の名前（1〜4人）を入力してください。</p>
+    <form id="form" class="card" novalidate>
+      <div id="users"></div>
+      <div class="row"><button id="addUser" type="button">ユーザを追加</button></div>
+      <p class="note">1人目は、<strong>家族の管理をする人（保護者など）</strong>にしてください。名前は、本名ではなく、ニックネームをおすすめします。1人あたり20文字までです。</p>
+      <p id="formError" class="error" role="alert" hidden></p>
+      <div class="row"><button id="submit" class="primary" type="submit">登録する</button></div>
+    </form>
+  </section>
+
+  <!-- 復旧コードの表示（この画面でしか表示されない） -->
+  <section data-screen="done" hidden>
+    <h2 class="no-print">登録しました</h2>
+    <div class="card">
+      <p><strong>復旧コード</strong>です。この画面でしか表示されません。必ず控えてください。</p>
+      <div id="recoveryCode" class="code"></div>
+      <div class="row no-print">
+        <button id="copy" type="button">コピー</button>
+        <button id="save" type="button">テキストファイルで保存</button>
+        <button id="print" type="button">印刷</button>
+      </div>
+      <p id="copyResult" class="note no-print" role="status" hidden></p>
+      <div class="warn">
+        <strong>復旧コードと Cookie の両方を失うと、アカウントは復旧できません。</strong>
+        ブラウザのデータを消した場合や、別の端末で使う場合は、この復旧コードでログインします。
+      </div>
+    </div>
+    <div class="no-print">
+      <label class="check"><input id="saved" type="checkbox"> 復旧コードを控えました</label>
+      <p class="note">この後、スーパーユーザ（1人目のユーザ）のパスワードを設定しておくと、日常の管理操作が楽になります（設定画面は、今後実装します）。</p>
+      <div class="row"><a id="next" class="button primary" href="../" aria-disabled="true">次へ</a></div>
+    </div>
+  </section>
+</main>
+<script type="module" src="register.js"></script>
+</body>
+</html>

@@ -17,11 +17,11 @@ use UecTst\Validation\Input;
 use UecTst\Validation\Params;
 
 /**
- * 組織の管理（ApiSpec_Organization.md 6.）。研究者の組織だけが呼べる。研究者の組織自身は、
+ * 組織の管理（ApiSpec_Organization.md 6.）。運用担当者の組織だけが呼べる。運用担当者の組織自身は、
  * 一覧には表示されるが、名前の変更・パスワードの再発行・削除の対象外（409 SUPER_ORGANIZATION_PROTECTED）。
  *   O17 一覧 GET /org/organizations
  *   O18 登録 POST /org/organizations
- *   O19 組織名の変更 PATCH /org/organizations/{organizationId}
+ *   O19 組織名・読み仮名の変更 PATCH /org/organizations/{organizationId}
  *   O20 パスワードの再発行 POST /org/organizations/{organizationId}/password-reset（確認が必要）
  *   O21 削除 DELETE /org/organizations/{organizationId}（確認が必要）
  */
@@ -34,6 +34,7 @@ final class OrgAdminController extends OrgController
             $items = array_map(static fn (array $row): array => [
                 'id' => Uuid7::toString($row['organization']->id),
                 'name' => $row['organization']->name,
+                'nameKana' => $row['organization']->nameKana,
                 'loginId' => $row['organization']->loginId,
                 'isSuper' => $row['organization']->isSuper,
                 'memberFamilyCount' => $row['memberFamilyCount'],
@@ -49,14 +50,19 @@ final class OrgAdminController extends OrgController
         $data = $request->json();
         $nameInput = Params::string($data, 'name');
         $loginIdInput = Params::string($data, 'loginId');
+        $kanaInput = Params::optionalString($data, 'nameKana');
 
-        return $this->guarded($request, function (OrgAuthContext $c) use ($nameInput, $loginIdInput): Response {
+        return $this->guarded($request, function (OrgAuthContext $c) use ($nameInput, $loginIdInput, $kanaInput): Response {
             $services = $this->services;
             $name = Input::normalizeText($nameInput);
             $loginId = strtolower(trim($loginIdInput));
+            $kana = Input::normalizeKana($kanaInput ?? '');
             $details = [];
             if (($error = Input::organizationNameError($name)) !== null) {
                 $details[] = ['field' => 'name', 'code' => $error];
+            }
+            if (($error = Input::kanaError($kana)) !== null) {
+                $details[] = ['field' => 'nameKana', 'code' => $error];
             }
             if (($error = Input::loginIdError($loginId)) !== null) {
                 $details[] = ['field' => 'loginId', 'code' => $error];
@@ -73,7 +79,7 @@ final class OrgAdminController extends OrgController
 
             $password = $services->orgPasswords->generateInitialPassword();
             $id = Uuid7::generateBinary();
-            $duplicate = $services->organizations->insert($id, $name, $loginId, $services->orgPasswords->hash($password), $services->clock->now());
+            $duplicate = $services->organizations->insert($id, $name, $kana === '' ? null : $kana, $loginId, $services->orgPasswords->hash($password), $services->clock->now());
             if ($duplicate !== null) {
                 // 同時の登録で、事前の確認をすり抜けた場合。
                 throw $duplicate === 'login_id' ? self::duplicateLoginId() : self::duplicateName();
@@ -85,21 +91,35 @@ final class OrgAdminController extends OrgController
         }, superOnly: true);
     }
 
-    /** O19 組織名の変更 */
+    /** O19 組織名・読み仮名の変更（送った項目だけを変更する。nameKana が空文字または null なら、読み仮名を未登録にする） */
     public function rename(Request $request, array $params): Response
     {
-        $nameInput = Params::string($request->json(), 'name');
+        $data = $request->json();
+        $nameInput = Params::optionalString($data, 'name');
+        $hasKana = array_key_exists('nameKana', $data);
+        $kanaInput = Params::optionalString($data, 'nameKana');
+        if ($nameInput === null && !$hasKana) {
+            throw ApiException::badRequest('「name」または「nameKana」を指定してください。');
+        }
 
-        return $this->guarded($request, function (OrgAuthContext $c) use ($params, $nameInput): Response {
+        return $this->guarded($request, function (OrgAuthContext $c) use ($params, $nameInput, $hasKana, $kanaInput): Response {
             $services = $this->services;
             $target = $this->targetOrganization($params);
             $this->assertNotSuper($target);
 
-            $name = Input::normalizeText($nameInput);
+            $name = $nameInput === null ? $target->name : Input::normalizeText($nameInput);
+            $kana = $hasKana ? Input::normalizeKana($kanaInput ?? '') : ($target->nameKana ?? '');
+            $details = [];
             if (($error = Input::organizationNameError($name)) !== null) {
-                throw ApiException::validationFailed('組織名を確認してください。', [['field' => 'name', 'code' => $error]]);
+                $details[] = ['field' => 'name', 'code' => $error];
             }
-            if ($services->organizations->nameTakenByOther($name, $target->id) || $services->organizations->rename($target->id, $name) !== null) {
+            if (($error = Input::kanaError($kana)) !== null) {
+                $details[] = ['field' => 'nameKana', 'code' => $error];
+            }
+            if ($details !== []) {
+                throw ApiException::validationFailed('組織名と読み仮名を確認してください。', $details);
+            }
+            if ($services->organizations->nameTakenByOther($name, $target->id) || $services->organizations->rename($target->id, $name, $kana === '' ? null : $kana) !== null) {
                 throw self::duplicateName();
             }
             $this->audit('organization.rename', $c->organizationId(), 'success', ['targetId' => Uuid7::toString($target->id)]);
@@ -163,7 +183,7 @@ final class OrgAdminController extends OrgController
     private function assertNotSuper(OrganizationRecord $target): void
     {
         if ($target->isSuper) {
-            throw ApiException::conflict('SUPER_ORGANIZATION_PROTECTED', '研究者の組織は、名前の変更・パスワードの再発行・削除はできません。');
+            throw ApiException::conflict('SUPER_ORGANIZATION_PROTECTED', '運用担当者の組織は、名前の変更・パスワードの再発行・削除はできません。');
         }
     }
 

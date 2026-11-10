@@ -1,7 +1,7 @@
 {
   "environment": "development",
   "allowedOrigins": ["http://localhost:8888", "http://127.0.0.1:8890"],
-  "publicBaseUrl": "http://127.0.0.1:8890",
+  "publicBaseUrl": "http://127.0.0.1:8890/app",
   "cookie": {
     "secure": false,
     "useHostPrefix": false
@@ -27,7 +27,8 @@
   "debug": {
     "enabled": true,
     "features": {
-      "mailViewer": true
+      "mailViewer": true,
+      "indexPage": true
     }
   },
   "testData": {

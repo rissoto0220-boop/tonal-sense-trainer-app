@@ -10,7 +10,7 @@ use PDOException;
 use UecTst\Support\Time;
 
 /**
- * パスキーのテーブルの操作。家族のパスキー（passkeys。TableSpec_Account.md 4.）と、研究者の組織のパスキー
+ * パスキーのテーブルの操作。家族のパスキー（passkeys。TableSpec_Account.md 4.）と、運用担当者の組織のパスキー
  * （organization_passkeys。TableSpec_Organization.md 3.）で、同じ処理を使う。持ち主は、家族または組織の ID。
  */
 final class PasskeyRepository

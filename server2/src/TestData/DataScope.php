@@ -34,7 +34,7 @@ final class DataScope
         );
     }
 
-    /** 研究者: すべて（個人ユーザ・退会した家族・削除されたユーザのデータを含む）。 */
+    /** 運用担当者: すべて（個人ユーザ・退会した家族・削除されたユーザのデータを含む）。 */
     public static function all(): self
     {
         return new self('test_sessions s', '1 = 1', []);

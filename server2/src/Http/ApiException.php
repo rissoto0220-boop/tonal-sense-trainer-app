@@ -121,7 +121,7 @@ class ApiException extends RuntimeException
 
     public static function superOnly(): self
     {
-        return new self(403, 'SUPER_ONLY', 'この操作は、研究者の組織だけが実行できます。');
+        return new self(403, 'SUPER_ONLY', 'この操作は、運用担当者の組織だけが実行できます。');
     }
 
     public static function payloadTooLarge(): self

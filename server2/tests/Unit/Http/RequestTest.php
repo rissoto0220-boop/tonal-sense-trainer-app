@@ -34,6 +34,11 @@ final class RequestTest extends TestCase
 
         $root = Request::fromGlobals($server + ['REQUEST_URI' => '/uec-tst/server2/public/index.php'], [], [], '');
         $this->assertSame('/', $root->path);
+        $this->assertSame('/uec-tst/server2/public/index.php', $root->basePath);
+
+        $dir = Request::fromGlobals($server + ['REQUEST_URI' => '/uec-tst/server2/public/'], [], [], '');
+        $this->assertSame('/', $dir->path);
+        $this->assertSame('/uec-tst/server2/public', $dir->basePath);
     }
 
     public function testBasePathIsEmptyAtDocumentRoot(): void

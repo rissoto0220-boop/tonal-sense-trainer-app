@@ -286,12 +286,12 @@ final class TestSessionRepository
         return $stmt->rowCount() > 0;
     }
 
-    // ---- 研究者・組織のユーザ一覧 ----
+    // ---- 運用担当者・組織のユーザ一覧 ----
 
     /**
      * 参照できるユーザの一覧（ユーザ ID の順）。
      *
-     * @param string|null $organizationId 通常の組織の ID。null なら研究者（すべて）
+     * @param string|null $organizationId 通常の組織の ID。null なら運用担当者（すべて）
      * @return list<array<string, mixed>>
      */
     public function users(?string $organizationId, int $limit, ?string $afterUserId): array
@@ -322,7 +322,7 @@ final class TestSessionRepository
     /**
      * そのユーザのデータを参照できるか（ApiSpec_TestData.md 0.2）。
      *
-     * @param string|null $organizationId 通常の組織の ID。null なら研究者（すべて）
+     * @param string|null $organizationId 通常の組織の ID。null なら運用担当者（すべて）
      */
     public function userVisible(?string $organizationId, string $userId): bool
     {

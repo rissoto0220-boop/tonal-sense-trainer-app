@@ -59,7 +59,7 @@ final class RegistrationController
         $global = $this->services->rateLimiter->hit('mail:send:global', self::MAIL_WINDOW);
         if ($global->count > self::MAIL_GLOBAL_LIMIT) {
             if ($global->count === self::MAIL_GLOBAL_LIMIT + 1) {
-                $this->services->logger->warning('仮登録メールの送信数が、システム全体の上限を超えました（運用者への通知）', ['limit' => self::MAIL_GLOBAL_LIMIT]);
+                $this->services->logger->warning('仮登録メールの送信数が、システム全体の上限を超えました（運用担当者への通知）', ['limit' => self::MAIL_GLOBAL_LIMIT]);
             }
             throw ApiException::rateLimited($global->retryAfterSeconds);
         }

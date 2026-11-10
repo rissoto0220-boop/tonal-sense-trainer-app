@@ -65,7 +65,7 @@ final class OrgSessionController extends OrgController
         }
         $this->assertPasswordOutcome($outcome, $organization->id, 'login');
 
-        // 5. セッションを作る。研究者の組織は段階0（パスキーの確認が未了）、通常の組織は段階1。
+        // 5. セッションを作る。運用担当者の組織は段階0（パスキーの確認が未了）、通常の組織は段階1。
         $this->deleteCurrentSessionIfAny($request);
         [$token, $session] = $services->orgSessions->create($organization->id, $organization->isSuper ? 0 : 1);
         $passkeyRegistered = $organization->isSuper && $services->orgPasskeys->countByOwner($organization->id) > 0;
@@ -169,8 +169,8 @@ final class OrgSessionController extends OrgController
         $this->services->rateLimiter->hit('orglogin:fail:ip:' . $clientIp, self::LOGIN_WINDOW);
         $global = $this->services->rateLimiter->hit('orglogin:fail:global', self::LOGIN_WINDOW);
         if ($global->count === self::LOGIN_FAIL_GLOBAL_NOTIFY + 1) {
-            // 拒否すると、全組織がログインできなくなるため、運用者への通知（ログ）のみ。
-            $this->services->logger->warning('組織のログインの失敗数が、システム全体のしきい値を超えました（運用者への通知）', ['threshold' => self::LOGIN_FAIL_GLOBAL_NOTIFY]);
+            // 拒否すると、全組織がログインできなくなるため、運用担当者への通知（ログ）のみ。
+            $this->services->logger->warning('組織のログインの失敗数が、システム全体のしきい値を超えました（運用担当者への通知）', ['threshold' => self::LOGIN_FAIL_GLOBAL_NOTIFY]);
         }
     }
 

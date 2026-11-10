@@ -38,8 +38,8 @@ final class RecoveryAttempts
         $this->limiter->hit('recovery:fail:ip:' . $clientIp, self::WINDOW);
         $global = $this->limiter->hit('recovery:fail:global', self::WINDOW);
         if ($global->count === self::FAIL_GLOBAL_NOTIFY + 1) {
-            // 拒否すると、全利用者がログインできなくなるため、運用者への通知（ログ）のみ。
-            $this->logger->warning('復旧コードの失敗数が、システム全体のしきい値を超えました（運用者への通知）', ['threshold' => self::FAIL_GLOBAL_NOTIFY]);
+            // 拒否すると、全利用者がログインできなくなるため、運用担当者への通知（ログ）のみ。
+            $this->logger->warning('復旧コードの失敗数が、システム全体のしきい値を超えました（運用担当者への通知）', ['threshold' => self::FAIL_GLOBAL_NOTIFY]);
         }
     }
 

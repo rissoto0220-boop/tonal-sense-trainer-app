@@ -33,7 +33,7 @@ test("利用データの API（家族向け）が、仕様どおりのメソッ�
   }
 });
 
-test("利用データの API（研究者・組織向け）が、ベースパス /api/v1/org で呼ぶ", async () => {
+test("利用データの API（運用担当者・組織向け）が、ベースパス /api/v1/org で呼ぶ", async () => {
   const cases = [
     [(a) => a.testData.users({ limit: 20 }), "GET", "/api/v1/org/users?limit=20"],
     [(a) => a.testData.sessions("u1", { testType: "training" }), "GET", "/api/v1/org/users/u1/test-sessions?testType=training"],

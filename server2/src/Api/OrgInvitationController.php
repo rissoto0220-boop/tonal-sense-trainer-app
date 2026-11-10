@@ -47,7 +47,7 @@ final class OrgInvitationController extends OrgController
             $global = $services->rateLimiter->hit('mail:send:global', self::SEND_WINDOW);
             if ($global->count > self::SEND_GLOBAL_LIMIT) {
                 if ($global->count === self::SEND_GLOBAL_LIMIT + 1) {
-                    $services->logger->warning('メールの送信数が、システム全体の上限を超えました（運用者への通知）', ['limit' => self::SEND_GLOBAL_LIMIT]);
+                    $services->logger->warning('メールの送信数が、システム全体の上限を超えました（運用担当者への通知）', ['limit' => self::SEND_GLOBAL_LIMIT]);
                 }
                 throw ApiException::rateLimited($global->retryAfterSeconds);
             }

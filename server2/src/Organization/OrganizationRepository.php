@@ -12,7 +12,7 @@ use UecTst\Support\Time;
 /** organizations テーブルと、組織に所属している家族の操作（TableSpec_Organization.md 2.・6.）。 */
 final class OrganizationRepository
 {
-    private const COLUMNS = 'id, name, login_id, password_hash, password_change_required, password_failed_count, password_locked_until, is_super, created_at';
+    private const COLUMNS = 'id, name, name_kana, login_id, password_hash, password_change_required, password_failed_count, password_locked_until, is_super, created_at';
 
     public function __construct(private readonly PDO $pdo)
     {
@@ -57,14 +57,14 @@ final class OrganizationRepository
      *
      * @return string|null 成功なら null。重複していれば、重複した項目（login_id または name）
      */
-    public function insert(string $id, string $name, string $loginId, string $passwordHash, DateTimeImmutable $now): ?string
+    public function insert(string $id, string $name, ?string $nameKana, string $loginId, string $passwordHash, DateTimeImmutable $now): ?string
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO organizations (id, name, login_id, password_hash, password_change_required, is_super, created_at, updated_at) VALUES (?, ?, ?, ?, 1, 0, ?, ?)',
+            'INSERT INTO organizations (id, name, name_kana, login_id, password_hash, password_change_required, is_super, created_at, updated_at) VALUES (?, ?, ?, ?, ?, 1, 0, ?, ?)',
         );
         $nowDb = Time::toDb($now);
         try {
-            $stmt->execute([$id, $name, $loginId, $passwordHash, $nowDb, $nowDb]);
+            $stmt->execute([$id, $name, $nameKana, $loginId, $passwordHash, $nowDb, $nowDb]);
         } catch (PDOException $e) {
             return $this->duplicateField($e);
         }
@@ -72,11 +72,11 @@ final class OrganizationRepository
     }
 
     /** @return string|null 成功なら null。組織名が重複していれば 'name' */
-    public function rename(string $id, string $name): ?string
+    public function rename(string $id, string $name, ?string $nameKana): ?string
     {
-        $stmt = $this->pdo->prepare('UPDATE organizations SET name = ? WHERE id = ?');
+        $stmt = $this->pdo->prepare('UPDATE organizations SET name = ?, name_kana = ? WHERE id = ?');
         try {
-            $stmt->execute([$name, $id]);
+            $stmt->execute([$name, $nameKana, $id]);
         } catch (PDOException $e) {
             return $this->duplicateField($e);
         }
@@ -128,7 +128,7 @@ final class OrganizationRepository
     public function listWithMemberCounts(): array
     {
         $stmt = $this->pdo->query(
-            'SELECT o.id, o.name, o.login_id, o.password_hash, o.password_change_required, o.password_failed_count, o.password_locked_until, o.is_super, o.created_at, '
+            'SELECT o.id, o.name, o.name_kana, o.login_id, o.password_hash, o.password_change_required, o.password_failed_count, o.password_locked_until, o.is_super, o.created_at, '
             . '(SELECT COUNT(*) FROM families f WHERE f.organization_id = o.id) AS member_count '
             . 'FROM organizations o ORDER BY o.created_at DESC, o.id DESC',
         );
@@ -214,6 +214,7 @@ final class OrganizationRepository
         return new OrganizationRecord(
             id: (string) $row['id'],
             name: (string) $row['name'],
+            nameKana: $row['name_kana'] === null ? null : (string) $row['name_kana'],
             loginId: (string) $row['login_id'],
             passwordHash: (string) $row['password_hash'],
             passwordChangeRequired: (int) $row['password_change_required'] === 1,

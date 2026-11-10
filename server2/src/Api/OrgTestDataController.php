@@ -15,12 +15,12 @@ use UecTst\TestData\ExportFormat;
 use UecTst\TestData\TestType;
 
 /**
- * 研究者・組織の、利用データ（テスト結果）の API（ApiSpec_TestData.md 3.〜5.）。
+ * 運用担当者・組織の、利用データ（テスト結果）の API（ApiSpec_TestData.md 3.〜5.）。
  *   O22 ユーザの一覧 GET /org/users
  *   O23 セッションの一覧 GET /org/users/{userId}/test-sessions
  *   O24 セッションの詳細 GET /org/users/{userId}/test-sessions/{sessionId}
  *   O25 ダウンロード GET /org/test-exports
- *   O26 セッションの削除 DELETE /org/test-sessions/{sessionId}（研究者のみ・確認が必要）
+ *   O26 セッションの削除 DELETE /org/test-sessions/{sessionId}（運用担当者のみ・確認が必要）
  *
  * 参照できる範囲は、リクエストのたびに、現在の所属関係で判定する。参照できないユーザは、存在しない場合と区別せず 404。
  */
@@ -148,7 +148,7 @@ final class OrgTestDataController extends OrgController
         });
     }
 
-    /** O26 セッションの削除（研究者のみ。確認が必要） */
+    /** O26 セッションの削除（運用担当者のみ。確認が必要） */
     public function delete(Request $request, array $params): Response
     {
         return $this->guarded($request, function (OrgAuthContext $c) use ($params): Response {

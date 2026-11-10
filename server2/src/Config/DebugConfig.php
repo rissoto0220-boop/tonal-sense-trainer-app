@@ -17,8 +17,11 @@ final class DebugConfig
     /** メールを送らず、送信内容をブラウザで表示する（メール表示ページ）。 */
     public const FEATURE_MAIL_VIEWER = 'mailViewer';
 
+    /** 入口（/）に、デバッグ用の案内ページ（メール表示ページへのリンク、API の基準パスなど）を出す。 */
+    public const FEATURE_INDEX_PAGE = 'indexPage';
+
     /** 指定できる機能。綴りの誤りで、無効のつもりが有効になる（またはその逆）ことを防ぐため、未知の名前は拒否する。 */
-    public const FEATURES = [self::FEATURE_MAIL_VIEWER];
+    public const FEATURES = [self::FEATURE_MAIL_VIEWER, self::FEATURE_INDEX_PAGE];
 
     /**
      * @param array<string, bool> $features

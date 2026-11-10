@@ -9,13 +9,13 @@ use UecTst\Support\Time;
 use UecTst\Tests\Support\SoftwareAuthenticator;
 use UecTst\Tests\Support\TestClient;
 
-/** 研究者・組織の API（ApiSpec_Organization.md）の結合テストの土台。 */
+/** 運用担当者・組織の API（ApiSpec_Organization.md）の結合テストの土台。 */
 abstract class OrgApiTestCase extends ApiTestCase
 {
     public const PASSWORD = 'correct-horse-battery';
 
     /**
-     * 組織を、データベースに直接作る（研究者の組織は、運用者が SQL で作るため。TableSpec_Organization.md 7.）。
+     * 組織を、データベースに直接作る（運用担当者の組織は、運用担当者が SQL で作るため。TableSpec_Organization.md 7.）。
      *
      * @return string 組織の ID（バイナリ）
      */
@@ -46,8 +46,8 @@ abstract class OrgApiTestCase extends ApiTestCase
         $this->assertSame(200, $response->status(), $response->body());
     }
 
-    /** 研究者の組織で、パスキーを登録済みにして、ログイン完了（段階1）の状態にする。認証器を返す。 */
-    protected function loginSuperWithPasskey(TestClient $client, string $loginId = 'researcher'): SoftwareAuthenticator
+    /** 運用担当者の組織で、パスキーを登録済みにして、ログイン完了（段階1）の状態にする。認証器を返す。 */
+    protected function loginSuperWithPasskey(TestClient $client, string $loginId = 'operator'): SoftwareAuthenticator
     {
         $login = $this->orgLogin($client, $loginId);
         $this->assertSame(0, $login['authStage']);
@@ -66,8 +66,8 @@ abstract class OrgApiTestCase extends ApiTestCase
         return $response->json();
     }
 
-    /** パスワード → パスキーの順で、研究者の組織でログインする。 */
-    protected function loginSuperAgain(TestClient $client, SoftwareAuthenticator $auth, string $loginId = 'researcher'): void
+    /** パスワード → パスキーの順で、運用担当者の組織でログインする。 */
+    protected function loginSuperAgain(TestClient $client, SoftwareAuthenticator $auth, string $loginId = 'operator'): void
     {
         $login = $this->orgLogin($client, $loginId);
         $this->assertSame(0, $login['authStage']);

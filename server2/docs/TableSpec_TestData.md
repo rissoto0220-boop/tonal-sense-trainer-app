@@ -76,7 +76,7 @@ users（現存するユーザ）… test_sessions.user_id（外部キーなし�
 |---|---|---|
 | 主キー `id` | `sessionId` | 再送の判定。同じ `id` が別の `user_id` で保存されている場合は `409`（アプリケーションで `user_id` を比較する） |
 | `ix_test_sessions_user_started` | `(user_id, started_at)` | 利用者ごとの履歴・CSV。5.2 の規則で必要な `user_id` のインデックス |
-| `ix_test_sessions_type_started` | `(test_type, started_at)` | 研究者による、種類・期間での抽出 |
+| `ix_test_sessions_type_started` | `(test_type, started_at)` | 運用担当者による、種類・期間での抽出 |
 | `ck_test_sessions_test_type` | 4 種類のみ | |
 | `ck_test_sessions_status` | 4 つの値のみ | |
 | `ck_test_sessions_status_type` | `forced_termination` は絶対音感のみ、`audio_error` は調性感・訓練のみ | DataFormat_TestData.md 3. |
@@ -382,13 +382,13 @@ SELECT s.*
 ```
 
 - 家族のユーザ：`s.user_id` が、ログイン中の家族の現存するユーザの `id` のいずれか。
-- 研究者：条件なし。
+- 運用担当者：条件なし。
 - 回答のテーブルは、`session_id` で `test_sessions` に結合し、同じ条件を適用する。
 
 ## 11. 保持・削除
 
 - ユーザの削除・退会：利用データは削除しない。アプリケーションは、`test_sessions` に何もしない。
-- 利用データの削除の手段（運用者の SQL、研究者の機能）は、別途定める。削除するときは、`test_sessions` の行を削除すれば、回答のテーブルの行は連鎖して削除される（`ON DELETE CASCADE`）。
+- 利用データの削除の手段（運用担当者の SQL、運用担当者の機能）は、別途定める。削除するときは、`test_sessions` の行を削除すれば、回答のテーブルの行は連鎖して削除される（`ON DELETE CASCADE`）。
 - 保存の期間（利用データの保存期間）は、未決。
 
 ## 12. 未決事項

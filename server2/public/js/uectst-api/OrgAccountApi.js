@@ -1,4 +1,4 @@
-// 研究者・組織のパスワードの変更と、破壊的な操作の確認の API（ApiSpec_Organization.md O6・O7）。
+// 運用担当者・組織のパスワードの変更と、破壊的な操作の確認の API（ApiSpec_Organization.md O6・O7）。
 
 export class OrgAccountApi {
   /** @param {import("./ApiClient.js").ApiClient} client */

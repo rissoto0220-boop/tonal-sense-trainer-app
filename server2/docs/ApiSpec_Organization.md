@@ -1,4 +1,4 @@
-# Web API 仕様書：組織（研究者を含む）
+# Web API 仕様書：組織（運用担当者を含む）
 
 基本方針（BasicPolicy.md）の「10. 組織」「11. 招待メールを受け取ったユーザの操作」とテーブル仕様書（TableSpec_Organization.md ほか）に基づき、組織の認証・管理の Web API を定義する。
 家族・ユーザの API は ApiSpec_Auth.md を参照する。家族が組織に所属・解除する API は、ApiSpec_Auth.md「10. 組織への所属」にある。
@@ -29,11 +29,11 @@
 
 | 段階 | 状態 | 使える API |
 |---|---|---|
-| 0 | パスワードの確認済み。パスキーの確認が未了（研究者の組織のみ） | O2、O3（パスキーの確認）、O4、O5、O6（パスワードの変更）、O9、O10（パスキーが1件もない場合の登録） |
-| 1 | ログイン完了 | すべての API（研究者のみの API は、研究者の組織のみ） |
+| 0 | パスワードの確認済み。パスキーの確認が未了（運用担当者の組織のみ） | O2、O3（パスキーの確認）、O4、O5、O6（パスワードの変更）、O9、O10（パスキーが1件もない場合の登録） |
+| 1 | ログイン完了 | すべての API（運用担当者のみの API は、運用担当者の組織のみ） |
 
-- 通常の組織は、パスワードの確認に成功すると、段階1になる。研究者の組織は、パスワードの確認の後、パスキーの確認（O2・O3）に成功すると段階1になる。
-- 研究者の組織で、パスキーが1件も登録されていない場合（最初のログイン）は、パスワードの変更（O6）の後、パスキーの登録（O9・O10）を行う。最初のパスキーの登録に成功したら、ログイン完了（段階1）とする。
+- 通常の組織は、パスワードの確認に成功すると、段階1になる。運用担当者の組織は、パスワードの確認の後、パスキーの確認（O2・O3）に成功すると段階1になる。
+- 運用担当者の組織で、パスキーが1件も登録されていない場合（最初のログイン）は、パスワードの変更（O6）の後、パスキーの登録（O9・O10）を行う。最初のパスキーの登録に成功したら、ログイン完了（段階1）とする。
 - 段階0のセッションで、使えない API を呼んだ場合は `403 PASSKEY_REQUIRED` を返す。
 - `password_change_required = 1` の間は、O4・O5・O6 以外の API は `403 PASSWORD_CHANGE_REQUIRED` を返す。
 - 検証の順序：`401` → `403 PASSKEY_REQUIRED` → `403 PASSWORD_CHANGE_REQUIRED` → `403 SUPER_ONLY` → `403 ELEVATION_REQUIRED` → `404`・`409` など。
@@ -69,38 +69,38 @@ ApiSpec_Auth.md 0.5 のコード（`BAD_REQUEST`、`UNAUTHENTICATED`、`FORBIDDE
 | 401 | `INVALID_CREDENTIALS` | ログインIDまたはパスワードが一致しない（ログインIDの有無を区別しない） |
 | 403 | `PASSKEY_REQUIRED` | パスキーの確認が済んでいない（段階0） |
 | 403 | `PASSWORD_CHANGE_REQUIRED` | パスワードの変更が必要 |
-| 403 | `SUPER_ONLY` | 研究者の組織のみが実行できる |
+| 403 | `SUPER_ONLY` | 運用担当者の組織のみが実行できる |
 | 409 | `DUPLICATE_ORGANIZATION_NAME` | 同じ組織名がある |
 | 409 | `DUPLICATE_LOGIN_ID` | 同じログインIDがある |
-| 409 | `SUPER_ORGANIZATION_PROTECTED` | 研究者の組織は、名前の変更・パスワードの再発行・削除の対象外 |
+| 409 | `SUPER_ORGANIZATION_PROTECTED` | 運用担当者の組織は、名前の変更・パスワードの再発行・削除の対象外 |
 | 409 | `LAST_PASSKEY` | 最後のパスキーは削除できない |
 | 429 | `ORGANIZATION_PASSWORD_LOCKED` | パスワードの連続失敗によりロック中。`Retry-After` ヘッダにロック解除までの秒数を付ける |
 
 ### 0.7 API 一覧
 
-| # | メソッド | パス | 認証 | 確認 | 研究者のみ | 概要 |
+| # | メソッド | パス | 認証 | 確認 | 運用担当者のみ | 概要 |
 |---|---|---|---|---|---|---|
 | O1 | POST | `/api/v1/org/sessions` | 不要 | | | ログイン（ログインID＋パスワード） |
-| O2 | POST | `/api/v1/org/sessions/passkey-options` | 段階0 | | 研究者 | パスキーによるログインの確認の開始（challenge の発行） |
-| O3 | POST | `/api/v1/org/sessions/passkey` | 段階0 | | 研究者 | パスキーによるログインの確認（ログインの完了） |
+| O2 | POST | `/api/v1/org/sessions/passkey-options` | 段階0 | | 運用担当者 | パスキーによるログインの確認の開始（challenge の発行） |
+| O3 | POST | `/api/v1/org/sessions/passkey` | 段階0 | | 運用担当者 | パスキーによるログインの確認（ログインの完了） |
 | O4 | GET | `/api/v1/org/sessions/current` | 段階0・1 | | | ログイン状態と組織の情報の取得 |
 | O5 | DELETE | `/api/v1/org/sessions/current` | 段階0・1 | | | ログアウト |
 | O6 | PUT | `/api/v1/org/password` | 段階0・1 | | | パスワードの変更 |
 | O7 | POST | `/api/v1/org/elevation` | 段階1 | | | 破壊的な操作の確認（パスワードの再入力） |
-| O8 | GET | `/api/v1/org/passkeys` | 段階1 | | 研究者 | パスキーの一覧 |
-| O9 | POST | `/api/v1/org/passkeys/registration-options` | 段階0・1 | 段階1で必要 | 研究者 | パスキーの登録の開始（challenge の発行） |
-| O10 | POST | `/api/v1/org/passkeys` | 段階0・1 | 段階1で必要 | 研究者 | パスキーの登録 |
-| O11 | DELETE | `/api/v1/org/passkeys/{passkeyId}` | 段階1 | 必要 | 研究者 | パスキーの削除 |
+| O8 | GET | `/api/v1/org/passkeys` | 段階1 | | 運用担当者 | パスキーの一覧 |
+| O9 | POST | `/api/v1/org/passkeys/registration-options` | 段階0・1 | 段階1で必要 | 運用担当者 | パスキーの登録の開始（challenge の発行） |
+| O10 | POST | `/api/v1/org/passkeys` | 段階0・1 | 段階1で必要 | 運用担当者 | パスキーの登録 |
+| O11 | DELETE | `/api/v1/org/passkeys/{passkeyId}` | 段階1 | 必要 | 運用担当者 | パスキーの削除 |
 | O12 | POST | `/api/v1/org/invitations` | 段階1 | | | 招待メールの送信 |
 | O13 | GET | `/api/v1/org/invitations` | 段階1 | | | 未使用の招待の件数の取得 |
 | O14 | DELETE | `/api/v1/org/invitations` | 段階1 | | | 未使用の招待の取り消し |
 | O15 | GET | `/api/v1/org/members` | 段階1 | | | 所属している家族の一覧 |
 | O16 | DELETE | `/api/v1/org/members/{familyId}` | 段階1 | | | 所属している家族を所属から外す |
-| O17 | GET | `/api/v1/org/organizations` | 段階1 | | 研究者 | 組織の一覧 |
-| O18 | POST | `/api/v1/org/organizations` | 段階1 | | 研究者 | 組織の登録（ログインアカウントの発行） |
-| O19 | PATCH | `/api/v1/org/organizations/{organizationId}` | 段階1 | | 研究者 | 組織名の変更 |
-| O20 | POST | `/api/v1/org/organizations/{organizationId}/password-reset` | 段階1 | 必要 | 研究者 | パスワードの再発行 |
-| O21 | DELETE | `/api/v1/org/organizations/{organizationId}` | 段階1 | 必要 | 研究者 | 組織の削除 |
+| O17 | GET | `/api/v1/org/organizations` | 段階1 | | 運用担当者 | 組織の一覧 |
+| O18 | POST | `/api/v1/org/organizations` | 段階1 | | 運用担当者 | 組織の登録（ログインアカウントの発行） |
+| O19 | PATCH | `/api/v1/org/organizations/{organizationId}` | 段階1 | | 運用担当者 | 組織名・読み仮名の変更 |
+| O20 | POST | `/api/v1/org/organizations/{organizationId}/password-reset` | 段階1 | 必要 | 運用担当者 | パスワードの再発行 |
+| O21 | DELETE | `/api/v1/org/organizations/{organizationId}` | 段階1 | 必要 | 運用担当者 | 組織の削除 |
 
 ### 0.8 共通のデータ形式
 
@@ -139,14 +139,14 @@ ApiSpec_Auth.md 0.5 のコード（`BAD_REQUEST`、`UNAUTHENTICATED`、`FORBIDDE
 3. 組織の行を `SELECT ... FOR UPDATE` でロックする。ロック中なら `429 ORGANIZATION_PASSWORD_LOCKED`（`Retry-After` にロック解除までの秒数）。
 4. パスワードを照合する。一致しなければ、組織の失敗回数を加算し（5回でロック、TableSpec_Organization.md 2.3）、IP 単位の失敗回数も加算して `401 INVALID_CREDENTIALS`。
 5. 一致したら、失敗回数を0に戻し、`organization_sessions` を作成して Cookie を設定する。
-   - 研究者の組織は段階0、通常の組織は段階1とする。
+   - 運用担当者の組織は段階0、通常の組織は段階1とする。
    - リクエストに有効な Cookie がある場合は、そのセッションを削除してから作成する。
 
 **レスポンス** `201 Created`（`Set-Cookie: __Host-org-sid=...`）
 
 ```json
 {
-  "organization": { "id": "0192f3c0-...", "name": "研究者", "loginId": "researcher", "isSuper": true, "passwordChangeRequired": false },
+  "organization": { "id": "0192f3c0-...", "name": "運用担当者", "loginId": "operator", "isSuper": true, "passwordChangeRequired": false },
   "authStage": 0,
   "passkeyRegistered": true
 }
@@ -154,8 +154,8 @@ ApiSpec_Auth.md 0.5 のコード（`BAD_REQUEST`、`UNAUTHENTICATED`、`FORBIDDE
 
 | 項目 | 説明 |
 |---|---|
-| `authStage` | 0：パスキーの確認が必要（研究者の組織）。1：ログイン完了 |
-| `passkeyRegistered` | 研究者の組織で、パスキーが1件以上登録されていれば `true`。通常の組織は常に `false`。段階0で `false` の場合は、パスキーの登録（3.）に進む |
+| `authStage` | 0：パスキーの確認が必要（運用担当者の組織）。1：ログイン完了 |
+| `passkeyRegistered` | 運用担当者の組織で、パスキーが1件以上登録されていれば `true`。通常の組織は常に `false`。段階0で `false` の場合は、パスキーの登録（3.）に進む |
 
 - クライアントは、`organization.passwordChangeRequired` が `true` ならパスワードの変更（2.1）、`authStage` が 0 で `passkeyRegistered` が `true` ならパスキーの確認（1.2・1.3）、`false` ならパスキーの登録（3.2・3.3）の画面を表示する。
 
@@ -169,7 +169,7 @@ ApiSpec_Auth.md 0.5 のコード（`BAD_REQUEST`、`UNAUTHENTICATED`、`FORBIDDE
 
 **処理**
 
-1. 研究者の組織でなければ `403 SUPER_ONLY`。すでにログインが完了している（段階1）セッションなら `400 BAD_REQUEST`。パスキーが1件もなければ `404 NOT_FOUND`。
+1. 運用担当者の組織でなければ `403 SUPER_ONLY`。すでにログインが完了している（段階1）セッションなら `400 BAD_REQUEST`。パスキーが1件もなければ `404 NOT_FOUND`。
 2. 回数制限（セッション単位の challenge の発行回数。9.）を確認する。
 3. 32バイトの challenge を生成し、このセッションに紐付けて5分間保持する（`webauthn_challenges`、`purpose` は `org_login`。TableSpec_Auth.md 4.2）。
 
@@ -204,7 +204,7 @@ ApiSpec_Auth.md 6.2 と同じ形式（`PublicKeyCredentialRequestOptions` の JS
 
 ```json
 {
-  "organization": { "id": "0192f3c0-...", "name": "研究者", "loginId": "researcher", "isSuper": true, "passwordChangeRequired": false },
+  "organization": { "id": "0192f3c0-...", "name": "運用担当者", "loginId": "operator", "isSuper": true, "passwordChangeRequired": false },
   "authStage": 1
 }
 ```
@@ -292,7 +292,7 @@ ApiSpec_Auth.md 6.2 と同じ形式（`PublicKeyCredentialRequestOptions` の JS
 
 **エラー**：`401 UNAUTHENTICATED`、`401 INVALID_CREDENTIALS`、`403 PASSKEY_REQUIRED`、`429 ORGANIZATION_PASSWORD_LOCKED`
 
-## 3. パスキー（研究者の組織のみ）
+## 3. パスキー（運用担当者の組織のみ）
 
 通常の組織が呼び出した場合は、`403 SUPER_ONLY` を返す。
 
@@ -351,7 +351,7 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 
 **確認（0.4）が必要**。
 
-**処理**：最後の1件なら `409 LAST_PASSKEY`（研究者の組織は、パスキーが1件以上必要）。そうでなければ、`organization_passkeys` の行を削除する。端末（認証器）に残ったパスキー自体は、サーバから削除できないため、クライアントは「端末のパスキーの管理画面からも削除してください」と案内する。
+**処理**：最後の1件なら `409 LAST_PASSKEY`（運用担当者の組織は、パスキーが1件以上必要）。そうでなければ、`organization_passkeys` の行を削除する。端末（認証器）に残ったパスキー自体は、サーバから削除できないため、クライアントは「端末のパスキーの管理画面からも削除してください」と案内する。
 
 **レスポンス** `204 No Content`
 
@@ -461,9 +461,9 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 
 **エラー**：`401 UNAUTHENTICATED`、`404 NOT_FOUND`
 
-## 6. 組織の管理（研究者の組織のみ）
+## 6. 組織の管理（運用担当者の組織のみ）
 
-通常の組織が呼び出した場合は、`403 SUPER_ONLY` を返す。研究者の組織は、一覧（6.1）には表示されるが、名前の変更・パスワードの再発行・削除の対象外である（`409 SUPER_ORGANIZATION_PROTECTED`）。
+通常の組織が呼び出した場合は、`403 SUPER_ONLY` を返す。運用担当者の組織は、一覧（6.1）には表示されるが、名前の変更・パスワードの再発行・削除の対象外である（`409 SUPER_ORGANIZATION_PROTECTED`）。
 
 ### 6.1 組織の一覧 `GET /api/v1/org/organizations`（O17）
 
@@ -475,6 +475,7 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
     {
       "id": "0192f3c0-...",
       "name": "○○大学",
+      "nameKana": "まるまるだいがく",
       "loginId": "example-univ",
       "isSuper": false,
       "memberFamilyCount": 12,
@@ -484,7 +485,8 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 }
 ```
 
-- 作成日時の新しい順。`memberFamilyCount` は、現在所属している家族の数。
+- 作成日時の新しい順。`memberFamilyCount` は、現在所属している家族の数。`nameKana` は、組織名の読み仮名（未登録は `null`）。
+- 組織名順に並べるときは、クライアントが、第1キーを読み仮名、第2キーを組織名の文字コード順にする（読み仮名が未登録の組織は、読み仮名のある組織の後ろに、組織名の文字コード順で並べる）。
 
 **エラー**：`401 UNAUTHENTICATED`、`403 SUPER_ONLY`
 
@@ -497,40 +499,46 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 ```json
 {
   "name": "○○大学",
+  "nameKana": "まるまるだいがく",
   "loginId": "example-univ"
 }
 ```
 
-**処理**：ログインIDと組織名を検証する。重複があれば `409 DUPLICATE_LOGIN_ID`・`409 DUPLICATE_ORGANIZATION_NAME`。初期パスワードを生成し、Argon2id でハッシュ化して、`password_change_required = 1` で `organizations` を作成する。
+- `nameKana`（読み仮名）は省略できる（省略・空文字は未登録）。ひらがな・長音符・半角の英数字・半角の空白のみ、100文字まで。カタカナは、ひらがなに変換して保存する。他の組織と重複してもよい。違反は `422 VALIDATION_FAILED`（`field: "nameKana"`、`INVALID_CHARACTER`・`TOO_LONG`）。
+
+**処理**：ログインIDと組織名・読み仮名を検証する。重複があれば `409 DUPLICATE_LOGIN_ID`・`409 DUPLICATE_ORGANIZATION_NAME`。初期パスワードを生成し、Argon2id でハッシュ化して、`password_change_required = 1` で `organizations` を作成する。
 
 **レスポンス** `201 Created`
 
 ```json
 {
-  "organization": { "id": "0192f3c0-...", "name": "○○大学", "loginId": "example-univ", "isSuper": false, "passwordChangeRequired": true },
+  "organization": { "id": "0192f3c0-...", "name": "○○大学", "nameKana": "まるまるだいがく", "loginId": "example-univ", "isSuper": false, "passwordChangeRequired": true },
   "initialPassword": "（16文字の初期パスワード）"
 }
 ```
 
-- `initialPassword` は、**このレスポンスでのみ返す**。研究者は、安全な方法で、組織の担当者に伝える。組織は、最初のログインで、パスワードを変更する（2.1）。
+- `initialPassword` は、**このレスポンスでのみ返す**。運用担当者は、安全な方法で、組織の担当者に伝える。組織は、最初のログインで、パスワードを変更する（2.1）。
 
 **エラー**：`401 UNAUTHENTICATED`、`403 SUPER_ONLY`、`409 DUPLICATE_LOGIN_ID`、`409 DUPLICATE_ORGANIZATION_NAME`、`422 VALIDATION_FAILED`
 
-### 6.3 組織名の変更 `PATCH /api/v1/org/organizations/{organizationId}`（O19）
+### 6.3 組織名・読み仮名の変更 `PATCH /api/v1/org/organizations/{organizationId}`（O19）
 
-**リクエスト**
+**リクエスト**（`name`・`nameKana` のうち、変更する項目だけを送る。どちらもなければ `400 BAD_REQUEST`）
 
 ```json
 {
-  "name": "○○大学 情報学部"
+  "name": "○○大学 情報学部",
+  "nameKana": "まるまるだいがく じょうほうがくぶ"
 }
 ```
+
+- `nameKana` を空文字または `null` にすると、読み仮名を未登録に戻す。規則は、6.2 と同じ。
 
 **レスポンス** `200 OK`
 
 ```json
 {
-  "organization": { "id": "0192f3c0-...", "name": "○○大学 情報学部", "loginId": "example-univ", "isSuper": false, "passwordChangeRequired": false }
+  "organization": { "id": "0192f3c0-...", "name": "○○大学 情報学部", "nameKana": "まるまるだいがく じょうほうがくぶ", "loginId": "example-univ", "isSuper": false, "passwordChangeRequired": false }
 }
 ```
 
@@ -564,7 +572,7 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 
 組織を削除する。**確認（0.4）が必要**。
 
-- 所属していた家族は、組織に属していない個人ユーザになる（基本方針 10.6）。利用データは削除されず、研究者のみが参照できる。
+- 所属していた家族は、組織に属していない個人ユーザになる（基本方針 10.6）。利用データは削除されず、運用担当者のみが参照できる。
 - 組織のパスキー・セッション・未使用の招待は削除される。
 - クライアントは、影響を受ける家族の数を表示して確認を求める（一覧の `memberFamilyCount`）。
 
@@ -589,20 +597,20 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 - 利用データ（テスト結果）の参照・ダウンロード・削除の API（O22〜O26）は、ApiSpec_TestData.md で定義する。
 - 参照できる範囲は、TableSpec_Organization.md 6. に従う。
   - 通常の組織：現在その組織に所属している家族の、現存するユーザのデータのみ。
-  - 研究者：すべて（個人ユーザ・退会した家族・削除されたユーザのデータを含む）。
+  - 運用担当者：すべて（個人ユーザ・退会した家族・削除されたユーザのデータを含む）。
 - パスは、`/api/v1/org/` の下に置く（`/api/v1/org/users/{userId}/...`、`/api/v1/org/test-exports` など）。
 - 参照の可否は、リクエストのたびに、組織の所属関係で判定する（セッションに保持した値は使わない）。参照できないユーザの `userId` を指定された場合は、存在しない場合と区別せず `404 NOT_FOUND` を返す。
 
 ## 8. 操作の記録
 
-研究者は全ユーザのデータを参照でき、組織の管理もできるため、次の操作を、アプリケーションのログに記録する（時刻・組織 ID・操作・結果。メールアドレス・パスワード・トークンは記録しない）。
+運用担当者は全ユーザのデータを参照でき、組織の管理もできるため、次の操作を、アプリケーションのログに記録する（時刻・組織 ID・操作・結果。メールアドレス・パスワード・トークンは記録しない）。
 
 - ログインの成功・失敗、パスワードの変更・再発行、ロックの発生
 - パスキーの登録・削除
 - 組織の登録・名前の変更・削除
 - 招待メールの送信（件数のみ。送信先は記録しない）、招待の取り消し
 - 家族の所属からの除外
-- 利用データのダウンロード・参照（研究者・組織。対象の範囲）
+- 利用データのダウンロード・参照（運用担当者・組織。対象の範囲）
 
 - ログの保存期間は未決（10.）。
 
@@ -611,17 +619,17 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 | 対象 API | 単位 | しきい値（初期値） | 超えた場合 | キー（TableSpec_Auth.md 4.1） |
 |---|---|---|---|---|
 | O1 ログイン | IP | 失敗 20回／1時間 | `429 RATE_LIMITED` | `orglogin:fail:ip:<IP>` |
-| O1 ログイン | システム全体 | 失敗 500回／1時間 | 運用者に通知のみ（拒否はしない） | `orglogin:fail:global` |
+| O1 ログイン | システム全体 | 失敗 500回／1時間 | 運用担当者に通知のみ（拒否はしない） | `orglogin:fail:global` |
 | O1・O6・O7 パスワードの照合 | 組織 | 連続失敗 5回で15分ロック（DB で管理） | `429 ORGANIZATION_PASSWORD_LOCKED` | `organizations` の列 |
 | O2・O9 challenge の発行 | セッション | 30回／10分 | `429 RATE_LIMITED` | `challenge:<セッションID>` |
 | O12 招待メールの送信 | 組織 | 100通／1時間 | `429 RATE_LIMITED` | `invite:send:org:<組織ID>` |
-| O12 招待メールの送信 | システム全体 | 1,000通／1時間（仮登録メールと合算） | `429 RATE_LIMITED`、運用者に通知 | `mail:send:global` |
+| O12 招待メールの送信 | システム全体 | 1,000通／1時間（仮登録メールと合算） | `429 RATE_LIMITED`、運用担当者に通知 | `mail:send:global` |
 
 - しきい値は初期値とし、利用状況を見て調整する。
 - IP 単位の制限は、緩めの値とする（基本方針 4.4）。IP アドレスは、鍵付きハッシュとして保存する。
 - 組織のログインのシステム全体の失敗数は、拒否すると全組織がログインできなくなるため、通知のみとする。
 - 超えた場合は `Retry-After` ヘッダに、カウンターの有効期限が切れるまでの秒数を付ける。
-- 研究者の組織のロックは、攻撃者が繰り返すと、研究者がログインできなくなる。復旧は、TableSpec_Organization.md 7. の SQL で行う。
+- 運用担当者の組織のロックは、攻撃者が繰り返すと、運用担当者がログインできなくなる。復旧は、TableSpec_Organization.md 7. の SQL で行う。
 
 ## 10. 未決事項
 
@@ -631,5 +639,5 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 - 招待の有効期限（7日としている）
 - 操作の記録（8.）の保存期間
 - 通常の組織にも、パスキーを求めるか、任意で登録できるようにするか
-- 研究者のパスキーの確認（O3）の失敗が続いた場合の扱い（現状は、challenge の発行回数の制限のみ）
+- 運用担当者のパスキーの確認（O3）の失敗が続いた場合の扱い（現状は、challenge の発行回数の制限のみ）
 - 組織が、所属している家族の ID を参照できてよいか（`families.id` は、パスキーの user handle と同じ値）

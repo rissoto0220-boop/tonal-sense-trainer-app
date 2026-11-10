@@ -1,4 +1,4 @@
-// 研究者の組織のパスキーの API（ApiSpec_Organization.md O8〜O11）。通常の組織が呼ぶと 403 SUPER_ONLY。
+// 運用担当者の組織のパスキーの API（ApiSpec_Organization.md O8〜O11）。通常の組織が呼ぶと 403 SUPER_ONLY。
 
 import { createCredential } from "./WebAuthnBrowser.js";
 

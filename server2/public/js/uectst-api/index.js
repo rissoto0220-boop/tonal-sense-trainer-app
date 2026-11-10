@@ -1,4 +1,4 @@
-// uectst-api の入口。家族・ユーザ用の FamilyClient と、研究者・組織用の OrgClient を公開する。
+// uectst-api の入口。家族・ユーザ用の FamilyClient と、運用担当者・組織用の OrgClient を公開する。
 export { ApiClient } from "./ApiClient.js";
 export { ApiError } from "./ApiError.js";
 export { FamilyClient } from "./FamilyClient.js";

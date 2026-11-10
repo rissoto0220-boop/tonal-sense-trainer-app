@@ -57,6 +57,34 @@ final class Input
     }
 
     /**
+     * 読み仮名を正規化する（NFKC、カタカナ→ひらがな、英字は小文字、空白は半角1つに）。空文字は「未登録」を表す。
+     */
+    public static function normalizeKana(string $kana): string
+    {
+        $nfkc = Normalizer::normalize(self::normalizeUserName($kana), Normalizer::FORM_KC);
+        $text = $nfkc === false ? $kana : $nfkc;
+        $text = mb_convert_kana($text, 'c', 'UTF-8');
+        $text = (string) preg_replace('/\s+/u', ' ', $text);
+        return strtolower(trim($text));
+    }
+
+    /**
+     * 正規化後の読み仮名の検査（空は未登録として有効。100文字まで。ひらがな・長音符・半角の英数字・半角の空白のみ）。
+     *
+     * @return string|null 問題がなければ null。あれば、TOO_LONG・INVALID_CHARACTER
+     */
+    public static function kanaError(string $normalized): ?string
+    {
+        if ($normalized === '') {
+            return null;
+        }
+        if (!mb_check_encoding($normalized, 'UTF-8') || preg_match('/^[ぁ-ゖー0-9a-z ]+$/u', $normalized) !== 1) {
+            return 'INVALID_CHARACTER';
+        }
+        return mb_strlen($normalized, 'UTF-8') > self::ORGANIZATION_NAME_MAX ? 'TOO_LONG' : null;
+    }
+
+    /**
      * 小文字に正規化した後のログインIDの検査（英小文字・数字・. _ - のみの4〜64文字）。
      *
      * @return string|null 問題がなければ null。あれば、TOO_SHORT・TOO_LONG・INVALID_CHARACTER

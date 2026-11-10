@@ -25,7 +25,7 @@ abstract class OrgController
      * @param callable(OrgAuthContext): Response $handler
      * @param bool $requireLoginComplete true なら、ログイン完了（段階1）が必要。false なら、段階0（パスキーの確認が未了）でも呼べる
      * @param bool $allowPasswordChangeRequired true なら、パスワードの変更が必要な間も呼べる（O4・O5・O6）
-     * @param bool $superOnly true なら、研究者の組織だけが呼べる
+     * @param bool $superOnly true なら、運用担当者の組織だけが呼べる
      */
     protected function guarded(
         Request $request,

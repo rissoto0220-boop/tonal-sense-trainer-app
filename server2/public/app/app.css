@@ -1,0 +1,84 @@
+/* 仮実装の画面の見た目（スマートフォンでの利用を前提にした、最小限のスタイル）。 */
+:root { color-scheme: light dark; --bg: #f4f5f7; --fg: #1d2330; --card: #fff; --line: #cfd4dc; --accent: #0b57d0; --accent-fg: #fff; --danger: #b3261e; --note: #5b6475; --warn-bg: #fff3cf; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #14161b; --fg: #e6e8ee; --card: #1d2027; --line: #3a3f4b; --accent: #8ab4f8; --accent-fg: #0b1b3a; --danger: #f2b8b5; --note: #a3abbb; --warn-bg: #4a3b10; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.7 system-ui, -apple-system, "Hiragino Sans", sans-serif; background: var(--bg); color: var(--fg); }
+.provisional { background: #7a3b00; color: #fff; font-size: 12px; padding: 4px 12px; text-align: center; }
+main { max-width: 520px; margin: 0 auto; padding: 20px 16px 48px; }
+h1 { font-size: 22px; margin: 8px 0 16px; }
+h2 { font-size: 17px; margin: 24px 0 8px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 12px 0; }
+label { display: block; font-weight: 600; margin: 12px 0 4px; }
+input[type=text], input[type=email], input[type=password] { width: 100%; padding: 10px 12px; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 1px; }
+button, .button { display: inline-block; font: inherit; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); color: var(--fg); cursor: pointer; text-decoration: none; }
+button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; align-items: center; }
+.note { color: var(--note); font-size: 14px; }
+.error { color: var(--danger); font-weight: 600; margin: 10px 0 0; white-space: pre-line; }
+.warn { background: var(--warn-bg); border-radius: 8px; padding: 10px 12px; margin: 12px 0; }
+.address { font-size: 18px; font-weight: 700; word-break: break-all; }
+.code { font: 700 22px/1.6 ui-monospace, Menlo, monospace; letter-spacing: .04em; text-align: center; word-break: break-all; padding: 14px 8px; background: var(--bg); border: 2px dashed var(--line); border-radius: 8px; user-select: all; }
+.userrow { display: flex; gap: 8px; align-items: center; }
+.userrow input { flex: 1; }
+.check { display: flex; gap: 8px; align-items: flex-start; font-weight: 600; margin: 14px 0 0; }
+.check input { margin-top: 6px; width: 18px; height: 18px; }
+ul.plain { padding-left: 20px; margin: 6px 0; }
+.links { margin-top: 24px; font-size: 14px; }
+a { color: var(--accent); }
+[hidden] { display: none !important; }
+@media print { .no-print { display: none !important; } body { background: #fff; color: #000; } .code { border-color: #000; } }
+
+/* ---- ログイン後の枠（組織向け）: 上にバー、左にメニュー、右に内容 ---- */
+.shell { min-height: calc(100vh - 24px); display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 20; }
+.topbar-title { font-size: 16px; }
+.menu-toggle { padding: 4px 12px; font-size: 20px; line-height: 1.4; }
+.badge { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); color: var(--note); vertical-align: middle; }
+.badge.super { background: var(--warn-bg); color: var(--fg); border-color: transparent; }
+.shell-body { flex: 1; display: flex; min-height: 0; position: relative; }
+.menu { width: 240px; flex: none; background: var(--card); border-right: 1px solid var(--line); padding: 12px 8px; display: flex; flex-direction: column; gap: 12px;
+  position: fixed; top: 0; bottom: 0; left: 0; z-index: 40; padding-top: 56px; transform: translateX(-100%); transition: transform .18s ease-out; overflow-y: auto; }
+.menu.open { transform: translateX(0); }
+.menu ul { list-style: none; margin: 0; padding: 0; }
+.menu li a { display: block; padding: 10px 12px; border-radius: 8px; color: var(--fg); text-decoration: none; }
+.menu li a:hover { background: var(--bg); }
+.menu li a[aria-current=page] { background: var(--accent); color: var(--accent-fg); font-weight: 600; }
+.menu li.group { margin: 14px 12px 4px; font-size: 12px; color: var(--note); }
+.menu-foot { margin-top: auto; padding: 0 4px 8px; }
+.menu-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, .35); z-index: 30; }
+.content { flex: 1; min-width: 0; max-width: 860px; padding: 20px 16px 48px; outline: none; }
+.content h1 { margin-top: 4px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; margin: 0; }
+.kv dt { color: var(--note); }
+.kv dd { margin: 0; word-break: break-all; }
+.soon { border-style: dashed; }
+@media (min-width: 800px) {
+  .menu-toggle { display: none; }
+  .menu { position: sticky; top: 49px; height: calc(100vh - 49px); padding-top: 12px; transform: none; transition: none; z-index: 10; align-self: flex-start; }
+  .menu-backdrop { display: none !important; }
+}
+
+/* ---- ダイアログ（確認・入力） ---- */
+dialog { border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--fg); width: calc(100% - 32px); max-width: 460px; padding: 18px 16px 14px; }
+dialog::backdrop { background: rgba(0, 0, 0, .5); }
+dialog h2 { margin: 0 0 10px; font-size: 18px; }
+dialog p { margin: 8px 0; }
+button.danger { border-color: var(--danger); color: var(--danger); }
+button.danger.primary { background: var(--danger); color: var(--bg); }
+.org-card h3 { margin: 0 0 4px; font-size: 17px; }
+.org-meta { margin: 0 0 8px; }
+.toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin: 8px 0 4px; }
+.status { color: var(--note); min-height: 1.6em; }
+.initial-password { font: 700 20px/1.5 ui-monospace, Menlo, monospace; letter-spacing: .06em; text-align: center; word-break: break-all; padding: 12px 8px; background: var(--bg); border: 2px dashed var(--line); border-radius: 8px; user-select: all; }
+select { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; }
+.toolbar input[type=text] { flex: 1 1 200px; }
+
+/* ---- ホーム（ユーザの選択・メニュー・家族の編集） ---- */
+.choices { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
+.choices button { width: 100%; padding: 14px 18px; font-size: 17px; }
+.family-user { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.family-user-name { flex: 1 1 100%; font-weight: 600; word-break: break-all; }
