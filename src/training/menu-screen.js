@@ -1,9 +1,11 @@
 // 音感訓練のメニュー選択画面。①〜⑧(Key C)と⑨〜⑯(Key ランダム)の2つに分けて並べる。
+// 拡張サンプル(sample-menus.js、sample: true)を渡されたときは、3つ目のグループとして最後に並べる。
 // 見た目は、テスト選択画面と同じ目次リスト形式(既存の .test-list などのスタイルを使う)。
 import { escapeHtml } from "../shared/escape-html.js";
 
 export const MENU_SCREEN_TEXT = {
   title: "訓練メニューを選んでください",
+  sampleGroup: "拡張サンプル(開発確認用・保存しません)",
   back: "テスト選択へ戻る",
   history: "履歴・CSVを見る",
   scoreChart: "得点の推移を見る",
@@ -30,13 +32,15 @@ function groupHtml(heading, menus) {
 }
 
 export function buildMenuScreenHtml(menus) {
-  const fixed = menus.filter((menu) => menu.keyPolicy.mode === "fixed");
-  const random = menus.filter((menu) => menu.keyPolicy.mode !== "fixed");
+  const regular = menus.filter((menu) => !menu.sample);
+  const samples = menus.filter((menu) => menu.sample);
+  const fixed = regular.filter((menu) => menu.keyPolicy.mode === "fixed");
+  const random = regular.filter((menu) => menu.keyPolicy.mode !== "fixed");
   return `
     <div class="panel">
       <h2 tabindex="-1">${MENU_SCREEN_TEXT.title}</h2>
       ${groupHtml("Key C", fixed)}
-      ${groupHtml("Key ランダム", random)}
+      ${groupHtml("Key ランダム", random)}${samples.length > 0 ? groupHtml(MENU_SCREEN_TEXT.sampleGroup, samples) : ""}
       <div class="actions">
         <button type="button" class="secondary" data-role="score-chart">${MENU_SCREEN_TEXT.scoreChart}</button>
         <button type="button" class="secondary" data-role="history">${MENU_SCREEN_TEXT.history}</button>

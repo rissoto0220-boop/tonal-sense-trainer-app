@@ -25,9 +25,9 @@ test("回答の種類(answerFeature)の許容値は degree と chordRootDegree",
   assert.deepEqual(ANSWER_FEATURES, ["degree", "chordRootDegree"]);
 });
 
-test("和音: 品質は機能的音感テストと同じ maj / dom7、根音度は有効な音度コード", () => {
-  assert.deepEqual(CHORD_QUALITIES, ["maj", "dom7"]);
-  assert.deepEqual(Object.keys(CHORDS), ["ch-n1-maj", "ch-n4-maj", "ch-n5-dom7"]);
+test("和音: 品質は機能的音感テストと同じ maj / dom7 と、拡張サンプルの min。根音度は有効な音度コード", () => {
+  assert.deepEqual(CHORD_QUALITIES, ["maj", "dom7", "min"]);
+  assert.deepEqual(Object.keys(CHORDS), ["ch-n1-maj", "ch-n4-maj", "ch-n5-dom7", "ch-n2-min", "ch-n3-min", "ch-n6-min", "ch-n3-dom7"]);
   for (const [chordRef, chord] of Object.entries(CHORDS)) {
     assert.ok(DEGREE_CODES.includes(chord.rootDegree), `${chordRef} の根音度が不正`);
     assert.ok(CHORD_QUALITIES.includes(chord.quality), `${chordRef} の品質が不正`);
@@ -58,8 +58,8 @@ test("回答候補: 和音の鍵盤は Ⅲ Ⅵ Ⅱ Ⅴ Ⅰ Ⅳ の並び(資料�
   assert.deepEqual(options.map((option) => option.code), ["n3", "n6", "n2", "n5", "n1", "n4"]);
 });
 
-test("課題テンプレート: 2種類。回答対象は配列で、partId と eventId で指す", () => {
-  assert.deepEqual(Object.keys(TASK_TEMPLATES), ["tt-melody-first", "tt-chord-first"]);
+test("課題テンプレート: ver.1 の2種類と、拡張サンプルの2回答の2種類。回答対象は配列で、partId と eventId で指す", () => {
+  assert.deepEqual(Object.keys(TASK_TEMPLATES), ["tt-melody-first", "tt-chord-first", "tt-melody-first-two", "tt-chord-first-two"]);
   for (const [name, template] of Object.entries(TASK_TEMPLATES)) {
     assert.equal(template.taskTemplateId, name);
     assert.equal(template.schemaVersion, DEFINITIONS_SCHEMA_VERSION);

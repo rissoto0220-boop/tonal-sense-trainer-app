@@ -17,13 +17,16 @@
 // 「訓練を終了する」(第7節): 音を止めて画面内で確認する。「終了する」なら、回答済みの試行だけを残して終える。
 //   「続ける」なら、止めた再生をやり直す。
 // 完了(第9節): 全問に回答し、かつ最終問の必須のフィードバックが終わった時点。
+// 複数回答(拡張サンプル): 課題テンプレートの回答対象を順に答え、全部そろった時点(または「わからない」)で確定する。
+//   「わからない」は残りの回答対象をすべて giveup にする。responseSubmittedAt・responseTimeMs は最後の回答の時刻
+//   (暫定。複数回答のときの記録の形は研究者の決定が未定)。正誤の文言は、全部答えたあとにまとめて出す。
 import { escapeHtml } from "../shared/escape-html.js";
 import { audioContextTime } from "../shared/audio-buffer-player.js";
 import { toLocalIso } from "../shared/iso-time.js";
 import { TASK_TEMPLATES } from "./definitions.js";
 import { TRAINING_AUDIO_VERSION } from "./stimuli.js";
 import { buildQuestions, drawSessionKey } from "./question-pool.js";
-import { judgeResponses } from "./judge.js";
+import { judgeResponses, GIVE_UP_RESPONSE_CODE } from "./judge.js";
 import { mountAnswerScreen } from "./answer-screen.js";
 import { createQuestionAudio } from "./question-audio.js";
 
@@ -75,7 +78,11 @@ export function runTrainingSession({
   if (!REPLAY_MODES.includes(replayMode)) throw new Error(`未対応のリプレイの方式です: ${replayMode}`);
   const { sessionKeyCode, keyAssignmentMethod } = drawSessionKey(menu, randomFn);
   const questions = buildQuestions(menu, { randomFn, keyCode: sessionKeyCode, ...(questionCount ? { questionCount } : {}) });
-  const optionSetRef = TASK_TEMPLATES[menu.taskTemplateRef].answerTargets[0].optionSetRef;
+  const { answerTargets } = TASK_TEMPLATES[menu.taskTemplateRef];
+  const optionSetRef = answerTargets[0].optionSetRef;
+  if (answerTargets.some((target) => target.optionSetRef !== optionSetRef)) {
+    throw new Error(`メニュー ${menu.menuId}: 回答対象ごとに回答候補が違う課題には、まだ対応していません`);
+  }
   const trials = [];
   let current = null; // { audio, screen }
   let completed = false;
@@ -126,7 +133,8 @@ export function runTrainingSession({
     teardown();
     const question = questions[index];
     const isLast = index === questions.length - 1;
-    const target = question.resolvedAnswerTargets[0];
+    const targets = question.resolvedAnswerTargets;
+    const responseCodes = []; // 回答順(targets と同じ順)
     const audio = createQuestionAudioFn(question, audioOptions);
     let loaded = false;
     let confirmingQuit = false;
@@ -162,7 +170,8 @@ export function runTrainingSession({
       screen.setNextEnabled(false);
       audio.playFeedback({
         onOnset: () => {
-          screen.showResult({ outcome: trial.responses[0].outcome, correctAnswerCode: target.correctAnswerCode, showNext: !correct, nextEnabled: false, replayEnabled: false });
+          const results = trial.responses.map(({ outcome, correctAnswerCode }) => ({ outcome, correctAnswerCode }));
+          screen.showResult({ ...results[0], results, showNext: !correct, nextEnabled: false, replayEnabled: false });
         },
         onEnd: () => {
           if (correct) return;
@@ -180,9 +189,10 @@ export function runTrainingSession({
       });
     };
 
-    function confirmTrial(code) {
+    function confirmTrial() {
       const submittedAudioTime = audioContextTimeFn();
-      const { responses, scoring } = judgeResponses(question.resolvedAnswerTargets, { [target.targetId]: code });
+      const codesByTargetId = Object.fromEntries(targets.map((target, i) => [target.targetId, responseCodes[i] ?? GIVE_UP_RESPONSE_CODE]));
+      const { responses, scoring } = judgeResponses(targets, codesByTargetId);
       return {
         trialNumber: question.questionNumber,
         menuId: question.menuId,
@@ -222,10 +232,17 @@ export function runTrainingSession({
       optionSetRef,
       activeOptionCodes: menu.activeOptionCodes,
       progressLabel: `${question.questionNumber} / ${questions.length}`,
-      onAnswer: (code) => {
+      tonicCode: menu.tonicCode,
+      targetCount: targets.length,
+      onAnswer: (code, { complete = true } = {}) => {
         if (trial || !enabled) return;
         audio.stop();
-        trial = confirmTrial(code);
+        responseCodes.push(code);
+        if (!complete) {
+          screen.setReplayEnabled(null); // リプレイで止めた音があっても、次の回答の間はリプレイを押せる
+          return;
+        }
+        trial = confirmTrial();
         trials.push(trial);
         onTrialConfirmed(structuredClone(trial));
         playFeedback(true);

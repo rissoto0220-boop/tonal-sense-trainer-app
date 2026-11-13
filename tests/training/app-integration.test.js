@@ -29,7 +29,7 @@ test("app.js: 旗がないときの説明文は「現在準備中です。」", 
 // 送信には、引き続き触れない(サーバーでの種別が未決定)。
 test("app.js: 音感訓練の起動は、参加者IDつきでブラウザに保存するが、送信の仕組みには触れない", () => {
   const body = functionBody("async function startTraining(menu)");
-  assert.match(body, /await resumeAudioContext\(\);\n\s+const recorder = createTrainingRecorder\(participantId, \{ storage: localStorage \}\);/);
+  assert.match(body, /await resumeAudioContext\(\);\n[^\n]*\n\s+const recorder = menu\.sample \? NO_OP_TRAINING_RECORDER : createTrainingRecorder\(participantId, \{ storage: localStorage \}\);/);
   assert.match(body, /runTrainingSession\(/);
   for (const name of ["onSessionStarted", "onTrialConfirmed", "onTrialUpdated"]) {
     assert.match(body, new RegExp(`${name}: recorder\\.${name},`), name);
@@ -54,4 +54,11 @@ test("app.js: 訓練の最中だけ、ページを閉じる前の確認を有効
   const body = functionBody("async function startTraining(menu)");
   assert.match(body, /const releaseUnloadGuard = enableUnloadGuard\(\);/);
   assert.equal((body.match(/releaseUnloadGuard\(\);/g) ?? []).length, 4, "完了・中断・音声エラー・メニューへ戻るで解除する");
+});
+
+test("app.js: 拡張サンプルは ?training=dev&samples=on のときだけメニューに並べ、結果は保存しない", () => {
+  const body = functionBody("function showTrainingMenus()");
+  assert.match(body, /const \{ samples \} = resolveTrainingOptions\(window\.location\);/);
+  assert.match(body, /menus: samples \? \[\.\.\.TRAINING_MENUS, \.\.\.SAMPLE_MENUS\] : TRAINING_MENUS,/);
+  assert.match(source, /const NO_OP_TRAINING_RECORDER = \{\n\s+onSessionStarted\(\) \{\}, onTrialConfirmed\(\) \{\}, onTrialUpdated\(\) \{\}, onFinished\(\) \{\}, onInterrupted\(\) \{\}, onAudioError\(\) \{\},\n\};/);
 });

@@ -10,6 +10,8 @@
 - 調セットアップ:   <key>-setup-v01.wav               (Keyごとに1本、4本)
 - 出題音:           <key>-q-<刺激ID>-v01.wav          (10刺激 × 4Key = 40本)
 - フィードバック:   <key>-fb-<刺激ID>-v01.wav         (10刺激 × 4Key = 40本)
+- 将来の問題拡張のサンプル(Key C のみ): 短調の調セットアップ c-setup-minor-v01.wav 1本、
+  出題音・フィードバック 12刺激 × 2 = 24本(下の SAMPLE_STIMULI)
   Key接頭辞は c / es / fis / a。ファイル名の規則は src/training/stimuli.js と同じ。
 
 テンポは ♩=120(1拍0.5秒、研究者の決定 2026-10-27)。前後に1拍(0.5秒)ずつの余白(無音)を付ける。
@@ -60,7 +62,7 @@ FILENAME_PREFIX = {"C": "c", "Es": "es", "Fis": "fis", "A": "a"}
 MELODY_SEMITONES = {"n5": -5, "n6": -3, "n7": -1, "n1": 0, "n2": 2, "n3": 4, "n4": 5}
 # 和音の根音の音度 → ドからの半音数(長音階)。
 ROOT_SEMITONES = {"n1": 0, "n2": 2, "n3": 4, "n4": 5, "n5": 7, "n6": 9, "n7": 11}
-CHORD_INTERVALS = {"maj": [0, 4, 7], "dom7": [0, 4, 7, 10]}
+CHORD_INTERVALS = {"maj": [0, 4, 7], "dom7": [0, 4, 7, 10], "min": [0, 3, 7]}
 
 # (第1音の音度, 第1和音)。src/training/stimuli.js の TRAINING_STIMULI と同じ内容・同じ順
 # (一致することを tests/training/placeholder-audio-script.test.js で確認している)。
@@ -76,6 +78,27 @@ STIMULI = [
     ("n1", "ch-n4-maj"),  # ド/Ⅳ
     ("n4", "ch-n4-maj"),  # ファ/Ⅳ
 ]
+
+# 将来の問題拡張のサンプル(src/training/sample-stimuli.js の SAMPLE_STIMULI と同じ内容・同じ順。Key C のみ)。
+# (刺激ID, メロディ[(音度, 拍)], 和音[(和音コード, 拍)])。フィードバックは出題と同じ内容(暫定)。
+# 一致することを tests/training/placeholder-audio-script.test.js で確認している。
+SAMPLE_STIMULI = [
+    # 短調: 第1音 → ラ、第1和音 → Ⅵm
+    ("st-min-n3-ch-n3-dom7", [("n3", 2), ("n6", 2)], [("ch-n3-dom7", 2), ("ch-n6-min", 2)]),  # ミ/Ⅲ7
+    ("st-min-n7-ch-n3-dom7", [("n7", 2), ("n6", 2)], [("ch-n3-dom7", 2), ("ch-n6-min", 2)]),  # シ/Ⅲ7
+    ("st-min-n1-ch-n6-min", [("n1", 2), ("n6", 2)], [("ch-n6-min", 2), ("ch-n6-min", 2)]),  # ド/Ⅵm
+    ("st-min-n6-ch-n6-min", [("n6", 2), ("n6", 2)], [("ch-n6-min", 2), ("ch-n6-min", 2)]),  # ラ/Ⅵm
+    ("st-min-n2-ch-n2-min", [("n2", 2), ("n6", 2)], [("ch-n2-min", 2), ("ch-n6-min", 2)]),  # レ/Ⅱm
+    ("st-min-n4-ch-n2-min", [("n4", 2), ("n6", 2)], [("ch-n2-min", 2), ("ch-n6-min", 2)]),  # ファ/Ⅱm
+    # 六和音の進行: 2つの和音 → Ⅰ(1拍 + 1拍 + 2拍)
+    ("st-prog-n2-n5", [("n2", 1), ("n7", 1), ("n1", 2)], [("ch-n2-min", 1), ("ch-n5-dom7", 1), ("ch-n1-maj", 2)]),  # Ⅱm→Ⅴ7→Ⅰ
+    ("st-prog-n4-n5", [("n4", 1), ("n2", 1), ("n1", 2)], [("ch-n4-maj", 1), ("ch-n5-dom7", 1), ("ch-n1-maj", 2)]),  # Ⅳ→Ⅴ7→Ⅰ
+    ("st-prog-n6-n4", [("n3", 1), ("n4", 1), ("n1", 2)], [("ch-n6-min", 1), ("ch-n4-maj", 1), ("ch-n1-maj", 2)]),  # Ⅵm→Ⅳ→Ⅰ
+    ("st-prog-n3-n6", [("n7", 1), ("n6", 1), ("n1", 2)], [("ch-n3-min", 1), ("ch-n6-min", 1), ("ch-n1-maj", 2)]),  # Ⅲm→Ⅵm→Ⅰ
+    ("st-prog-n1-n4", [("n5", 1), ("n6", 1), ("n1", 2)], [("ch-n1-maj", 1), ("ch-n4-maj", 1), ("ch-n1-maj", 2)]),  # Ⅰ→Ⅳ→Ⅰ
+    ("st-prog-n6-n2", [("n3", 1), ("n2", 1), ("n1", 2)], [("ch-n6-min", 1), ("ch-n2-min", 1), ("ch-n1-maj", 2)]),  # Ⅵm→Ⅱm→Ⅰ
+]
+SAMPLE_KEY = "C"
 
 # フィードバックのフレーズ: 第1音 → [(音度, 拍数), ...]。どれも計4拍で、最後はド(2拍)。
 FEEDBACK_PHRASES = {
@@ -98,6 +121,19 @@ SETUP_CHORDS = [
     ([4, 7, 12], 2),  # Ⅰ
 ]
 SETUP_BASS = [([-12], 2), ([-19], 1), ([-17], 1), ([-12], 2), ([-12], 2)]  # C3 F2 G2 | C3 C3
+
+# 短調の調セットアップ(拡張サンプル用。主音はラ)。楽譜(a)を短調に置き換えた暫定の内容:
+#   旋律 ミ(1) ド(1) レ(0.5) シ(0.5) ソ#(1) | ラ(2) ラ(2)
+#   和音 Ⅵm(2) Ⅱm(1) Ⅲ7(1) | Ⅵm(2) Ⅵm(2)、低音 A2(2) D2(1) E2(1) | A2(2) A2(2)
+MINOR_SETUP_MELODY = [([4], 1), ([0], 1), ([2], 0.5), ([-1], 0.5), ([-4], 1), ([-3], 2), ([-3], 2)]
+MINOR_SETUP_CHORDS = [
+    ([0, 4, 9], 2),  # Ⅵm (Key CでC4・E4・A4)
+    ([2, 5, 9], 1),  # Ⅱm (D4・F4・A4)
+    ([2, 4, 8, 11], 1),  # Ⅲ7 (D4・E4・G#4・B4)
+    ([0, 4, 9], 2),  # Ⅵm
+    ([0, 4, 9], 2),  # Ⅵm
+]
+MINOR_SETUP_BASS = [([-15], 2), ([-22], 1), ([-20], 1), ([-15], 2), ([-15], 2)]  # A2 D2 E2 | A2 A2
 
 
 def frequency(semitones_from_c4):
@@ -183,10 +219,29 @@ def generate_feedback(key, first_degree, first_chord_ref):
     write_wav(OUTPUT_DIR / filename("fb", key, first_degree, first_chord_ref), samples)
 
 
+def generate_minor_setup(key):
+    samples = new_buffer(SETUP_BEATS)
+    add_sequence(samples, key, MINOR_SETUP_CHORDS, 0.6)
+    add_sequence(samples, key, MINOR_SETUP_BASS, 0.4)
+    add_sequence(samples, key, MINOR_SETUP_MELODY, 0.8)
+    write_wav(OUTPUT_DIR / f"{FILENAME_PREFIX[key]}-setup-minor-v01.wav", samples)
+
+
+def generate_sample(key, sample_id, melody, chords):
+    # 出題音とフィードバックは同じ内容(暫定)。
+    for kind in ("q", "fb"):
+        samples = new_buffer(QUESTION_BEATS)
+        add_sequence(samples, key, [(chord_semitones(chord_ref), beats) for chord_ref, beats in chords], 0.6)
+        add_sequence(samples, key, melody_events(melody), 0.8)
+        write_wav(OUTPUT_DIR / f"{FILENAME_PREFIX[key]}-{kind}-{sample_id}-v01.wav", samples)
+
+
 def main():
     for phrase in FEEDBACK_PHRASES.values():
         assert sum(beats for _, beats in phrase) == FEEDBACK_BEATS and phrase[-1] == ("n1", 2), phrase
-    for events in (SETUP_MELODY, SETUP_CHORDS, SETUP_BASS):
+    for _, melody, chords in SAMPLE_STIMULI:
+        assert sum(beats for _, beats in melody) == QUESTION_BEATS == sum(beats for _, beats in chords), melody
+    for events in (SETUP_MELODY, SETUP_CHORDS, SETUP_BASS, MINOR_SETUP_MELODY, MINOR_SETUP_CHORDS, MINOR_SETUP_BASS):
         assert sum(beats for _, beats in events) == SETUP_BEATS, events
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     for key in KEY_TONIC_SEMITONES:
@@ -194,6 +249,9 @@ def main():
         for first_degree, first_chord_ref in STIMULI:
             generate_question(key, first_degree, first_chord_ref)
             generate_feedback(key, first_degree, first_chord_ref)
+    generate_minor_setup(SAMPLE_KEY)
+    for sample_id, melody, chords in SAMPLE_STIMULI:
+        generate_sample(SAMPLE_KEY, sample_id, melody, chords)
     print(f"{len(list(OUTPUT_DIR.glob('*.wav')))}本を {OUTPUT_DIR} に生成しました")
 
 

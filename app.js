@@ -57,6 +57,7 @@ import {
 import { showHistoryScreen as showFunctionalPitchHistoryScreen } from "./src/functional-pitch/history-screen.js";
 import { resolveTrainingOptions } from "./src/training/dev-flag.js";
 import { TRAINING_MENUS } from "./src/training/menus.js";
+import { SAMPLE_MENUS } from "./src/training/sample-menus.js";
 import { showTrainingMenuScreen } from "./src/training/menu-screen.js";
 import { runTrainingSession } from "./src/training/training-session.js";
 import {
@@ -294,9 +295,11 @@ function startFunctionalPitchTest() {
 // 結果は参加者IDごとにブラウザ(localStorage)へ、回答を確定するたびに保存し、履歴・CSVで出力できる。
 // サーバーへの送信はしない(送信処理は training: のキーを対象にしていない。サーバーでの種別は未決定)。
 function showTrainingMenus() {
+  // 将来の問題拡張のサンプルは ?training=dev&samples=on のときだけ並べる(結果は保存しない)。
+  const { samples } = resolveTrainingOptions(window.location);
   showTrainingMenuScreen({
     screenEl,
-    menus: TRAINING_MENUS,
+    menus: samples ? [...TRAINING_MENUS, ...SAMPLE_MENUS] : TRAINING_MENUS,
     onSelect: startTraining,
     onShowHistory: () => showTrainingHistoryScreen({
       screenEl,
@@ -314,11 +317,16 @@ function showTrainingMenus() {
   });
 }
 
+const NO_OP_TRAINING_RECORDER = {
+  onSessionStarted() {}, onTrialConfirmed() {}, onTrialUpdated() {}, onFinished() {}, onInterrupted() {}, onAudioError() {},
+};
+
 // メニューのボタンを押した操作の中で、音声(AudioContext)を有効化してから始める。
 async function startTraining(menu) {
   const { replayMode, questionCount } = resolveTrainingOptions(window.location);
   await resumeAudioContext();
-  const recorder = createTrainingRecorder(participantId, { storage: localStorage });
+  // サンプルは保存しない(複数回答の保存形式・CSVの形が未決定のため、研究データに混ぜない)。
+  const recorder = menu.sample ? NO_OP_TRAINING_RECORDER : createTrainingRecorder(participantId, { storage: localStorage });
   // 訓練の最中に誤ってページを閉じないよう、ブラウザの確認を出す(終われば解除する)。
   const releaseUnloadGuard = enableUnloadGuard();
   runTrainingSession({

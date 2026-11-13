@@ -8,6 +8,7 @@
 // (tonal-sense-docs/training-data-design-prototype.md 第7.2節)。
 // 拍(onsetBeats・durationBeats)は仮音源の暫定値(第1音2拍 → ド2拍、♩=120)。正式音源が決まったら合わせて直す。
 import { DEFINITIONS_SCHEMA_VERSION } from "./definitions.js";
+import { SAMPLE_STIMULI } from "./sample-stimuli.js";
 
 // 訓練で使うKey(相対音感の完全版と同じ4つ)。相対音感のコードは参照せず、訓練用に持つ。
 export const TRAINING_KEY_CODES = ["C", "Es", "Fis", "A"];
@@ -59,8 +60,9 @@ export const TRAINING_STIMULI = [
   twoEventStimulus("n4", "ch-n4-maj"), // ファ/Ⅳ
 ];
 
+// ver.1 の刺激に加え、拡張サンプルの刺激(sample-stimuli.js)も探す。
 export function findTrainingStimulus(stimulusId) {
-  return TRAINING_STIMULI.find((stimulus) => stimulus.stimulusId === stimulusId) ?? null;
+  return [...TRAINING_STIMULI, ...SAMPLE_STIMULI].find((stimulus) => stimulus.stimulusId === stimulusId) ?? null;
 }
 
 // kind: "q"(問題音) または "fb"(回答後のフィードバックのフレーズ)。問題音とフィードバックは、刺激ごとに必ず1組で対応する。
@@ -81,9 +83,14 @@ export function feedbackAudioFilenameFor(keyCode, stimulusId) {
   return audioFilenameFor("fb", keyCode, stimulusId);
 }
 
-// 調セットアップ(出題音の前に毎問鳴らす、調を示す音源)のファイル名(例: c-setup-v01.wav)。Keyごとに1本。
-export function keySetupAudioFilenameFor(keyCode) {
+// 調セットアップ(出題音の前に毎問鳴らす、調を示す音源)のファイル名。Keyと長調・短調ごとに1本。
+//   長調: c-setup-v01.wav(ver.1)  短調: c-setup-minor-v01.wav(拡張サンプル用。主音はラ)
+export const TRAINING_SCALES = ["major", "minor"];
+
+export function keySetupAudioFilenameFor(keyCode, scale = "major") {
   const prefix = FILENAME_PREFIX_BY_KEY[keyCode];
   if (!prefix) throw new Error(`未対応のKeyです: ${keyCode}`);
-  return `${prefix}-setup-v${TRAINING_AUDIO_VERSION}.wav`;
+  if (!TRAINING_SCALES.includes(scale)) throw new Error(`未対応の音階です: ${scale}`);
+  const scalePart = scale === "major" ? "" : `-${scale}`;
+  return `${prefix}-setup${scalePart}-v${TRAINING_AUDIO_VERSION}.wav`;
 }

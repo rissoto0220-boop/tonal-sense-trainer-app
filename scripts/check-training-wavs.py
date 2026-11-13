@@ -14,6 +14,7 @@ scripts/check-functional-pitch-wavs.py と同じ作法。
 
 確認する項目:
 - ファイルがそろっているか: 調セットアップ4本、出題音40本、フィードバック40本(不合格)
+  加えて、将来の問題拡張のサンプル(Key C のみ): 短調の調セットアップ1本、出題音12本、フィードバック12本
 - 前の無音・後ろの無音: 0.5秒(±0.05秒)(不合格)
 - 形式(チャンネル数・サンプリング周波数・ビット深度): すべてのファイルで同じ(不合格)
 - 長さ: 目安 調セットアップ5.0秒、出題音3.0秒、フィードバック3.0秒(警告のみ。アプリは止まらない)
@@ -58,6 +59,13 @@ STIMULI = [
     ("n1", "ch-n4-maj"),  # ド/Ⅳ
     ("n4", "ch-n4-maj"),  # ファ/Ⅳ
 ]
+# 将来の問題拡張のサンプル(src/training/sample-stimuli.js の SAMPLE_STIMULI と同じ順)。Key C のみ。
+SAMPLE_KEY_PREFIX = "c"
+SAMPLE_STIMULUS_IDS = [
+    "st-min-n3-ch-n3-dom7", "st-min-n7-ch-n3-dom7", "st-min-n1-ch-n6-min",
+    "st-min-n6-ch-n6-min", "st-min-n2-ch-n2-min", "st-min-n4-ch-n2-min",
+    "st-prog-n2-n5", "st-prog-n4-n5", "st-prog-n6-n4", "st-prog-n3-n6", "st-prog-n1-n4", "st-prog-n6-n2",
+]
 AUDIO_VERSION = "01"
 
 
@@ -70,6 +78,10 @@ def expected_files():
             stimulus_id = f"st-{degree}-{chord_ref}"
             files[f"{prefix}-q-{stimulus_id}-v{AUDIO_VERSION}.wav"] = "q"
             files[f"{prefix}-fb-{stimulus_id}-v{AUDIO_VERSION}.wav"] = "fb"
+    files[f"{SAMPLE_KEY_PREFIX}-setup-minor-v{AUDIO_VERSION}.wav"] = "setup"
+    for stimulus_id in SAMPLE_STIMULUS_IDS:
+        files[f"{SAMPLE_KEY_PREFIX}-q-{stimulus_id}-v{AUDIO_VERSION}.wav"] = "q"
+        files[f"{SAMPLE_KEY_PREFIX}-fb-{stimulus_id}-v{AUDIO_VERSION}.wav"] = "fb"
     return files
 
 

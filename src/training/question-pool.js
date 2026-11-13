@@ -31,7 +31,8 @@ export function buildQuestionPool(menu, keyCode) {
 }
 
 // 戻り値: 出題数ぶんの問題。各問は
-//   { questionNumber, menuId, stimulusId, keyCode, taskTemplateId, resolvedAnswerTargets }
+//   { questionNumber, menuId, stimulusId, keyCode, scale, taskTemplateId, resolvedAnswerTargets }
+// scale は刺激の musicalContext.scale("major" / "minor")。調セットアップの音源を選ぶのに使う。
 // keyCode を省くと drawSessionKey で決める。正解(resolvedAnswerTargets)は、刺激と課題テンプレートから解決する。
 // 問題のID(QID・questionId)は作らない(研究者の決定、第14節)。試行は「訓練のID + 問題の番号」で区別する。
 export function buildQuestions(menu, {
@@ -51,6 +52,7 @@ export function buildQuestions(menu, {
       menuId: menu.menuId,
       stimulusId,
       keyCode,
+      scale: stimulus.musicalContext?.scale ?? "major",
       taskTemplateId: taskTemplate.taskTemplateId,
       resolvedAnswerTargets: resolveAnswerTargets(stimulus, taskTemplate),
     };
