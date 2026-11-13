@@ -5,6 +5,7 @@
 //
 // 保存はcamelCase、CSVはsnake_case(研究者の決定、第15節)。変換は toSnakeCaseRow の1か所だけで行う。
 import { toFilenameTimestamp } from "../shared/iso-time.js";
+import { DEFAULT_QUESTION_COUNT } from "./definitions.js";
 
 // 「中断」の扱いにする状態(「訓練を終了する」・ページを閉じた等の interrupted と、音声エラーの audio_error)。
 const isInterrupted = (session) => session.sessionStatus !== "completed";
@@ -42,6 +43,28 @@ export function buildHistorySummary(sessions, includeInterrupted) {
     correctCount: session.correctCount,
     trialsPlanned: session.trialsPlanned,
   }));
+}
+
+// メニューごとの得点推移グラフ用の点。中断(interrupted・audio_error)は含めない。
+// 入力はセッションの配列だけ(保存の出どころには依存しない。ブラウザ保存でもサーバー保存でも、この形にして渡す)。
+// index は、完了した回だけで数え直した実施回(履歴一覧の attemptNumber は中断も数えるので別物)。
+export function buildScoreSeries(sessions, menuId) {
+  const points = finishedSessions(sessions, false)
+    .filter((session) => session.menuId === menuId)
+    .map((session, i) => ({
+      index: i + 1,
+      correctCount: session.correctCount,
+      trialsPlanned: session.trialsPlanned,
+      startedAt: session.startedAt,
+      sessionKeyCode: session.sessionKeyCode,
+    }));
+  const maxScore = Math.max(DEFAULT_QUESTION_COUNT, ...points.map((point) => point.trialsPlanned));
+  return { menuId, maxScore, points };
+}
+
+// 完了した回があるメニューの menuId(重複なし・初めて完了した順)。グラフの既定メニューを選ぶのに使う。
+export function listMenuIdsWithScores(sessions) {
+  return [...new Set(finishedSessions(sessions, false).map((session) => session.menuId))];
 }
 
 // 推奨ファイル名。例: P00001_training_responses_20261028_153525.csv

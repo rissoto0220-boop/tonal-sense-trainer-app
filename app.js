@@ -64,6 +64,7 @@ import {
   loadParticipantData as loadTrainingParticipantData,
 } from "./src/training/session-store.js";
 import { showHistoryScreen as showTrainingHistoryScreen } from "./src/training/history-screen.js";
+import { showScoreChartScreen as showTrainingScoreChartScreen } from "./src/training/score-chart-screen.js";
 import { enableUnloadGuard } from "./src/functional-pitch/unload-guard.js";
 
 const QUESTION_MS = 3000;
@@ -300,6 +301,12 @@ function showTrainingMenus() {
     onShowHistory: () => showTrainingHistoryScreen({
       screenEl,
       participantId,
+      participantData: loadTrainingParticipantData(participantId, localStorage),
+      onBack: showTrainingMenus,
+    }),
+    // 得点の推移は、sessions の配列だけを渡す。サーバー保存から読むことになったら、ここだけ替える。
+    onShowScoreChart: () => showTrainingScoreChartScreen({
+      screenEl,
       participantData: loadTrainingParticipantData(participantId, localStorage),
       onBack: showTrainingMenus,
     }),

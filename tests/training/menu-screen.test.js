@@ -12,6 +12,7 @@ function mount() {
     menus: TRAINING_MENUS,
     onSelect: (menu) => calls.push(["select", menu.menuId]),
     onShowHistory: () => calls.push(["history"]),
+    onShowScoreChart: () => calls.push(["score-chart"]),
     onBack: () => calls.push(["back"]),
   });
   return { screenEl, calls };
@@ -49,4 +50,11 @@ test("メニューを押すと onSelect にそのメニュー、「履歴・CSV�
   screenEl.el('[data-role="back"]').click();
   assert.deepEqual(calls, [["select", "menu-09"], ["history"], ["back"]]);
   assert.equal(screenEl.el("h2").focused, true, "見出しにフォーカスを移す");
+});
+
+test("「得点の推移を見る」を押すと onShowScoreChart が呼ばれる", () => {
+  const { screenEl, calls } = mount();
+  assert.match(screenEl.text('[data-role="score-chart"]'), new RegExp(MENU_SCREEN_TEXT.scoreChart));
+  screenEl.el('[data-role="score-chart"]').click();
+  assert.deepEqual(calls, [["score-chart"]]);
 });

@@ -6,6 +6,7 @@ export const MENU_SCREEN_TEXT = {
   title: "訓練メニューを選んでください",
   back: "テスト選択へ戻る",
   history: "履歴・CSVを見る",
+  scoreChart: "得点の推移を見る",
 };
 
 // 1メニューの説明(出題数とKey)。
@@ -37,6 +38,7 @@ export function buildMenuScreenHtml(menus) {
       ${groupHtml("Key C", fixed)}
       ${groupHtml("Key ランダム", random)}
       <div class="actions">
+        <button type="button" class="secondary" data-role="score-chart">${MENU_SCREEN_TEXT.scoreChart}</button>
         <button type="button" class="secondary" data-role="history">${MENU_SCREEN_TEXT.history}</button>
         <button type="button" class="secondary" data-role="back">${MENU_SCREEN_TEXT.back}</button>
       </div>
@@ -44,8 +46,9 @@ export function buildMenuScreenHtml(menus) {
 }
 
 // onSelect(menu): メニューを押したとき(参加者のクリックの中で呼ぶので、音声の有効化に使える)。
-// onShowHistory(): 「履歴・CSVを見る」を押したとき。onBack(): 「テスト選択へ戻る」を押したとき。
-export function showTrainingMenuScreen({ screenEl, menus, onSelect, onShowHistory = () => {}, onBack }) {
+// onShowHistory(): 「履歴・CSVを見る」を押したとき。onShowScoreChart(): 「得点の推移を見る」を押したとき。
+// onBack(): 「テスト選択へ戻る」を押したとき。
+export function showTrainingMenuScreen({ screenEl, menus, onSelect, onShowHistory = () => {}, onShowScoreChart = () => {}, onBack }) {
   screenEl.innerHTML = buildMenuScreenHtml(menus);
   screenEl.querySelector("h2")?.focus();
   for (const button of screenEl.querySelectorAll("[data-menu-id]")) {
@@ -55,5 +58,6 @@ export function showTrainingMenuScreen({ screenEl, menus, onSelect, onShowHistor
     });
   }
   screenEl.querySelector('[data-role="history"]')?.addEventListener("click", onShowHistory);
+  screenEl.querySelector('[data-role="score-chart"]')?.addEventListener("click", onShowScoreChart);
   screenEl.querySelector('[data-role="back"]')?.addEventListener("click", onBack);
 }

@@ -82,10 +82,10 @@ test("課題テンプレート: 刺激の中身(正解)を持たない", () => {
   }
 });
 
-// 保存・履歴・CSV(T7)の3ファイル。ブラウザ保存とCSVの部品を使ってよいが、送信・サーバーには依存しない。
-const STORAGE_FILES = ["session-store.js", "reports.js", "history-screen.js"];
+// 保存・履歴・CSV(T7)と得点推移の画面の4ファイル。ブラウザ保存・CSV・日時の表示整形の部品を使ってよいが、送信・サーバーには依存しない。
+const STORAGE_FILES = ["session-store.js", "reports.js", "history-screen.js", "score-chart-screen.js"];
 
-test("src/training は(保存・履歴の3ファイルを除き)DOM・保存・サーバーに依存しない(importの許可リスト)", () => {
+test("src/training は(保存・履歴・得点推移画面の4ファイルを除き)DOM・保存・サーバーに依存しない(importの許可リスト)", () => {
   // src/training/ 内のファイル同士と、共通の小さな部品(HTMLの無害化・1回だけ受付・音声の再生・時刻表記)、
   // 機能的音感の音声時計タイマーだけを許可する。
   const allowed = /^(\.\/[a-z-]+\.js|\.\.\/shared\/(escape-html|answer-lock|audio-buffer-player|iso-time)\.js|\.\.\/functional-pitch\/audio-clock\.js)$/;
@@ -101,7 +101,7 @@ test("src/training は(保存・履歴の3ファイルを除き)DOM・保存・�
   }
 });
 
-test("src/training の保存・履歴の3ファイルは、ブラウザ保存とCSVまで。送信・サーバーには依存しない", () => {
+test("src/training の保存・履歴・得点推移画面の4ファイルは、ブラウザ保存とCSVまで。送信・サーバーには依存しない", () => {
   const allowed = /^(\.\/[a-z-]+\.js|\.\.\/shared\/(escape-html|iso-time|storage|csv|display-format)\.js)$/;
   for (const file of STORAGE_FILES) {
     const source = readFileSync(new URL(`../../src/training/${file}`, import.meta.url), "utf8");

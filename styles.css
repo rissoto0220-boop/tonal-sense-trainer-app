@@ -137,6 +137,17 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 .history-list { list-style: none; margin: 16px 0; padding: 0; border-top: 2px solid var(--ink); }
 .history-list li { padding: 12px 6px; border-bottom: 1px solid var(--line); }
 
+/* 音感訓練の得点推移グラフ(インラインSVG)。点には値の文字を付けるので、色は補助 */
+.score-menu-select { display: block; margin: 16px 0; font-weight: 700; }
+.score-menu-select select { display: block; width: 100%; margin-top: 6px; padding: 10px; font: inherit; }
+.score-chart { display: block; width: 100%; height: auto; margin: 16px 0; }
+.score-chart-grid { stroke: var(--line); stroke-width: 1; }
+.score-chart-axis { stroke: var(--line-strong); stroke-width: 1.5; }
+.score-chart-line { fill: none; stroke: var(--blue); stroke-width: 2.5; stroke-linejoin: round; }
+.score-chart-dot { fill: var(--paper); stroke: var(--blue); stroke-width: 2.5; }
+.score-chart-label { fill: var(--muted); font-size: 12px; }
+.score-chart-value { fill: var(--ink); font-size: 13px; font-weight: 700; }
+
 /* テスト選択画面(目次リスト):枠・影なし、区切り線と大きな番号で並べる。
    HTMLは変えず、番号はCSSカウンター(counter)で付ける。
    左端の縦線は絶対音感=青・相対音感=オレンジだが、番号と文字でも区別できるので色は補助。 */
