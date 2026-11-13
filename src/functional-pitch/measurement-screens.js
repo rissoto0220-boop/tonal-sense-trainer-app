@@ -48,7 +48,7 @@ export function buildLoadErrorHtml(failures) {
       <h2 tabindex="-1">音源を読み込めませんでした</h2>
       <p class="error">測定を開始できません(${failures.length}件)。研究者へお知らせください。</p>
       <ul class="functional-error-files">${items}</ul>
-      <p class="note">ページを再読み込みすると、もう一度試せます。もう一方のKeyは、別の音源なので選べます。</p>
+      <p class="note">再読み込みで再試行できます。もう一方のKeyは選べます。</p>
       <div class="actions"><button type="button" class="primary" data-role="back">Key選択へ戻る</button></div>
     </div>`;
 }
@@ -58,8 +58,8 @@ export function buildInterruptedHtml(completedCount) {
   return `
     <div class="panel functional-measurement-error">
       <h2 tabindex="-1">測定を中断しました</h2>
-      <p class="error">音声エラーのため、測定を中断しました。(${completedCount} 試行まで回答済み)</p>
-      <p class="note">研究者へお知らせください。ページを再読み込みすると、もう一度試せます。</p>
+      <p class="error">音声エラーで中断しました(${completedCount}試行まで回答済み)。</p>
+      <p class="note">研究者へお知らせください。再読み込みで再試行できます。</p>
       <div class="actions"><button type="button" class="primary" data-role="back">Key選択へ戻る</button></div>
     </div>`;
 }

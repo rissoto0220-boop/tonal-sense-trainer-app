@@ -63,7 +63,7 @@ test("音源の読み込みエラー: 件数と失敗したファイル名(研�
   assert.match(html, /c-phr-ch-n1-maj-mel-n1-v01\.wav\(読み込めません\)/);
   assert.match(html, /c-phr-ch-n4-maj-mel-n4-v01\.wav\(長さが想定と異なります\)/);
   assert.equal(html.includes("public/sounds"), false); // フォルダーは出さずファイル名だけ
-  assert.match(html, /ページを再読み込み/);
+  assert.match(html, /再読み込みで再試行できます/);
   assert.match(html, /data-role="back">Key選択へ戻る<\/button>/);
 });
 
@@ -75,7 +75,7 @@ test("音源の読み込みエラー: ファイル名にHTMLの特殊文字が�
 
 test("中断画面: 回答済みの試行数を表示し、Key選択へ戻れる", () => {
   const html = buildInterruptedHtml(37);
-  assert.match(html, /音声エラーのため、測定を中断しました。\(37 試行まで回答済み\)/);
+  assert.match(html, /音声エラーで中断しました\(37試行まで回答済み\)/);
   assert.match(html, /data-role="back">Key選択へ戻る<\/button>/);
 });
 

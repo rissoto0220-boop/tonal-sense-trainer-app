@@ -54,7 +54,7 @@ export function showMainTestFlow({
     screenEl.innerHTML = `
       <div class="panel">
         <h2>本番</h2>
-        <p id="test-status" class="status">音を再生しています。しばらくお待ちください。</p>
+        <p id="test-status" class="status">音を再生しています…</p>
         <div id="answer-panel-container"></div>
       </div>`;
 

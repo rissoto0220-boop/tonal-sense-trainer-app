@@ -42,7 +42,7 @@ export function showPracticeFlow({
     screenEl.innerHTML = `
       <div class="panel">
         <h2>練習について</h2>
-        <p>以前にこのテストを完了した記録があります。練習をもう一度行うか、スキップして本番へ進むか選べます。</p>
+        <p>このテストは完了済みです。練習するか、スキップして本番へ進むか選べます。</p>
         <div class="actions">
           <button id="do-practice" class="primary">練習してから開始</button>
           <button id="skip-practice" class="secondary">練習をスキップして本番へ</button>
@@ -63,9 +63,9 @@ export function showPracticeFlow({
         <p>これから${practiceQuestions.length}問の練習を行います。</p>
         <ul class="instructions">
           <li>カデンツ・基準音・目的音の順に自動再生されます。</li>
-          <li>目的音が鳴り始めたら、聞こえた階名を選んでください。</li>
-          <li>回答時間の制限はありません。回答するまで次へ進みません。</li>
-          <li>練習では、回答のたびに正解・不正解が表示されます(本番では表示されません)。</li>
+          <li>目的音が鳴ったら、その階名を選んでください。</li>
+          <li>時間制限はありません(回答すると次へ進みます)。</li>
+          <li>練習では正解・不正解が表示されます(本番では表示されません)。</li>
         </ul>
         <p class="note">この練習は原則1回のみです。</p>
         <div class="actions"><button id="practice-start" class="primary">練習を開始</button></div>
@@ -95,7 +95,7 @@ export function showPracticeFlow({
     screenEl.innerHTML = `
       <div class="panel">
         <h2>練習</h2>
-        <p id="practice-status" class="status">音を再生しています。しばらくお待ちください。</p>
+        <p id="practice-status" class="status">音を再生しています…</p>
         <div id="answer-panel-container"></div>
       </div>`;
 

@@ -264,7 +264,7 @@ test("途中で音声エラーが起きたら、そこまでの結果を audio_e
   assert.equal(env.measured[0].measurement_status, "audio_error");
   assert.equal(env.measured[0].completed_trials.length, 4);
   assert.equal(env.measured[0].generated_trial_order.length, 90);
-  assert.match(env.screenEl.innerHTML, /4 試行まで回答済み/);
+  assert.match(env.screenEl.innerHTML, /4試行まで回答済み/);
   assert.equal(env.mount.mounts[0].destroyed, true);
   env.screenEl.button('[data-role="back"]').click();
   assert.deepEqual(env.backs, ["back"]);

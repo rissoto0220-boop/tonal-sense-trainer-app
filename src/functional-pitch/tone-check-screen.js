@@ -21,7 +21,7 @@ export function buildToneCheckHtml() {
   return `
     <div class="panel functional-tone-check">
       <h2>音色の確認</h2>
-      <p>この測定では、リコーダーとピアノが一緒に鳴る短いフレーズを聴きます。まず、それぞれの楽器の音を1回ずつ聴いてください。何度でも聴けます。</p>
+      <p>リコーダーとピアノが一緒に鳴るフレーズを聴きます。まず各楽器の音を聴いてください(何度でも聴けます)。</p>
       <ul class="functional-tone-list">${items}
       </ul>
       <p class="error" data-role="error"></p>

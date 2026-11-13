@@ -101,7 +101,7 @@ function showIdEntry(prefill = "") {
   screenEl.innerHTML = `
     <div class="panel">
       <h2>参加者IDを入力してください</h2>
-      <p>研究者から指定されたIDを入力してください。小文字の p は自動で大文字に変換します。</p>
+      <p>研究者から指定されたIDを入力してください(p は自動で大文字になります)。</p>
       <div class="field">
         <label for="participant-id">参加者ID</label>
         <input id="participant-id" inputmode="text" autocomplete="off" placeholder="P00001" maxlength="6" value="${escapeHtml(prefill)}">
@@ -156,28 +156,28 @@ function availableTests() {
     {
       id: "absolute-pitch",
       title: "絶対音感テスト",
-      description: "鳴った音の音名を答えるテストです(練習3問・本番最大60問)。",
+      description: "鳴った音の音名を答えます(練習3問・本番最大60問)",
       available: true,
       onStart: startAbsolutePitchTest,
     },
     {
       id: "relative-pitch",
       title: "相対音感テスト",
-      description: "基準の音から聞いて、目的の音の階名を答えるテストです(簡易版12問・完全版44問)。",
+      description: "基準音から目的音の階名を答えます(簡易版12問・完全版44問)",
       available: true,
       onStart: startRelativePitchTest,
     },
     {
       id: "functional-pitch",
       title: "機能的音感テスト",
-      description: functionalPitchOptions.enabled ? "2つのフレーズの印象の変化を評定します(開発確認用)。" : "現在準備中です。",
+      description: functionalPitchOptions.enabled ? "2つのフレーズの印象の変化を評定します(開発確認用)" : "現在準備中です。",
       available: functionalPitchOptions.enabled,
       onStart: startFunctionalPitchTest,
     },
     {
       id: "training",
       title: "音感訓練",
-      description: trainingOptions.enabled ? "メロディの音や和音を答えて練習します(開発確認用)。" : "現在準備中です。",
+      description: trainingOptions.enabled ? "メロディの音や和音を答えます(開発確認用)" : "現在準備中です。",
       available: trainingOptions.enabled,
       onStart: showTrainingMenus,
     },
@@ -350,13 +350,11 @@ function showPracticeIntro() {
       <p>これから3問の練習を行います。</p>
       <ul class="instructions">
         <li>音は1回だけ自動で再生されます。</li>
-        <li>聞こえた音名のボタンを押してください。</li>
-        <li>回答時間は、音の再生開始から3.0秒です。</li>
-        <li>音の再生中でも回答できます。</li>
-        <li>早く回答しても、次の問題は3.0秒後に始まります。</li>
-        <li>正解・不正解は表示しません。</li>
+        <li>聞こえた音名のボタンを押してください(再生中も回答できます)。</li>
+        <li>回答時間は再生開始から3.0秒です。早く回答しても次の問題は3.0秒後に始まります。</li>
+        <li>正解・不正解は表示されません。</li>
       </ul>
-      <p class="note">この練習は原則1回のみです。練習問題そのものの再実施はできません。</p>
+      <p class="note">練習は原則1回のみで、やり直しはできません。</p>
       <div class="actions"><button id="practice-start" class="primary">練習を開始</button></div>
     </div>`;
   document.getElementById("practice-start").addEventListener("click", () => {
@@ -399,7 +397,7 @@ function showQuestion({ mode, note, questionNumber }, onResult) {
   const title = mode === "practice" ? "練習" : "本番";
   const helpBlock = mode === "practice"
     ? `<div class="notice">
-        <strong>操作方法:</strong>聞こえた音名を選択してください。音は1回だけ、回答時間は3.0秒です。
+        <strong>操作方法:</strong>音は1回だけ、回答は3.0秒以内です。
       </div>`
     : "";
 
@@ -492,10 +490,10 @@ function showPlaybackError(note) {
   screenEl.innerHTML = `
     <div class="panel center">
       <h2>音声を再生できませんでした</h2>
-      <p>問題の音声ファイル(${escapeHtml(note.filename)})の再生に失敗しました。</p>
+      <p>音声ファイル(${escapeHtml(note.filename)})を再生できませんでした。</p>
       <p class="note">
-        この問題は誤回答やタイムアウトとしては記録されません。<br>
-        お手数ですが、テスト選択からやり直してください。
+        この問題は誤回答・タイムアウトとして記録されません。<br>
+        テスト選択からやり直してください。
       </p>
       <div class="actions centered"><button id="to-selection" class="primary">テスト選択へ戻る</button></div>
     </div>`;
@@ -506,17 +504,14 @@ function showPlaybackError(note) {
 
 // 強制終了ルールの告知文(仕様10章の確定事項)。
 // 将来この告知自体を削除する場合に他の文章へ影響しないよう、独立した定数にしている。
-const FORCED_TERMINATION_NOTICE = "誤回答とタイムアウトの合計が13件に達した場合、その時点でテストが終了します。";
+const FORCED_TERMINATION_NOTICE = "誤回答とタイムアウトが合計13件に達すると、テストは終了します。";
 
 function showTestConfirm() {
   screenEl.innerHTML = `
     <div class="panel">
       <h2>本番開始確認</h2>
-      <p>練習が終了しました。<br>
-      次から本番の絶対音感テストを開始します。<br>
-      本番中も正解・不正解は表示されません。</p>
+      <p>練習が終了しました。次から本番です(正解・不正解は表示されません)。</p>
       <p class="notice">${escapeHtml(FORCED_TERMINATION_NOTICE)}</p>
-      <p>準備ができたら「本番を開始」を押してください。</p>
       <div class="actions">
         <button id="back-info" class="secondary">練習の説明を確認する</button>
         <button id="main-start" class="primary">本番を開始</button>
@@ -531,12 +526,12 @@ function showPracticeRecap() {
     <div class="panel">
       <h2>操作方法の確認</h2>
       <ul class="instructions">
-        <li>音は各問題で1回だけ自動再生されます。</li>
-        <li>回答時間は音の再生開始から3.0秒です。</li>
+        <li>音は1回だけ自動再生されます。</li>
+        <li>回答時間は再生開始から3.0秒です。</li>
         <li>音の再生中でも回答できます。</li>
         <li>正解・不正解は表示しません。</li>
       </ul>
-      <p class="note">練習問題は原則1回のため、再実施はできません。</p>
+      <p class="note">練習のやり直しはできません。</p>
       <div class="actions"><button id="back-confirm" class="primary">本番開始確認へ戻る</button></div>
     </div>`;
   document.getElementById("back-confirm").addEventListener("click", showTestConfirm);

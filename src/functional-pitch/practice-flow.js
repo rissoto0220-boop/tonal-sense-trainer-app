@@ -10,7 +10,6 @@ export function buildPracticeEndHtml() {
   return `
     <div class="panel center functional-practice-end">
       <h2 tabindex="-1">練習が終わりました</h2>
-      <p>本番を開始するか、練習をもう一度行うかを選んでください。</p>
       <div class="actions centered">
         <button type="button" class="primary" data-role="start-main">本番を開始する</button>
         <button type="button" class="secondary" data-role="retry">練習をもう一度行う</button>
