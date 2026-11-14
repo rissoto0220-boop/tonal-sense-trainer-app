@@ -107,12 +107,14 @@ test("問題に scale が付き、短調の調セットアップは c-setup-mino
 
 // --- 画面 ---
 
-test("メニュー画面: サンプルは3つ目のグループとして最後に並ぶ。渡さなければグループも出ない", () => {
+test("メニュー画面: サンプルは3つ目の「拡張」タブに並ぶ。渡さなければタブも出ない", () => {
   const html = buildMenuScreenHtml([...TRAINING_MENUS, ...SAMPLE_MENUS]);
-  const groupAt = html.indexOf(`>${MENU_SCREEN_TEXT.sampleGroup}</h3>`);
-  assert.ok(groupAt > html.indexOf(">Key ランダム</h3>"));
-  assert.ok(html.indexOf('data-menu-id="menu-16"') < groupAt && html.indexOf('data-menu-id="sample-01"') > groupAt);
-  assert.equal(buildMenuScreenHtml(TRAINING_MENUS).includes(MENU_SCREEN_TEXT.sampleGroup), false);
+  const tabIds = [...html.matchAll(/role="tab"[^>]*data-tab-id="([^"]+)"/g)].map((match) => match[1]);
+  assert.deepEqual(tabIds, ["key-c", "key-random", "samples"]);
+  const panelAt = html.indexOf('data-panel-id="samples"');
+  assert.ok(html.indexOf('data-menu-id="menu-16"') < panelAt && html.indexOf('data-menu-id="sample-01"') > panelAt);
+  assert.equal(buildMenuScreenHtml(TRAINING_MENUS).includes('data-tab-id="samples"'), false);
+  assert.match(html, new RegExp(MENU_SCREEN_TEXT.title));
 });
 
 test("主音の指定(短調): 上部の表示は「? → ラ」「? → Ⅵ」。ラの鍵盤が高く、六角形の頂点はⅥ", () => {

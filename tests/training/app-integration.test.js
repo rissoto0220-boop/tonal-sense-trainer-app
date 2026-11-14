@@ -56,6 +56,14 @@ test("app.js: 訓練の最中だけ、ページを閉じる前の確認を有効
   assert.equal((body.match(/releaseUnloadGuard\(\);/g) ?? []).length, 4, "完了・中断・音声エラー・メニューへ戻るで解除する");
 });
 
+test("app.js: メニュー選択で最後に開いていたタブを覚えておき、戻ったときに同じタブを開く(ブラウザには保存しない)", () => {
+  assert.match(source, /\nlet trainingMenuTabId = null;\n/);
+  const body = functionBody("function showTrainingMenus()");
+  assert.match(body, /initialTabId: trainingMenuTabId,/);
+  assert.match(body, /onTabChange: \(tabId\) => \{ trainingMenuTabId = tabId; \},/);
+  assert.equal(/trainingMenuTabId[^\n]*localStorage|localStorage[^\n]*trainingMenuTabId/.test(source), false);
+});
+
 test("app.js: 拡張サンプルは ?training=dev&samples=on のときだけメニューに並べ、結果は保存しない", () => {
   const body = functionBody("function showTrainingMenus()");
   assert.match(body, /const \{ samples \} = resolveTrainingOptions\(window\.location\);/);

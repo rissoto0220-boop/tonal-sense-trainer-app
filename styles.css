@@ -197,6 +197,26 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 .test-button:disabled::before { color: #a8b0b9; }
 .test-badge { flex: none; font-size: .8rem; font-weight: 700; color: var(--muted); border: 1.5px solid var(--muted); border-radius: 999px; padding: 2px 12px; }
 .test-description { margin: 0 14px 0 72px; color: var(--muted); font-size: .93rem; line-height: 1.7; }
+
+/* 音感訓練のメニュー選択のタブ。選択中は、色だけでなく太字と下の太い線(形)で示す。
+   タブが入りきらないときは、タブの列の中だけを横にスクロールさせる(ページ全体は横にスクロールさせない)。 */
+.training-tabs { display: flex; gap: 4px; margin: 20px 0 0; border-bottom: 2px solid var(--ink); overflow-x: auto; }
+.training-tab {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 10px 18px;
+  border: 0;
+  border-bottom: 5px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.training-tab[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--ink); }
+.training-tab:hover:not([aria-selected="true"]) { color: var(--ink); background: var(--cream); }
+.training-tab:focus-visible { outline-offset: -3px; }
+.training-tabpanel[role="tabpanel"] .test-list { margin-top: 0; border-top: 0; }
+.training-tab-note { margin: 14px 0 10px; font-weight: 700; }
 /* 準備中:点線の縦線+灰色の文字+「準備中」ラベル(色だけに頼らない) */
 .is-unavailable { --accent: #c9c5bb; border-left-style: dashed; }
 

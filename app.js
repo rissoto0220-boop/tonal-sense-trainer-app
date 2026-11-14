@@ -294,12 +294,17 @@ function startFunctionalPitchTest() {
 
 // 結果は参加者IDごとにブラウザ(localStorage)へ、回答を確定するたびに保存し、履歴・CSVで出力できる。
 // サーバーへの送信はしない(送信処理は training: のキーを対象にしていない。サーバーでの種別は未決定)。
+// メニュー選択で最後に開いていたタブ。訓練から戻ったときに同じタブを開く(ページを閉じると消える。保存はしない)。
+let trainingMenuTabId = null;
+
 function showTrainingMenus() {
   // 将来の問題拡張のサンプルは ?training=dev&samples=on のときだけ並べる(結果は保存しない)。
   const { samples } = resolveTrainingOptions(window.location);
   showTrainingMenuScreen({
     screenEl,
     menus: samples ? [...TRAINING_MENUS, ...SAMPLE_MENUS] : TRAINING_MENUS,
+    initialTabId: trainingMenuTabId,
+    onTabChange: (tabId) => { trainingMenuTabId = tabId; },
     onSelect: startTraining,
     onShowHistory: () => showTrainingHistoryScreen({
       screenEl,
