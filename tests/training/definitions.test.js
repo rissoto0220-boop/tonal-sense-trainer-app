@@ -87,8 +87,8 @@ const STORAGE_FILES = ["session-store.js", "reports.js", "history-screen.js", "s
 
 test("src/training は(保存・履歴・得点推移画面の4ファイルを除き)DOM・保存・サーバーに依存しない(importの許可リスト)", () => {
   // src/training/ 内のファイル同士と、共通の小さな部品(HTMLの無害化・1回だけ受付・音声の再生・時刻表記)、
-  // 機能的音感の音声時計タイマーだけを許可する。
-  const allowed = /^(\.\/[a-z-]+\.js|\.\.\/shared\/(escape-html|answer-lock|audio-buffer-player|iso-time)\.js|\.\.\/functional-pitch\/audio-clock\.js)$/;
+  // 機能的音感の音声時計タイマー、エラー画面の部品(2026-11-14)だけを許可する。
+  const allowed = /^(\.\/[a-z-]+\.js|\.\.\/shared\/(escape-html|answer-lock|audio-buffer-player|iso-time|error-screen)\.js|\.\.\/functional-pitch\/audio-clock\.js)$/;
   const files = readdirSync(new URL("../../src/training/", import.meta.url)).filter((name) => name.endsWith(".js") && !STORAGE_FILES.includes(name));
   assert.ok(files.length >= 2);
   for (const file of files) {

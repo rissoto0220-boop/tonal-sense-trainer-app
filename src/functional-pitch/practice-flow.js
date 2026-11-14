@@ -44,7 +44,7 @@ export function runPracticeFlow({
     resumeAudioContextFn().then(() => {
       if (destroyed) return;
       controller?.destroy();
-      controller = mountTrialScreenFn(screenEl, trialControllerOptions);
+      controller = mountTrialScreenFn(screenEl, trialControllerOptions, { heading: "練習" });
       startCurrentTrial();
     });
   }

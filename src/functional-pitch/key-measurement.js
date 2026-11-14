@@ -15,6 +15,7 @@ import {
   buildInterruptedHtml,
   buildInternalErrorHtml,
   showBackScreen,
+  KEY_LABEL,
 } from "./measurement-screens.js";
 
 const RESPONSE_KEYS = [
@@ -126,7 +127,7 @@ export function runKeyMeasurement({
 
   function startTrials() {
     disableGuard = enableUnloadGuardFn();
-    controller = mountTrialScreenFn(screenEl, trialControllerOptions);
+    controller = mountTrialScreenFn(screenEl, trialControllerOptions, { heading: `測定(${KEY_LABEL[keyCode] ?? keyCode})` });
     onSessionStarted({
       measurement_key_code: keyCode,
       generated_trial_order: generatedOrder.map(toOrderEntry),

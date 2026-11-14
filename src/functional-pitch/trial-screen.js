@@ -37,10 +37,12 @@ export function phraseStates(phase) {
   }
 }
 
+// 試行画面の中に一瞬出るエラー文。練習ではテスト選択へ戻れるエラー画面に、測定では中断の画面に切り替わるため、
+// ここでは「再読み込み」を促さない(2026-11-14)。
 export const ERROR_TEXT = {
-  load: "音声を読み込めませんでした。ページを再読み込みしてください。",
+  load: "音声を読み込めませんでした。",
   duration: "音源の長さが想定と異なります。研究者へお知らせください。",
-  schedule: "音声を再生できませんでした。ページを再読み込みしてください。",
+  schedule: "音声を再生できませんでした。",
 };
 
 function buildPhraseBoxHtml(number) {
@@ -54,9 +56,9 @@ function buildPhraseBoxHtml(number) {
 
 const ratingNumbers = Array.from({ length: RATING_MAX - RATING_MIN + 1 }, (_, i) => RATING_MIN + i);
 
-// 試行画面のHTML文字列を返す(初期状態: 全て無効、選択なし)。
+// 試行画面のHTML文字列を返す(初期状態: 全て無効、選択なし)。heading: 画面の見出し(「練習」「測定(Key C)」など)。
 // functional-trial--animated は再生中アニメーションを使うための印で、外せば静止表示になる。
-export function buildTrialHtml() {
+export function buildTrialHtml({ heading = "" } = {}) {
   const items = RATING_ITEMS.map((item) => `
       <fieldset class="rating-item" data-item="${item.key}" aria-describedby="rating-ends-${item.key}" disabled>
         <legend class="rating-question">${escapeHtml(item.question)}</legend>
@@ -75,6 +77,7 @@ export function buildTrialHtml() {
 
   return `
     <div class="functional-trial functional-trial--animated" data-phase="preparing">
+      ${heading ? `<h2 class="functional-trial-title">${escapeHtml(heading)}</h2>` : ""}
       <p class="functional-progress" data-role="progress" tabindex="-1"></p>
       <div class="functional-phrases" aria-hidden="true">${buildPhraseBoxHtml(1)}
         <span class="functional-phrases__arrow">→</span>${buildPhraseBoxHtml(2)}
@@ -142,8 +145,9 @@ function createDomView(screenEl) {
 
 // screenEl に試行画面を作り、試行を操作する controller(start / destroy)を返す。
 // controllerOptions: 時間制御の差し替え(runTrialTimelineFn / timelineOptions)。
-export function mountTrialScreen(screenEl, controllerOptions = {}) {
-  screenEl.innerHTML = buildTrialHtml();
+// heading: 画面の見出し(「練習」「測定(Key C)」など)。
+export function mountTrialScreen(screenEl, controllerOptions = {}, { heading = "" } = {}) {
+  screenEl.innerHTML = buildTrialHtml({ heading });
   const view = createDomView(screenEl);
   const controller = createTrialController({ view, ...controllerOptions });
 

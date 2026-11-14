@@ -52,6 +52,7 @@ test("完了画面: 得点・正答率・評定の平均などを表示しない
 
 test("読み込み中の画面", () => {
   assert.match(buildLoadingHtml(), /音声を準備しています…/);
+  assert.match(buildLoadingHtml(), /<h2>音声の準備<\/h2>/);
 });
 
 test("音源の読み込みエラー: 件数と失敗したファイル名(研究者向け)を表示し、Key選択へ戻れる", () => {

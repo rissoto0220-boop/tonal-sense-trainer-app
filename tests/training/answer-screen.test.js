@@ -251,3 +251,10 @@ test("終了の確認: 「訓練を終了する」で onQuit。確認の間は�
   screenEl.el('[data-role="quit-yes"]').click();
   assert.deepEqual(log, ["cancel", "confirm"]);
 });
+
+test("見出し: heading を渡すと進捗の上に出す。省略すると出さない(2026-11-14)", () => {
+  const IDLE = { answerable: false, selectedCode: null, result: null, showNext: false, replayEnabled: null };
+  const html = buildAnswerScreenHtml({ ...MELODY, state: IDLE, heading: "① 単音 シドレの判別(Key C)" });
+  assert.match(html, /<h2 class="training-answer-title">① 単音 シドレの判別\(Key C\)<\/h2>\s*<p class="training-progress">/);
+  assert.equal(buildAnswerScreenHtml({ ...MELODY, state: IDLE }).includes("<h2"), false);
+});

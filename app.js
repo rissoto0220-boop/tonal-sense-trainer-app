@@ -239,6 +239,7 @@ function startRelativePitchTest() {
         hasCompletedBefore,
         session: relativeSession,
         persistSession: persistRelativeSession,
+        onBack: showTestSelection, // 音声エラーの画面から戻る
         onFinished: () => {
           showMainTestFlow({
             screenEl,
@@ -383,7 +384,7 @@ function showPracticeIntro() {
     // 練習を始める。待たずに始めると、時計が一時停止したままの状態でスケジュールを計算してしまい、
     // 後から時計が動き出した際にスケジュールが早く(または即座に)発火してしまう
     // (相対音感の練習・本番画面で見つかったのと同じ不具合)。
-    screenEl.innerHTML = `<div class="panel center"><p class="status">音声を準備しています…</p></div>`;
+    screenEl.innerHTML = `<div class="panel center"><h2>音声の準備</h2><p class="status">音声を準備しています…</p></div>`;
     resumeAudioContext().then(() => {
       runPractice();
     });

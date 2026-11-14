@@ -22,7 +22,7 @@ export function buildKeySelectHtml({ showExit = false, showHistory = false } = {
 }
 
 export function buildLoadingHtml() {
-  return `<div class="panel center"><p class="status">音声を準備しています…</p></div>`;
+  return `<div class="panel center"><h2>音声の準備</h2><p class="status">音声を準備しています…</p></div>`;
 }
 
 // 完了画面。得点・正答率・評定の平均などは表示しない(主観評定で、正解がないため)。

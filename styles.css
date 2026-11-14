@@ -385,6 +385,8 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 .functional-trial { max-width: 600px; margin: 0 auto; }
 .functional-progress { margin: 0 0 4px; color: var(--muted); font-weight: 700; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
 .functional-progress:focus { outline: none; }
+/* 試行画面の見出し(「練習」「測定(Key C)」)。進捗の上に、控えめな大きさで出す */
+.functional-trial-title { margin: 0 0 4px; font-size: 1.15rem; }
 .functional-status { margin: 0; min-height: 1.8em; font-weight: 700; }
 
 /* どちらのフレーズが再生中かを示す図(2つの枠)。色だけに頼らず、塗り・枠の形・文字の3つで示す。
@@ -503,6 +505,8 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
    押せない音は、色だけでなく点線の枠と灰色の文字でも示す。選択中は✓印と内側の枠でも示す。 */
 .training-answer { text-align: center; }
 .training-progress { margin: 0 0 12px; color: var(--muted); font-weight: 700; }
+/* 回答画面の見出し(メニュー名)。長い名前でも折り返す */
+.training-answer-title { margin: 0 0 4px; font-size: 1.1rem; overflow-wrap: anywhere; }
 .training-prompt {
   max-width: 280px;
   margin: 8px auto 32px;

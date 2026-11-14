@@ -8,7 +8,8 @@ export const PART_LABEL = { recorder: "リコーダー", piano: "ピアノ" };
 // 状態は色だけに頼らず、文字と枠の形で示す(✓は回答の選択中の印と紛らわしいので使わない)。
 export const PART_STATE_TEXT = { idle: "未再生", playing: "再生中", played: "再生済み" };
 
-export const TONE_CHECK_ERROR_TEXT = "音声を読み込めませんでした。ページを再読み込みしてください。";
+// 画面の中に一瞬出るエラー文。すぐにテスト選択へ戻れるエラー画面に切り替わるため、「再読み込み」を促さない(2026-11-14)。
+export const TONE_CHECK_ERROR_TEXT = "音声を読み込めませんでした。";
 
 // 音色確認画面のHTML文字列を返す(初期状態: どちらも未再生、「練習へ進む」は無効)。
 export function buildToneCheckHtml() {

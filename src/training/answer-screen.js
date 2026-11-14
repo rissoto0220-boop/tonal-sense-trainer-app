@@ -92,7 +92,8 @@ function resultLines(optionSet, results) {
 // state: { answerable, selectedCode(1回答) または selectedCodes(回答順の配列),
 //          result: { outcome, correctAnswerCode } | null(1回答) または results: [...](複数回答),
 //          showNext, nextEnabled, replayEnabled, confirmingQuit }
-export function buildAnswerScreenHtml({ optionSetRef, activeOptionCodes, progressLabel, state, tonicCode = TONIC_CODE, targetCount = 1 }) {
+// heading: 画面の見出し(メニュー名)。省略すると見出しを出さない。
+export function buildAnswerScreenHtml({ optionSetRef, activeOptionCodes, progressLabel, state, tonicCode = TONIC_CODE, targetCount = 1, heading = "" }) {
   const optionSet = OPTION_SETS[optionSetRef];
   if (!optionSet) throw new Error(`回答候補「${optionSetRef}」が辞書にありません`);
   const isChord = optionSet.answerFeature === "chordRootDegree";
@@ -118,7 +119,8 @@ export function buildAnswerScreenHtml({ optionSetRef, activeOptionCodes, progres
   const nextEnabled = (state.nextEnabled ?? true) && !state.confirmingQuit;
 
   return `
-    <div class="panel training-answer">
+    <div class="panel training-answer">${heading ? `
+      <h2 class="training-answer-title">${escapeHtml(heading)}</h2>` : ""}
       <p class="training-progress">${escapeHtml(progressLabel)}</p>
       <div class="training-prompt" data-role="prompt">${escapeHtml(promptFor(optionSet, selectedCodes, targetCount, tonicCode))}</div>
       <div class="${isChord ? "training-hexagon" : "training-keyboard"}">${buttons}</div>
@@ -159,7 +161,7 @@ function feedbackHtml(lines) {
 // 画面は最初に1回だけ作り、その後は必要な部分(ボタンの押せる/押せない・選択中の印・上部の表示・正誤の文言・
 // 「次に進む」の表示)だけを書き換える。描き直すと、外枠 .panel のフェードイン(styles.css)が毎回やり直され、
 // 音の再生のたびにボタンが一瞬消えて見えるため(2026-10-27 の確認で判明)。
-export function mountAnswerScreen({ screenEl, optionSetRef, activeOptionCodes, progressLabel, tonicCode = TONIC_CODE, targetCount = 1, onAnswer = () => {}, onReplay = () => {}, onNext = () => {}, onQuit = () => {} }) {
+export function mountAnswerScreen({ screenEl, optionSetRef, activeOptionCodes, progressLabel, heading = "", tonicCode = TONIC_CODE, targetCount = 1, onAnswer = () => {}, onReplay = () => {}, onNext = () => {}, onQuit = () => {} }) {
   const optionSet = OPTION_SETS[optionSetRef];
   // 回答の欄ごとに「最初の1回だけ受け付ける」ロック(二度押しで次の欄まで埋まらないようにする)。
   const locks = Array.from({ length: targetCount }, () => createAnswerLock());
@@ -167,7 +169,7 @@ export function mountAnswerScreen({ screenEl, optionSetRef, activeOptionCodes, p
   let quitHandlers = null; // 確認を出している間の { onConfirm, onCancel }
   let destroyed = false;
 
-  screenEl.innerHTML = buildAnswerScreenHtml({ optionSetRef, activeOptionCodes, progressLabel, state, tonicCode, targetCount });
+  screenEl.innerHTML = buildAnswerScreenHtml({ optionSetRef, activeOptionCodes, progressLabel, state, tonicCode, targetCount, heading });
   const optionButtons = [...screenEl.querySelectorAll("[data-code]")];
   const promptEl = screenEl.querySelector('[data-role="prompt"]');
   const feedbackEl = screenEl.querySelector('[data-role="feedback"]');

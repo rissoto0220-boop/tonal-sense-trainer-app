@@ -54,7 +54,12 @@ test("再生状態・エラーの文言は仕様どおり", () => {
     phrase2: "フレーズ2を再生しています",
     answerable: "それぞれの印象の変化を回答してください",
   });
-  assert.match(ERROR_TEXT.load, /ページを再読み込みしてください/);
+  // 2026-11-14: 練習はエラー画面、測定は中断の画面に切り替わるため、試行画面の中の文では再読み込みを促さない。
+  assert.deepEqual(ERROR_TEXT, {
+    load: "音声を読み込めませんでした。",
+    duration: "音源の長さが想定と異なります。研究者へお知らせください。",
+    schedule: "音声を再生できませんでした。",
+  });
 });
 
 test("正解・不正解を連想させる語が画面に含まれない", () => {
@@ -125,4 +130,10 @@ test("測定本体の画面はユーザー・保存・CSV・サーバーに依�
       );
     }
   }
+});
+
+test("見出し: heading を渡すと進捗の上に出す(練習・測定)。文字は無害化する", () => {
+  assert.match(buildTrialHtml({ heading: "測定(Key C)" }), /<h2 class="functional-trial-title">測定\(Key C\)<\/h2>\s*<p class="functional-progress"/);
+  assert.match(buildTrialHtml({ heading: "<練習>" }), /&lt;練習&gt;/);
+  assert.equal(buildTrialHtml().includes("<h2"), false);
 });

@@ -6,6 +6,21 @@ import { runToneCheck } from "./tone-check-screen.js";
 import { runPracticeFlow } from "./practice-flow.js";
 import { runKeyMeasurement } from "./key-measurement.js";
 import { showKeySelectScreen } from "./measurement-screens.js";
+import { showErrorScreen } from "../shared/error-screen.js";
+
+// 音色確認・練習で音声エラーが起きたときの見出し(エラーの種類ごと)。
+// 以前は画面の中に「ページを再読み込みしてください」と出すだけだったが、テスト選択へ戻れるエラー画面にした(2026-11-14)。
+export const STAGE_ERROR_TITLE = {
+  load: "音声を読み込めませんでした",
+  duration: "音源の長さが想定と異なります",
+  schedule: "音声を再生できませんでした",
+};
+export const STAGE_ERROR_BACK_LABEL = "テスト選択へ戻る";
+
+export function stageErrorMessage(kind) {
+  const restart = "テスト選択へ戻って、最初からやり直してください。";
+  return kind === "duration" ? `研究者へお知らせください。${restart}` : restart;
+}
 
 // screenEl: 描画先のDOM要素。
 // practiceRequired: 真なら音色確認と練習から始める。偽ならKey選択から始める
@@ -15,7 +30,7 @@ import { showKeySelectScreen } from "./measurement-screens.js";
 //   result: { measurement_key_code, measurement_status, completed_trials, generated_trial_order, practice_results }
 // onSessionStarted(info) / onTrialStarted(entry) / onTrialConfirmed(record): Keyごとの測定の通知
 //   (key-measurement.js と同じ。onSessionStarted の info には practice_results も加える)。
-// onExit: 省略可。渡すと、Key選択画面に「テスト選択へ戻る」を表示し、押したときに呼ぶ。
+// onExit: 省略可。渡すと、Key選択画面と、音色確認・練習のエラー画面に「テスト選択へ戻る」を表示し、押したときに呼ぶ。
 // onShowHistory(backToKeySelect): 省略可。渡すと、Key選択画面に「履歴・CSVを見る」を表示し、
 //   押したときに呼ぶ。履歴画面から戻るときは、渡された backToKeySelect() を呼ぶ。
 // toneCheckOptions / practiceFlowOptions / keyMeasurementOptions: 各段階への追加の引数
@@ -54,7 +69,21 @@ export function runFunctionalPitchSession({
   }
 
   function showToneCheck() {
-    replaceActive(runToneCheckFn({ screenEl, onProceed: showPractice, ...toneCheckOptions }));
+    replaceActive(runToneCheckFn({ screenEl, onProceed: showPractice, onError: showStageError, ...toneCheckOptions }));
+  }
+
+  // 音色確認・練習の音声エラー。鳴っている段階を止めてから、テスト選択へ戻れるエラー画面を出す
+  // (やり直しは最初から。Key測定のエラーは key-measurement.js の画面のまま)。
+  function showStageError({ kind } = {}) {
+    if (destroyed) return;
+    replaceActive(null);
+    showErrorScreen({
+      screenEl,
+      title: STAGE_ERROR_TITLE[kind] ?? STAGE_ERROR_TITLE.load,
+      message: stageErrorMessage(kind),
+      backLabel: STAGE_ERROR_BACK_LABEL,
+      onBack: onExit ? () => { destroy(); onExit(); } : null,
+    });
   }
 
   // 「練習へ進む」(参加者のクリック)の中で呼ばれる。
@@ -65,6 +94,7 @@ export function runFunctionalPitchSession({
         practiceResults = practice_results;
         showKeySelect();
       },
+      onError: showStageError,
       ...practiceFlowOptions,
     }));
   }

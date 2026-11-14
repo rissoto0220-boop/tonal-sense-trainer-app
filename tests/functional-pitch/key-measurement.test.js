@@ -19,9 +19,10 @@ function seededRandom(seed) {
 // 試行画面の代わりに、start の呼び出しを記録するだけの偽物。
 function createFakeMount() {
   const mounts = [];
-  const fn = (screenEl, options) => {
+  const fn = (screenEl, options, display) => {
     const controller = {
       options,
+      display,
       starts: [],
       destroyed: false,
       start(args) { controller.starts.push(args); },
@@ -350,7 +351,8 @@ test("destroy は何度呼んでも安全", async () => {
 });
 
 test("Keyごとの測定はユーザー・保存・CSV・サーバーに依存しない(importの許可リスト)", () => {
-  const allowed = /^(\.\/[\w-]+\.js|\.\.\/shared\/(audio-buffer-player|escape-html|answer-lock|iso-time)\.js)$/;
+  // error-screen: 音色確認・練習のエラー画面(2026-11-14)。保存・送信には関わらない画面の部品。
+  const allowed = /^(\.\/[\w-]+\.js|\.\.\/shared\/(audio-buffer-player|escape-html|answer-lock|iso-time|error-screen)\.js)$/;
   for (const file of ["key-measurement.js", "functional-session.js", "measurement-screens.js", "key-audio.js", "unload-guard.js", "dev-flag.js"]) {
     const source = readFileSync(new URL(`../../src/functional-pitch/${file}`, import.meta.url), "utf8");
     for (const [, path] of source.matchAll(/from "(.*)";/g)) {
@@ -362,4 +364,12 @@ test("Keyごとの測定はユーザー・保存・CSV・サーバーに依存�
 
 test("document が無い環境でも key-measurement.js のimportで例外にならない", async () => {
   await assert.doesNotReject(import("../../src/functional-pitch/key-measurement.js"));
+});
+
+test("測定の試行画面には、見出し「測定(Key C)」「測定(Key Fis)」を渡す", async () => {
+  const c = setup();
+  const fis = setup({ keyCode: "Fis" });
+  await flush();
+  assert.deepEqual(c.mount.mounts[0].display, { heading: "測定(Key C)" });
+  assert.deepEqual(fis.mount.mounts[0].display, { heading: "測定(Key Fis)" });
 });

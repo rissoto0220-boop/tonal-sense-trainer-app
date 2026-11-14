@@ -28,14 +28,14 @@ function createFakeScreen() {
 // 試行画面の代わりに、start の呼び出しを記録するだけの controller。
 function createFakeMount() {
   const mounts = [];
-  const fn = (screenEl) => {
+  const fn = (screenEl, options, display) => {
     const controller = {
       starts: [],
       destroyed: false,
       start(args) { controller.starts.push(args); },
       destroy() { controller.destroyed = true; },
     };
-    mounts.push({ screenEl, controller });
+    mounts.push({ screenEl, controller, display });
     return controller;
   };
   fn.mounts = mounts;
@@ -170,4 +170,10 @@ test("resume の完了前に destroy すると、練習を始めない", async (
 
 test("document が無い環境でも practice-flow.js のimportで例外にならない", async () => {
   await assert.doesNotReject(import("../../src/functional-pitch/practice-flow.js"));
+});
+
+test("練習の試行画面には、見出し「練習」を渡す", async () => {
+  const env = setup();
+  await flush();
+  assert.deepEqual(env.mount.mounts[0].display, { heading: "練習" });
 });

@@ -21,6 +21,7 @@
 //   「わからない」は残りの回答対象をすべて giveup にする。responseSubmittedAt・responseTimeMs は最後の回答の時刻
 //   (暫定。複数回答のときの記録の形は研究者の決定が未定)。正誤の文言は、全部答えたあとにまとめて出す。
 import { escapeHtml } from "../shared/escape-html.js";
+import { showErrorScreen } from "../shared/error-screen.js";
 import { audioContextTime } from "../shared/audio-buffer-player.js";
 import { toLocalIso } from "../shared/iso-time.js";
 import { TASK_TEMPLATES } from "./definitions.js";
@@ -35,7 +36,9 @@ export const REPLAY_MODES = ["question-only", "with-setup"];
 export const SESSION_TEXT = {
   finishedTitle: "訓練が終了しました",
   backToMenus: "メニュー選択へ戻る",
-  audioError: "音声を読み込めませんでした。ページを再読み込みしてください。",
+  // 音声エラーの画面(メニュー選択へ戻れる。以前は文だけで、再読み込みしかなかった。2026-11-14)。
+  audioErrorTitle: "音声を読み込めませんでした",
+  audioErrorMessage: "メニュー選択へ戻って、やり直してください。",
 };
 
 export function buildFinishedHtml(correctCount, questionCount) {
@@ -55,7 +58,7 @@ export function buildFinishedHtml(correctCount, questionCount) {
 //   onFinished(trials): 完了した時点で1回(最終問の必須のフィードバックが終わった時点)。
 //   onInterrupted(trials): 完了前に「訓練を終了する」で終えたとき。
 //   onAudioError(): 音声を読み込めなかったとき。
-//   onExit(): 終了画面の「メニュー選択へ戻る」、または「訓練を終了する」で終えたあと。
+//   onExit(): 終了画面・音声エラーの画面の「メニュー選択へ戻る」、または「訓練を終了する」で終えたあと。
 // 戻り値の destroy(): 画面を離れるときに呼ぶ。音・タイマーを止め、以後の操作を無視する。
 export function runTrainingSession({
   screenEl,
@@ -98,7 +101,13 @@ export function runTrainingSession({
 
   function showAudioError() {
     teardown();
-    screenEl.innerHTML = `<div class="panel center"><p class="error" role="alert">${escapeHtml(SESSION_TEXT.audioError)}</p></div>`;
+    showErrorScreen({
+      screenEl,
+      title: SESSION_TEXT.audioErrorTitle,
+      message: SESSION_TEXT.audioErrorMessage,
+      backLabel: SESSION_TEXT.backToMenus,
+      onBack: () => { if (!destroyed) onExit(); },
+    });
     onAudioError();
   }
 
@@ -232,6 +241,7 @@ export function runTrainingSession({
       optionSetRef,
       activeOptionCodes: menu.activeOptionCodes,
       progressLabel: `${question.questionNumber} / ${questions.length}`,
+      heading: menu.name,
       tonicCode: menu.tonicCode,
       targetCount: targets.length,
       onAnswer: (code, { complete = true } = {}) => {

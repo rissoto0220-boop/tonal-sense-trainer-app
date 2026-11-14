@@ -12,6 +12,7 @@ import {
   cadenceFilenameFor,
 } from "./intervals.js";
 import * as sessionStore from "./session-store.js";
+import { showRelativeAudioError } from "./audio-error-screen.js";
 
 // screenEl: 描画先のDOM要素。
 // testVersion: "simplified"(既定)または"full"。回答ボタンの構成を切り替える(仕様6.2)。
@@ -20,6 +21,7 @@ import * as sessionStore from "./session-store.js";
 // session: このセッションの保存対象(session-store.jsのstartSessionが返すもの)。
 // persistSession: 保存を反映させるために呼ぶ関数(呼び出し元がlocalStorageへの書き込みを担う)。
 // onFinished: 練習が終わった時点(全問終えた、またはスキップした)で呼ぶ。
+// onBack: 音声エラーの画面で「テスト選択へ戻る」を押したときに呼ぶ。
 export function showPracticeFlow({
   screenEl,
   testVersion = "simplified",
@@ -27,6 +29,7 @@ export function showPracticeFlow({
   session,
   persistSession = () => {},
   onFinished = () => {},
+  onBack = () => {},
 }) {
   const practiceQuestions = PRACTICE_QUESTIONS;
   const answerLabels = testVersion === "full" ? FULL_ANSWER_LABELS : ANSWER_LABELS;
@@ -75,7 +78,7 @@ export function showPracticeFlow({
       // resumeの完了(=AudioContextの時計が実際に動き出す)を待ってから最初の問題を始める。
       // 待たずに始めると、時計が一時停止したままの状態でスケジュールを計算してしまい、
       // 後から時計が動き出した際にスケジュールが早く(または即座に)発火してしまう。
-      screenEl.innerHTML = `<div class="panel center"><p class="status">音声を準備しています…</p></div>`;
+      screenEl.innerHTML = `<div class="panel center"><h2>音声の準備</h2><p class="status">音声を準備しています…</p></div>`;
       resumeAudioContext().then(() => {
         runQuestion(0);
       });
@@ -143,7 +146,7 @@ export function showPracticeFlow({
         // 音源エラー時はセッションを中断扱いにする(仕様22.1)。
         sessionStore.finalizeSession(session, "interrupted");
         persistSession();
-        document.getElementById("practice-status").textContent = "音声の読み込みに失敗しました。お手数ですが、最初からやり直してください。";
+        showRelativeAudioError({ screenEl, onBack });
       },
     });
   }

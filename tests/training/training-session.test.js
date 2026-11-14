@@ -374,10 +374,22 @@ test("和音のメニュー: 和音の根音度で判定し、「? → Ⅰ」の
   session.destroy();
 });
 
-test("音声の読み込みに失敗したら、再読み込みを促す文言を出し、onAudioError", async () => {
+test("音声の読み込みに失敗したら、見出し付きのエラー画面を出し、onAudioError。「メニュー選択へ戻る」で onExit", async () => {
   const { screenEl, session, log } = await start({ envOptions: { failSrc: "-setup-" } });
-  assert.match(screenEl.innerHTML, new RegExp(SESSION_TEXT.audioError));
+  assert.equal(screenEl.text("h2"), SESSION_TEXT.audioErrorTitle);
+  assert.equal(screenEl.text("h2"), "音声を読み込めませんでした");
+  assert.match(screenEl.innerHTML, /メニュー選択へ戻って、やり直してください。/);
+  assert.equal(screenEl.innerHTML.includes("再読み込み"), false, "再読み込みは促さない(戻ってやり直せる)");
   assert.equal(log.audioErrors, 1);
+  assert.equal(log.exits, 0);
+  screenEl.el('[data-role="back"]').click();
+  assert.equal(log.exits, 1);
+  session.destroy();
+});
+
+test("回答画面の見出しは、メニュー名", async () => {
+  const { screenEl, session } = await start();
+  assert.match(screenEl.text("h2"), /^① 単音 シドレの判別\(Key C\)$/);
   session.destroy();
 });
 

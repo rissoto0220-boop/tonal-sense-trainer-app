@@ -49,12 +49,17 @@ const bufferCache = new Map();
 
 // 音声ファイルを読み込み・デコードしてAudioBufferを返す(事前読み込み)。
 // 同じsrcへの呼び出しは、デコード結果(Promise)をキャッシュして使い回す。
+// 失敗した読み込みはキャッシュに残さない。エラー画面から戻ってやり直したときに、もう一度読みに行く
+// (残すと、ページを再読み込みするまで同じ失敗が続くため。2026-11-14)。
 export function loadAudioBuffer(src) {
   if (!bufferCache.has(src)) {
     const promise = fetch(src)
       .then((response) => response.arrayBuffer())
       .then((data) => getAudioContext().decodeAudioData(data));
     bufferCache.set(src, promise);
+    promise.catch(() => {
+      if (bufferCache.get(src) === promise) bufferCache.delete(src);
+    });
   }
   return bufferCache.get(src);
 }
