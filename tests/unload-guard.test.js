@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { enableUnloadGuard } from "../../src/functional-pitch/unload-guard.js";
+import { enableUnloadGuard } from "../src/shared/unload-guard.js";
 
 function createFakeWindow() {
   const listeners = new Set();

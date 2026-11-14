@@ -66,7 +66,7 @@ import {
 } from "./src/training/session-store.js";
 import { showHistoryScreen as showTrainingHistoryScreen } from "./src/training/history-screen.js";
 import { showScoreChartScreen as showTrainingScoreChartScreen } from "./src/training/score-chart-screen.js";
-import { enableUnloadGuard } from "./src/functional-pitch/unload-guard.js";
+import { enableUnloadGuard } from "./src/shared/unload-guard.js";
 
 const QUESTION_MS = 3000;
 const INTER_QUESTION_GAP_MS = 1000; // 問題間の間隔(仕様13.4)
@@ -87,10 +87,29 @@ function syncSessionsToServer() {
 
 function persistCurrentSession() {
   persistParticipantData(participantId, participantData, localStorage);
-  if (currentSession?.sessionStatus) syncSessionsToServer();
+  if (currentSession?.sessionStatus) {
+    releaseTestUnloadGuard(); // 結果・再生エラーで状態が確定した(以後、閉じても失うものはない)
+    syncSessionsToServer();
+  }
+}
+
+// 絶対音感・相対音感の、ページを閉じる前のブラウザの確認(2026-11-14 研究者の決定: 練習の開始から結果まで)。
+// どちらのテストも、結果画面・エラー画面の直前に必ず状態(sessionStatus)を確定して保存するので、
+// 保存の受け口で状態が確定したら解除する。訓練は startTraining の中で、機能的音感は functional-session.js で持つ。
+let releaseTestGuard = () => {};
+
+function holdTestUnloadGuard() {
+  releaseTestGuard();
+  releaseTestGuard = enableUnloadGuard();
+}
+
+function releaseTestUnloadGuard() {
+  releaseTestGuard();
+  releaseTestGuard = () => {};
 }
 
 function restartApp() {
+  releaseTestUnloadGuard();
   participantId = "";
   participantData = null;
   currentSession = null;
@@ -187,6 +206,7 @@ function availableTests() {
 }
 
 function showTestSelection() {
+  releaseTestUnloadGuard(); // テスト選択では、確認を残さない(念のため)
   showTestSelectionScreen({
     screenEl,
     participantId,
@@ -230,8 +250,12 @@ function startRelativePitchTest() {
       const persistRelativeSession = () => {
         persistRelativePitchParticipantData(participantId, result.data, localStorage);
         // 完了・音声エラーによる中断でsessionStatusが確定した直後に送る(API仕様5節)。
-        if (relativeSession.sessionStatus) syncSessionsToServer();
+        if (relativeSession.sessionStatus) {
+          releaseTestUnloadGuard(); // 状態が確定した(結果・音声エラー)ので、ページを閉じる前の確認を解除する
+          syncSessionsToServer();
+        }
       };
+      holdTestUnloadGuard(); // セッションを始めた時点から、結果・音声エラーまで確認を出す
 
       showPracticeFlow({
         screenEl,
@@ -384,6 +408,7 @@ function showPracticeIntro() {
     // 練習を始める。待たずに始めると、時計が一時停止したままの状態でスケジュールを計算してしまい、
     // 後から時計が動き出した際にスケジュールが早く(または即座に)発火してしまう
     // (相対音感の練習・本番画面で見つかったのと同じ不具合)。
+    holdTestUnloadGuard(); // 練習の開始から、結果・再生エラーまで確認を出す
     screenEl.innerHTML = `<div class="panel center"><h2>音声の準備</h2><p class="status">音声を準備しています…</p></div>`;
     resumeAudioContext().then(() => {
       runPractice();

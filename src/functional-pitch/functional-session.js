@@ -7,6 +7,7 @@ import { runPracticeFlow } from "./practice-flow.js";
 import { runKeyMeasurement } from "./key-measurement.js";
 import { showKeySelectScreen } from "./measurement-screens.js";
 import { showErrorScreen } from "../shared/error-screen.js";
+import { enableUnloadGuard } from "../shared/unload-guard.js";
 
 // 音色確認・練習で音声エラーが起きたときの見出し(エラーの種類ごと)。
 // 以前は画面の中に「ページを再読み込みしてください」と出すだけだったが、テスト選択へ戻れるエラー画面にした(2026-11-14)。
@@ -35,6 +36,7 @@ export function stageErrorMessage(kind) {
 //   押したときに呼ぶ。履歴画面から戻るときは、渡された backToKeySelect() を呼ぶ。
 // toneCheckOptions / practiceFlowOptions / keyMeasurementOptions: 各段階への追加の引数
 //   (テスト・開発用ページ向けの差し替え。音源のフォルダーなど)。
+// enableUnloadGuardFn: ページを閉じる前の確認の差し替え(テスト用)。
 // 戻り値の destroy(): 画面を離れるときに呼ぶ。音・タイマー・beforeunload をすべて止める。
 export function runFunctionalPitchSession({
   screenEl,
@@ -52,10 +54,18 @@ export function runFunctionalPitchSession({
   runToneCheckFn = runToneCheck,
   runPracticeFlowFn = runPracticeFlow,
   runKeyMeasurementFn = runKeyMeasurement,
+  enableUnloadGuardFn = enableUnloadGuard,
 }) {
   let active = null; // 現在の段階(destroy を持つもの)
   let practiceResults = [];
   let destroyed = false;
+  // 音色確認・練習の間の、ページを閉じる前のブラウザの確認(2026-11-14 研究者の決定: 練習の開始から結果まで)。
+  // Key選択・エラー画面・destroy で解除する。測定中の確認は key-measurement.js が持つ。
+  let releaseGuard = () => {};
+  function releaseStageGuard() {
+    releaseGuard();
+    releaseGuard = () => {};
+  }
 
   function replaceActive(next) {
     active?.destroy();
@@ -66,9 +76,12 @@ export function runFunctionalPitchSession({
     destroyed = true;
     active?.destroy();
     active = null;
+    releaseStageGuard();
   }
 
   function showToneCheck() {
+    releaseStageGuard();
+    releaseGuard = enableUnloadGuardFn();
     replaceActive(runToneCheckFn({ screenEl, onProceed: showPractice, onError: showStageError, ...toneCheckOptions }));
   }
 
@@ -77,6 +90,7 @@ export function runFunctionalPitchSession({
   function showStageError({ kind } = {}) {
     if (destroyed) return;
     replaceActive(null);
+    releaseStageGuard();
     showErrorScreen({
       screenEl,
       title: STAGE_ERROR_TITLE[kind] ?? STAGE_ERROR_TITLE.load,
@@ -102,6 +116,7 @@ export function runFunctionalPitchSession({
   function showKeySelect() {
     if (destroyed) return;
     replaceActive(null);
+    releaseStageGuard(); // 拠点の画面では確認を出さない(測定を始めると key-measurement.js が有効にする)
     showKeySelectScreen({
       screenEl,
       onSelect: startKey,

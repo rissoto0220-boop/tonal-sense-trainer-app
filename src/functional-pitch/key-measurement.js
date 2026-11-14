@@ -7,7 +7,7 @@ import { resumeAudioContext } from "../shared/audio-buffer-player.js";
 import { generateTrialOrder, validateTrialOrder } from "./trial-generator.js";
 import { loadKeyPhrases } from "./key-audio.js";
 import { mountTrialScreen } from "./trial-screen.js";
-import { enableUnloadGuard } from "./unload-guard.js";
+import { enableUnloadGuard } from "../shared/unload-guard.js";
 import {
   buildLoadingHtml,
   buildCompletionHtml,

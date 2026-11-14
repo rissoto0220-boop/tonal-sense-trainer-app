@@ -282,3 +282,47 @@ test("onExit を渡さないと、エラー画面に戻るボタンを出さな�
   stages.calls.toneCheck[0].onError({ kind: "load" });
   assert.equal(screenEl.button('[data-role="back"]'), undefined);
 });
+
+// --- ページを閉じる前の確認(2026-11-14: 練習の開始から結果まで) ---
+
+function createFakeGuard() {
+  const guard = { enabled: 0, released: 0, active: () => guard.enabled - guard.released };
+  guard.fn = () => {
+    guard.enabled += 1;
+    let done = false;
+    return () => { if (!done) { done = true; guard.released += 1; } };
+  };
+  return guard;
+}
+
+test("確認: 音色確認の開始で有効、練習の間も続き、Key選択で解除する", () => {
+  const guard = createFakeGuard();
+  const { stages } = setup({ enableUnloadGuardFn: guard.fn });
+  assert.equal(guard.active(), 1, "音色確認の開始で有効");
+  stages.calls.toneCheck[0].onProceed();
+  assert.equal(guard.active(), 1, "練習の間も有効のまま");
+  stages.calls.practice[0].onFinished({ practice_results: PRACTICE_RESULTS });
+  assert.equal(guard.active(), 0, "Key選択で解除");
+  assert.equal(guard.enabled, 1, "途中で付け直さない");
+});
+
+test("確認: 音色確認・練習のエラー画面で解除する", () => {
+  const toneGuard = createFakeGuard();
+  setup({ enableUnloadGuardFn: toneGuard.fn, onExit: () => {} }).stages.calls.toneCheck[0].onError({ kind: "load" });
+  assert.equal(toneGuard.active(), 0);
+  const practiceGuard = createFakeGuard();
+  const { stages } = setup({ enableUnloadGuardFn: practiceGuard.fn, onExit: () => {} });
+  stages.calls.toneCheck[0].onProceed();
+  stages.calls.practice[0].onError({ kind: "load" });
+  assert.equal(practiceGuard.active(), 0);
+});
+
+test("確認: destroy で解除する。practiceRequired が偽(Key選択から始める)なら有効にしない", () => {
+  const guard = createFakeGuard();
+  const { session } = setup({ enableUnloadGuardFn: guard.fn });
+  session.destroy();
+  assert.equal(guard.active(), 0);
+  const skipGuard = createFakeGuard();
+  setup({ practiceRequired: false, enableUnloadGuardFn: skipGuard.fn });
+  assert.equal(skipGuard.enabled, 0);
+});

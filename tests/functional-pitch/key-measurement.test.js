@@ -352,8 +352,9 @@ test("destroy は何度呼んでも安全", async () => {
 
 test("Keyごとの測定はユーザー・保存・CSV・サーバーに依存しない(importの許可リスト)", () => {
   // error-screen: 音色確認・練習のエラー画面(2026-11-14)。保存・送信には関わらない画面の部品。
-  const allowed = /^(\.\/[\w-]+\.js|\.\.\/shared\/(audio-buffer-player|escape-html|answer-lock|iso-time|error-screen)\.js)$/;
-  for (const file of ["key-measurement.js", "functional-session.js", "measurement-screens.js", "key-audio.js", "unload-guard.js", "dev-flag.js"]) {
+  const allowed = /^(\.\/[\w-]+\.js|\.\.\/shared\/(audio-buffer-player|escape-html|answer-lock|iso-time|error-screen|unload-guard)\.js)$/;
+  // unload-guard: ページを閉じる前の確認(2026-11-14 に src/shared へ移した)。保存・送信には関わらない。
+  for (const file of ["key-measurement.js", "functional-session.js", "measurement-screens.js", "key-audio.js", "dev-flag.js"]) {
     const source = readFileSync(new URL(`../../src/functional-pitch/${file}`, import.meta.url), "utf8");
     for (const [, path] of source.matchAll(/from "(.*)";/g)) {
       assert.match(path, allowed, `${file} が ${path} をimportしている`);
