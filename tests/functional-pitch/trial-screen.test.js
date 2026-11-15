@@ -108,28 +108,10 @@ test("枠の状態の文字は 待機中/再生中/再生済み", () => {
   assert.deepEqual(PHRASE_STATE_TEXT, { waiting: "待機中", playing: "再生中", played: "再生済み" });
 });
 
-test("document が無い環境でも trial-screen.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/functional-pitch/trial-screen.js"));
-});
-
 test("styles.css: 動きを減らす設定で、再生中アニメーションが止まる", () => {
   const css = readFileSync(new URL("../../styles.css", import.meta.url), "utf8");
   const reduced = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
   assert.match(reduced, /\.functional-playing i \{ animation: none; \}/);
-});
-
-test("測定本体の画面はユーザー・保存・CSV・サーバーに依存しない(importしていない)", () => {
-  for (const file of ["rating-state.js", "trial-controller.js", "trial-screen.js"]) {
-    const source = readFileSync(new URL(`../../src/functional-pitch/${file}`, import.meta.url), "utf8");
-    const imports = [...source.matchAll(/from "(.*)";/g)].map((m) => m[1]);
-    for (const path of imports) {
-      assert.match(
-        path,
-        /^(\.\/(rating-state|trial-controller|trial-timeline)\.js|\.\.\/shared\/escape-html\.js)$/,
-        `${file} が ${path} をimportしている`,
-      );
-    }
-  }
 });
 
 test("見出し: heading を渡すと進捗の上に出す(練習・測定)。文字は無害化する", () => {

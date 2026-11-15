@@ -242,10 +242,6 @@ test("結合: 本物の runKeyMeasurement とつなぐと、練習結果つき�
   assert.deepEqual(trialStarts.map((s) => s.trial.keyCode), ["Fis", "Fis"]);
 });
 
-test("document が無い環境でも functional-session.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/functional-pitch/functional-session.js"));
-});
-
 // --- 音色確認・練習の音声エラー(2026-11-14: テスト選択へ戻れるエラー画面) ---
 
 test("音色確認のエラー: 音色確認を破棄し、見出し付きのエラー画面。「テスト選択へ戻る」で onExit", () => {

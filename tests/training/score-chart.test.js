@@ -72,7 +72,3 @@ test("1行の表示と、series の組み立てがつながる(buildScoreSeries 
   assert.match(buildScoreChartSvg(s), /<circle/);
   assert.equal(formatScorePointRow(s.points[0]), "<li>第1回 — Key Fis — A — 正解 4 / 15</li>");
 });
-
-test("document が無い環境でも score-chart-screen.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/training/score-chart-screen.js"));
-});

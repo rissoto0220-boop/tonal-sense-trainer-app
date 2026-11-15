@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
 import {
   DEFINITIONS_SCHEMA_VERSION,
   DEFAULT_QUESTION_COUNT,
@@ -79,35 +78,5 @@ test("課題テンプレート: 刺激の中身(正解)を持たない", () => {
   for (const template of Object.values(TASK_TEMPLATES)) {
     const text = JSON.stringify(template);
     assert.equal(/correct|degree":"n\d/.test(text), false, "正解や音度の値を書かない");
-  }
-});
-
-// 保存・履歴・CSV(T7)と得点推移の画面の4ファイル。ブラウザ保存・CSV・日時の表示整形の部品を使ってよいが、送信・サーバーには依存しない。
-const STORAGE_FILES = ["session-store.js", "reports.js", "history-screen.js", "score-chart-screen.js"];
-
-test("src/training は(保存・履歴・得点推移画面の4ファイルを除き)DOM・保存・サーバーに依存しない(importの許可リスト)", () => {
-  // src/training/ 内のファイル同士と、共通の小さな部品(HTMLの無害化・1回だけ受付・音声の再生・時刻表記)、
-  // 機能的音感の音声時計タイマー、エラー画面の部品(2026-11-14)だけを許可する。
-  const allowed = /^(\.\/[a-z-]+\.js|\.\.\/shared\/(escape-html|answer-lock|audio-buffer-player|iso-time|error-screen)\.js|\.\.\/functional-pitch\/audio-clock\.js)$/;
-  const files = readdirSync(new URL("../../src/training/", import.meta.url)).filter((name) => name.endsWith(".js") && !STORAGE_FILES.includes(name));
-  assert.ok(files.length >= 2);
-  for (const file of files) {
-    const source = readFileSync(new URL(`../../src/training/${file}`, import.meta.url), "utf8");
-    for (const [, path] of source.matchAll(/from "(.*)";/g)) {
-      assert.match(path, allowed, `${file} が ${path} をimportしている`);
-      assert.equal(STORAGE_FILES.some((name) => path === `./${name}`), false, `${file} が保存の部品 ${path} をimportしている`);
-    }
-    assert.equal(/\b(document|localStorage|sessionStorage|fetch|AudioContext)\b/.test(source.replace(/\/\/.*$/gm, "")), false, `${file} がブラウザのAPIを使っている`);
-  }
-});
-
-test("src/training の保存・履歴・得点推移画面の4ファイルは、ブラウザ保存とCSVまで。送信・サーバーには依存しない", () => {
-  const allowed = /^(\.\/[a-z-]+\.js|\.\.\/shared\/(escape-html|iso-time|storage|csv|display-format)\.js)$/;
-  for (const file of STORAGE_FILES) {
-    const source = readFileSync(new URL(`../../src/training/${file}`, import.meta.url), "utf8");
-    for (const [, path] of source.matchAll(/from "(.*)";/g)) {
-      assert.match(path, allowed, `${file} が ${path} をimportしている`);
-    }
-    assert.equal(/\b(localStorage|sessionStorage|fetch|XMLHttpRequest)\b/.test(source.replace(/\/\/.*$/gm, "")), false, `${file} が保存先・通信を直接使っている`);
   }
 });

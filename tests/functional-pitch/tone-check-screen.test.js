@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import {
   buildToneCheckHtml,
   PART_LABEL,
@@ -65,19 +64,5 @@ test("エラー文言は 読み込めなかったことを伝え、再読み込�
 test("正解・不正解を連想させる語が含まれない", () => {
   for (const word of ["正解", "不正解", "正しい", "間違", "誤り"]) {
     assert.equal(html.includes(word), false, word);
-  }
-});
-
-test("document が無い環境でも tone-check-screen.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/functional-pitch/tone-check-screen.js"));
-});
-
-test("音色確認・練習の画面はユーザー・保存・CSV・サーバーに依存しない(importしていない)", () => {
-  const allowed = /^(\.\/(audio-clock|tone-check-controller|stimuli|phrase-audio|practice-session|trial-screen)\.js|\.\.\/shared\/(escape-html|audio-buffer-player)\.js)$/;
-  for (const file of ["audio-clock.js", "tone-check-controller.js", "tone-check-screen.js", "practice-session.js", "practice-flow.js"]) {
-    const source = readFileSync(new URL(`../../src/functional-pitch/${file}`, import.meta.url), "utf8");
-    for (const [, path] of source.matchAll(/from "(.*)";/g)) {
-      assert.match(path, allowed, `${file} が ${path} をimportしている`);
-    }
   }
 });

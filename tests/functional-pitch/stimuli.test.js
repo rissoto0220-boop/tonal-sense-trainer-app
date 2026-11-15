@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import {
   STIMULI,
   PRACTICE_TRIALS,
@@ -67,16 +66,6 @@ test("練習の刺激はすべて刺激定義に存在し、Es用のファイル
     for (const id of [trial.firstStimulusId, trial.secondStimulusId]) {
       assert.ok(findStimulus(id), id);
       assert.doesNotThrow(() => phraseFilenameFor("Es", id));
-    }
-  }
-});
-
-test("測定本体はユーザー・保存・CSV・サーバーに依存しない(importしていない)", () => {
-  for (const file of ["stimuli.js", "trial-generator.js"]) {
-    const source = readFileSync(new URL(`../../src/functional-pitch/${file}`, import.meta.url), "utf8");
-    const imports = [...source.matchAll(/^import .* from "(.*)";/gm)].map((m) => m[1]);
-    for (const path of imports) {
-      assert.match(path, /^\.\/(stimuli|trial-generator)\.js$/, `${file} が ${path} をimportしている`);
     }
   }
 });

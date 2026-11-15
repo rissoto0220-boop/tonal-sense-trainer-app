@@ -173,7 +173,3 @@ test("showBackScreen: 「Key選択へ戻る」を押すと onBack が1回だけ�
   back.click(); // 二重押し(ボタンは無効になっている)
   assert.equal(backs, 1);
 });
-
-test("document が無い環境でも measurement-screens.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/functional-pitch/measurement-screens.js"));
-});

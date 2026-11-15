@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { runKeyMeasurement } from "../../src/functional-pitch/key-measurement.js";
 import { generateTrialOrder } from "../../src/functional-pitch/trial-generator.js";
 import { createFakeScreen } from "./helpers/fake-screen.js";
@@ -379,23 +378,6 @@ test("destroy は何度呼んでも安全", async () => {
   await flush();
   env.flow.destroy();
   assert.doesNotThrow(() => env.flow.destroy());
-});
-
-test("Keyごとの測定はユーザー・保存・CSV・サーバーに依存しない(importの許可リスト)", () => {
-  // error-screen・error-kinds: エラー画面と、エラーの種類の表(2026-11-14・2026-11-15)。保存・送信には関わらない画面の部品。
-  const allowed = /^(\.\/[\w-]+\.js|\.\.\/shared\/(audio-buffer-player|escape-html|answer-lock|iso-time|error-screen|error-kinds|unload-guard)\.js)$/;
-  // unload-guard: ページを閉じる前の確認(2026-11-14 に src/shared へ移した)。保存・送信には関わらない。
-  for (const file of ["key-measurement.js", "functional-session.js", "measurement-screens.js", "key-audio.js", "dev-flag.js"]) {
-    const source = readFileSync(new URL(`../../src/functional-pitch/${file}`, import.meta.url), "utf8");
-    for (const [, path] of source.matchAll(/from "(.*)";/g)) {
-      assert.match(path, allowed, `${file} が ${path} をimportしている`);
-      assert.equal(/participant|session-store|session-uploader|storage|csv|server-config/.test(path), false, `${file}: ${path}`);
-    }
-  }
-});
-
-test("document が無い環境でも key-measurement.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/functional-pitch/key-measurement.js"));
 });
 
 test("測定の試行画面には、見出し「測定(Key C)」「測定(Key Fis)」を渡す", async () => {

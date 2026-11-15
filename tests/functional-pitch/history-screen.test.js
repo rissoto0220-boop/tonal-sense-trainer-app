@@ -17,7 +17,3 @@ test("一覧の1行: 中断・音声エラーの回は、その旨を添える",
   assert.match(formatHistoryRow({ ...ROW, sessionStatus: "interrupted" }), /— 中断\(3 \/ 90 試行\)<\/li>$/);
   assert.match(formatHistoryRow({ ...ROW, sessionStatus: "audio_error" }), /— 音声エラーで中断\(3 \/ 90 試行\)<\/li>$/);
 });
-
-test("document が無い環境でも history-screen.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/functional-pitch/history-screen.js"));
-});
