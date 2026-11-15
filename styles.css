@@ -486,13 +486,14 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 }
 
 /* ===== 機能的音感測定: 音色確認・練習の終了画面(tone-check-screen.js / practice-flow.js) =====
-   状態は色だけに頼らず、文字と枠の形(未再生=点線、再生済み=実線、再生中=青の塗り)で示す。 */
+   状態は色だけに頼らず、丸の形と✓(未再生=点線の空の丸、再生済み=実線の丸+✓、再生中=青の塗り)で示す。 */
 .functional-tone-list { list-style: none; margin: 20px 0; padding: 0; }
 .functional-tone-item { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .functional-tone-item:first-child { border-top: 1px solid var(--line); }
-.functional-tone-state { min-width: 6.5em; padding: 4px 12px; border: 2px dashed var(--line-strong); border-radius: var(--radius); text-align: center; font-weight: 700; color: var(--muted); }
-.functional-tone-item[data-state="played"] .functional-tone-state { border-style: solid; color: var(--ink); }
-.functional-tone-item[data-state="playing"] .functional-tone-state { border-style: solid; border-color: var(--ink); background: var(--blue); color: white; box-shadow: inset 0 0 0 2px white; }
+.functional-tone-state { display: inline-flex; flex: none; }
+.functional-tone-mark { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 2rem; height: 2rem; border: 2px dashed var(--line-strong); border-radius: 50%; font-size: 1.15rem; font-weight: 700; line-height: 1; color: var(--ink); }
+.functional-tone-item[data-state="played"] .functional-tone-mark { border-style: solid; border-color: var(--ink); }
+.functional-tone-item[data-state="playing"] .functional-tone-mark { border-style: solid; border-color: var(--ink); background: var(--blue); box-shadow: inset 0 0 0 2px white; }
 .functional-practice-end h2:focus { outline: none; }
 
 /* ===== 機能的音感測定: Key選択・完了・エラー画面(measurement-screens.js) =====
