@@ -47,3 +47,18 @@ test("window が無い環境(Node)でも例外にならず、解除関数を返�
   const disable = enableUnloadGuard(null);
   assert.doesNotThrow(() => disable());
 });
+
+test("releaseAllUnloadGuards: 有効な確認をすべて解除する。個別の解除をあとから呼んでも安全で、そのあとの有効化は効く", async () => {
+  const { releaseAllUnloadGuards } = await import("../src/shared/unload-guard.js");
+  const win = createFakeWindow();
+  const first = enableUnloadGuard(win);
+  const second = enableUnloadGuard(win);
+  assert.equal(win.count(), 2);
+  releaseAllUnloadGuards();
+  assert.equal(win.count(), 0);
+  assert.equal(win.tryClose(), false);
+  assert.doesNotThrow(() => { first(); second(); });
+  enableUnloadGuard(win);
+  assert.equal(win.tryClose(), true);
+  releaseAllUnloadGuards();
+});

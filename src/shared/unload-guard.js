@@ -5,6 +5,9 @@
 
 // target: window 相当(addEventListener / removeEventListener を持つもの)。
 // 戻り値: 解除する関数(何度呼んでも安全)。
+// 有効な確認は、モジュール内に覚えておき、releaseAllUnloadGuards() でまとめて解除できる。
+const activeReleases = new Set();
+
 export function enableUnloadGuard(target = typeof window !== "undefined" ? window : null) {
   if (!target) return () => {};
   const handler = (event) => {
@@ -13,9 +16,19 @@ export function enableUnloadGuard(target = typeof window !== "undefined" ? windo
   };
   target.addEventListener("beforeunload", handler);
   let active = true;
-  return () => {
+  const release = () => {
     if (!active) return;
     active = false;
+    activeReleases.delete(release);
     target.removeEventListener("beforeunload", handler);
   };
+  activeReleases.add(release);
+  return release;
+}
+
+// 有効な確認を、すべて解除する(2026-11-15 エラーの見せ方の統一 フェーズ5-C)。
+// 想定外のエラーの帯の「最初からやり直す」で、再読み込みの前に確認が出ないようにするために使う。
+// 各テスト・訓練が持っている個別の解除関数は、あとから呼んでも安全。
+export function releaseAllUnloadGuards() {
+  for (const release of [...activeReleases]) release();
 }

@@ -613,3 +613,8 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
   .training-keyboard { gap: 3px; }
   .training-key { font-size: .95rem; }
 }
+
+/* 想定外の例外の帯(src/shared/error-notice.js)。画面の外(#screen の直前)に出る */
+.error-notice { margin: 0 0 12px; padding: 12px 16px; border: 2px solid var(--error); border-radius: 8px; background: var(--cream); }
+.error-notice p { margin: 0 0 8px; }
+.error-notice .actions { margin-top: 8px; flex-wrap: wrap; }

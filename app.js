@@ -67,7 +67,8 @@ import {
 } from "./src/training/session-store.js";
 import { showHistoryScreen as showTrainingHistoryScreen } from "./src/training/history-screen.js";
 import { showScoreChartScreen as showTrainingScoreChartScreen } from "./src/training/score-chart-screen.js";
-import { enableUnloadGuard } from "./src/shared/unload-guard.js";
+import { enableUnloadGuard, releaseAllUnloadGuards } from "./src/shared/unload-guard.js";
+import { installErrorNotice } from "./src/shared/error-notice.js";
 import { showErrorScreen } from "./src/shared/error-screen.js";
 
 const QUESTION_MS = 3000;
@@ -755,6 +756,15 @@ function showHistory(data = participantData) {
 
 function mount() {
   screenEl = document.getElementById("screen");
+  // 想定外の例外は、画面の上の帯で知らせる。「最初からやり直す」は、確認を出さずに再読み込みする
+  // (参加者ID・保存済みの記録はブラウザに残る。途中のセッションは、保存前なら失われる)。
+  installErrorNotice({
+    anchorEl: screenEl,
+    onRestart: () => {
+      releaseAllUnloadGuards();
+      window.location.reload();
+    },
+  });
   showIdEntry();
   syncSessionsToServer(); // 前回送れなかった分(オフライン・サーバー障害など)を再送する
 }

@@ -12,7 +12,7 @@ function functionBody(name) {
 }
 
 test("共通部品 src/shared/unload-guard.js を使い、確認の付け外しを1か所(holdTestUnloadGuard / releaseTestUnloadGuard)で行う", () => {
-  assert.match(source, /import \{ enableUnloadGuard \} from "\.\/src\/shared\/unload-guard\.js";/);
+  assert.match(source, /import \{ enableUnloadGuard, releaseAllUnloadGuards \} from "\.\/src\/shared\/unload-guard\.js";/);
   assert.match(functionBody("function holdTestUnloadGuard()"), /releaseTestGuard\(\);\n\s+releaseTestGuard = enableUnloadGuard\(\);/);
   assert.match(functionBody("function releaseTestUnloadGuard()"), /releaseTestGuard\(\);\n\s+releaseTestGuard = \(\) => \{\};/);
 });
@@ -40,4 +40,11 @@ test("参加者IDの変更(restartApp)で、訓練のメニュー選択のタブ
   const body = functionBody("function restartApp()");
   assert.match(body, /trainingMenuTabId = null;/);
   assert.match(source, /\nlet trainingMenuTabId = null;\n/);
+});
+
+test("想定外のエラーの帯: mount で1回だけ設置し、「最初からやり直す」は確認を一括解除してから再読み込みする", () => {
+  assert.match(source, /import \{ installErrorNotice \} from "\.\/src\/shared\/error-notice\.js";/);
+  assert.equal((source.match(/installErrorNotice\(/g) ?? []).length, 1);
+  const body = functionBody("function mount()");
+  assert.match(body, /installErrorNotice\(\{\n\s+anchorEl: screenEl,\n\s+onRestart: \(\) => \{\n\s+releaseAllUnloadGuards\(\);\n\s+window\.location\.reload\(\);/);
 });
