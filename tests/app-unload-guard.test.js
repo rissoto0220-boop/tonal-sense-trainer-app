@@ -34,3 +34,10 @@ test("テスト選択・参加者の変更では、確認を残さない", () =>
   assert.match(functionBody("function showTestSelection()"), /releaseTestUnloadGuard\(\);/);
   assert.match(functionBody("function restartApp()"), /releaseTestUnloadGuard\(\);/);
 });
+
+// 2026-11-15 研究者の決定(画面構成図の気になる点 #8): 参加者を変えたら、訓練のメニュー選択は最初のタブから。
+test("参加者IDの変更(restartApp)で、訓練のメニュー選択のタブの記憶を消す", () => {
+  const body = functionBody("function restartApp()");
+  assert.match(body, /trainingMenuTabId = null;/);
+  assert.match(source, /\nlet trainingMenuTabId = null;\n/);
+});

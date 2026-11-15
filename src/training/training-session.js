@@ -16,7 +16,9 @@
 //   回答前 → questionReplayCount、回答後 → feedbackReplayCount(回答後に増えたら onTrialUpdated で通知)。
 // 「訓練を終了する」(第7節): 音を止めて画面内で確認する。「終了する」なら、回答済みの試行だけを残して終える。
 //   「続ける」なら、止めた再生をやり直す。
-// 完了(第9節): 全問に回答し、かつ最終問の必須のフィードバックが終わった時点。
+// 完了(第9節): 終了画面を出した時点(2026-11-15 に改めた。以前は、最終問の必須のフィードバックが終わった時点)。
+//   最終問が正解なら、フィードバックの0.5秒後に自動で、不正解・「わからない」なら「次に進む」で、終了画面に進む。
+//   それより前に「訓練を終了する」で終えたり、ページを閉じたりしたときは、全問に回答済みでも中断として残る。
 // 複数回答(拡張サンプル): 課題テンプレートの回答対象を順に答え、全部そろった時点(または「わからない」)で確定する。
 //   「わからない」は残りの回答対象をすべて giveup にする。responseSubmittedAt・responseTimeMs は最後の回答の時刻
 //   (暫定。複数回答のときの記録の形は研究者の決定が未定)。正誤の文言は、全部答えたあとにまとめて出す。
@@ -55,7 +57,7 @@ export function buildFinishedHtml(correctCount, questionCount) {
 //   onSessionStarted({ menuId, sessionKeyCode, keyAssignmentMethod, trialsPlanned }): 開始時に1回。
 //   onTrialConfirmed(trial): 回答を確定した時点。trial の形は下の confirmTrial を参照。
 //   onTrialUpdated(trial): 回答後に記録が変わったとき(フィードバックを聞き直した回数)。
-//   onFinished(trials): 完了した時点で1回(最終問の必須のフィードバックが終わった時点)。
+//   onFinished(trials): 完了した時点(終了画面を出す直前)で1回。
 //   onInterrupted(trials): 完了前に「訓練を終了する」で終えたとき。
 //   onAudioError(): 音声を読み込めなかったとき。
 //   onExit(): 終了画面・音声エラーの画面の「メニュー選択へ戻る」、または「訓練を終了する」で終えたあと。
@@ -111,7 +113,7 @@ export function runTrainingSession({
     onAudioError();
   }
 
-  // 全問に回答し、最終問の必須のフィードバックが終わった時点で1回だけ呼ぶ。
+  // 終了画面を出す直前に、1回だけ呼ぶ。
   function complete() {
     if (completed) return;
     completed = true;
@@ -141,7 +143,6 @@ export function runTrainingSession({
     }
     teardown();
     const question = questions[index];
-    const isLast = index === questions.length - 1;
     const targets = question.resolvedAnswerTargets;
     const responseCodes = []; // 回答順(targets と同じ順)
     const audio = createQuestionAudioFn(question, audioOptions);
@@ -186,10 +187,7 @@ export function runTrainingSession({
           if (correct) return;
           screen.setReplayEnabled(true);
           screen.setNextEnabled(true);
-          if (mandatory && !mandatoryFeedbackDone) {
-            mandatoryFeedbackDone = true;
-            if (isLast) complete();
-          }
+          if (mandatory) mandatoryFeedbackDone = true;
         },
         onAutoNext: correct ? () => {
           mandatoryFeedbackDone = true;

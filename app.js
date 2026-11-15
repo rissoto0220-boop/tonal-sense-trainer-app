@@ -111,6 +111,7 @@ function releaseTestUnloadGuard() {
 
 function restartApp() {
   releaseTestUnloadGuard();
+  trainingMenuTabId = null; // 参加者を変えたら、メニュー選択は最初のタブから(2026-11-15 研究者の決定)
   participantId = "";
   participantData = null;
   currentSession = null;

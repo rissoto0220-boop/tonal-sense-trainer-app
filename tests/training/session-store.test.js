@@ -259,3 +259,62 @@ test("送信処理は training: のキーを送らない(送信はまだ作ら�
   assert.equal(calls.length, 0);
   assert.equal(summary.sent, 0);
 });
+
+// 2026-11-15: 完了は終了画面を出した時点。全問に回答済みでも、終了画面の前に終えたら中断として残る。
+test("結合: 最終問を間違えて、「次に進む」を押す前に「訓練を終了する」で終えたら、interrupted。全問の記録が残る", async () => {
+  const storage = makeFakeStorage();
+  const recorder = createSessionRecorder("P00001", { storage, generateId: () => "s1" });
+  const env = createFakeAudioEnv();
+  const screenEl = createFakeDom();
+  const menu = TRAINING_MENUS[0];
+  const session = runTrainingSession({
+    screenEl,
+    menu,
+    questionCount: 1,
+    ...recorder,
+    audioOptions: env.audioOptions(),
+    audioContextTimeFn: env.audioContextTimeFn,
+  });
+  await flushMicrotasks();
+  const saved = () => loadParticipantData("P00001", storage).sessions[0];
+  const correct = session.questions[0].resolvedAnswerTargets[0].correctAnswerCode;
+  env.tick(8.1);
+  screenEl.el(`[data-code="${menu.activeOptionCodes.find((code) => code !== correct)}"]`).click();
+  env.tick(3.1); // 必須のフィードバックが鳴り終わる
+  assert.equal(saved().sessionStatus, null, "フィードバックが鳴り終わっても、まだ完了ではない");
+  screenEl.el('[data-role="quit"]').click();
+  screenEl.el('[data-role="quit-yes"]').click();
+  assert.equal(saved().sessionStatus, "interrupted");
+  assert.deepEqual([saved().trialsCompleted, saved().trialsPlanned], [1, 1], "全問回答済みの記録が残る");
+  session.destroy();
+});
+
+test("結合: 最終問を間違えて、「次に進む」を押して終了画面が出たら、completed", async () => {
+  const storage = makeFakeStorage();
+  const recorder = createSessionRecorder("P00001", { storage, generateId: () => "s1" });
+  const env = createFakeAudioEnv();
+  const screenEl = createFakeDom();
+  const menu = TRAINING_MENUS[0];
+  const session = runTrainingSession({
+    screenEl,
+    menu,
+    questionCount: 1,
+    ...recorder,
+    audioOptions: env.audioOptions(),
+    audioContextTimeFn: env.audioContextTimeFn,
+  });
+  await flushMicrotasks();
+  const saved = () => loadParticipantData("P00001", storage).sessions[0];
+  const correct = session.questions[0].resolvedAnswerTargets[0].correctAnswerCode;
+  env.tick(8.1);
+  screenEl.el(`[data-code="${menu.activeOptionCodes.find((code) => code !== correct)}"]`).click();
+  env.tick(3.1);
+  screenEl.el('[data-role="replay"]').click();
+  assert.equal(saved().trials[0].feedbackReplayCount, 1, "聞き直しの回数は、完了の前に保存される");
+  env.tick(3.1);
+  assert.equal(saved().sessionStatus, null);
+  screenEl.el('[data-role="next"]').click();
+  assert.equal(saved().sessionStatus, "completed");
+  assert.equal(saved().trials[0].feedbackReplayCount, 1);
+  session.destroy();
+});
