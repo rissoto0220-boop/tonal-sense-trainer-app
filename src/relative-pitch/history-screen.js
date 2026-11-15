@@ -22,8 +22,8 @@ const VERSION_LABELS = { simplified: "簡易版", full: "完全版" };
 
 // participantId: 参加者ID。
 // participantData: session-store.jsのloadParticipantData()が返す形({ sessions: [...] })。
-// onBack: 「最初からやり直す」等、この画面を出た際に呼ぶ。
-export function showHistoryScreen({ screenEl, participantId, participantData, onBack = () => {} }) {
+// onBack: 戻るボタンを押したときに呼ぶ。backLabel: そのボタンの文字(省略すると「テスト選択へ戻る」。説明画面から開いたときは「戻る」)。
+export function showHistoryScreen({ screenEl, participantId, participantData, onBack = () => {}, backLabel = "テスト選択へ戻る" }) {
   let includeInterruptedInList = false;
   let includeInterruptedInCsv = false;
 
@@ -52,7 +52,7 @@ export function showHistoryScreen({ screenEl, participantId, participantData, on
           <button id="download-responses" class="secondary">回答詳細CSVをダウンロード</button>
           <button id="download-sessions" class="secondary">テスト履歴CSVをダウンロード</button>
         </div>
-        <div class="actions"><button id="back" class="primary">テスト選択へ戻る</button></div>
+        <div class="actions"><button id="back" class="primary">${escapeHtml(backLabel)}</button></div>
       </div>`;
 
     document.getElementById("toggle-list-interrupted").addEventListener("change", (e) => {

@@ -29,7 +29,7 @@ test("音感訓練の起動は、音声の起動に成功してから、参加�
   assertInOrder(assert, body, ["await resumeAudioContext()", "createTrainingRecorder(participantId", "runTrainingSession("]);
   for (const name of ["onSessionStarted", "onTrialConfirmed", "onTrialUpdated"]) assert.match(compact(body), new RegExp(`${name}: recorder\\.${name}`), name);
   for (const name of ["onFinished", "onInterrupted", "onAudioError"]) assert.match(compact(body), new RegExp(`recorder\\.${name}\\(`), name);
-  for (const name of ["function showTrainingMenus()", "async function startTraining(menu)"]) {
+  for (const name of ["function showTrainingMenus(", "async function startTraining(menu)"]) {
     for (const word of SEND_WORDS) assert.equal(functionBody(appSource, name).includes(word), false, `${name}: ${word}`);
   }
 });
@@ -41,6 +41,6 @@ test("訓練の最中だけ、ページを閉じる前の確認を付け、完�
 });
 
 test("拡張サンプルは ?training=dev&samples=on のときだけメニューに並べ、結果は保存しない", () => {
-  assert.match(compact(functionBody(appSource, "function showTrainingMenus()")), /menus: samples \? \[\.\.\.TRAINING_MENUS, \.\.\.SAMPLE_MENUS\] : TRAINING_MENUS/);
+  assert.match(compact(functionBody(appSource, "function showTrainingMenus(")), /menus: samples \? \[\.\.\.TRAINING_MENUS, \.\.\.SAMPLE_MENUS\] : TRAINING_MENUS/);
   assert.match(compact(functionBody(appSource, "async function startTraining(menu)")), /menu\.sample \? NO_OP_TRAINING_RECORDER : createTrainingRecorder\(/);
 });

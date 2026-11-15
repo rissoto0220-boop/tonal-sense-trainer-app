@@ -176,7 +176,10 @@ function showIdConfirm() {
 // テスト選択は名前だけ。名前を押すと説明画面(showTestIntro)を出し、「始める」で onStart、「履歴・CSVを見る」で onShowHistory を呼ぶ
 // (2026-11-15 研究者の決定)。
 // onShowHistory: 説明画面の「履歴・CSVを見る」(2026-11-14 研究者の決定。2026-11-15 に、テスト選択から説明画面へ移した)。保存データをその場で読むだけで、
-// セッションは始めない(中断の確定もしない)。履歴画面の戻り先はテスト選択。
+// セッションは始めない(中断の確定もしない)。履歴画面の戻り先は、開いた説明画面(ctx.backToIntro。2026-11-15)。
+// onStart(ctx)・onShowHistory(ctx): ctx は { backToIntro } (showTestIntro が渡す)。
+const BACK_LABEL = "戻る"; // 説明画面へ戻るボタンの文字
+
 function availableTests() {
   // 機能的音感は未完成のため、URLに ?functional=dev があるときだけ選べる(本番では「準備中」のまま)。
   const functionalPitchOptions = resolveFunctionalPitchOptions(window.location);
@@ -189,18 +192,19 @@ function availableTests() {
       title: "絶対音感テスト",
       available: true,
       onStart: startAbsolutePitchTest,
-      onShowHistory: () => showHistory(loadAbsolutePitchParticipantData(participantId, localStorage)),
+      onShowHistory: (ctx) => showHistory(loadAbsolutePitchParticipantData(participantId, localStorage), { onBack: ctx.backToIntro, backLabel: BACK_LABEL }),
     },
     {
       id: "relative-pitch",
       title: "相対音感テスト",
       available: true,
       onStart: startRelativePitchTest,
-      onShowHistory: () => showRelativePitchHistoryScreen({
+      onShowHistory: (ctx) => showRelativePitchHistoryScreen({
         screenEl,
         participantId,
         participantData: loadRelativePitchParticipantData(participantId, localStorage),
-        onBack: showTestSelection,
+        onBack: ctx.backToIntro,
+        backLabel: BACK_LABEL,
       }),
     },
     {
@@ -208,11 +212,12 @@ function availableTests() {
       title: "機能的音感テスト",
       available: functionalPitchOptions.enabled,
       onStart: startFunctionalPitchTest,
-      onShowHistory: () => showFunctionalPitchHistoryScreen({
+      onShowHistory: (ctx) => showFunctionalPitchHistoryScreen({
         screenEl,
         participantId,
         participantData: loadFunctionalPitchParticipantData(participantId, localStorage),
-        onBack: showTestSelection,
+        onBack: ctx.backToIntro,
+        backLabel: BACK_LABEL,
       }),
     },
     {
@@ -220,11 +225,12 @@ function availableTests() {
       title: "音感訓練",
       available: trainingOptions.enabled,
       onStart: showTrainingMenus,
-      onShowHistory: () => showTrainingHistoryScreen({
+      onShowHistory: (ctx) => showTrainingHistoryScreen({
         screenEl,
         participantId,
         participantData: loadTrainingParticipantData(participantId, localStorage),
-        onBack: showTestSelection,
+        onBack: ctx.backToIntro,
+        backLabel: BACK_LABEL,
       }),
     },
   ];
@@ -243,26 +249,23 @@ function showTestSelection() {
 
 // テストの説明画面。「始める」を押すまでは、セッションも音声も始めない。
 function showTestIntro(test) {
+  // 各テストの最初の画面・履歴画面から、この説明画面へ戻るための関数(2026-11-15 研究者の決定: ひとつ前の画面へ戻る)
+  const ctx = { backToIntro: () => showTestIntro(test) };
   showTestIntroScreen({
     screenEl,
     title: test.title,
     lines: TEST_INTRO_TEXT[test.id] ?? [],
-    onStart: test.onStart,
-    onShowHistory: test.onShowHistory,
+    onStart: () => test.onStart(ctx),
+    onShowHistory: () => test.onShowHistory(ctx),
     onBack: showTestSelection,
   });
 }
 
 // --- 絶対音感テスト ---
 
-function startAbsolutePitchTest() {
-  // 前回、完了しきれなかったセッションがあればここでinterruptedとして確定し、
-  // 新しいsession_idでこのセッションを開始する(仕様6.2・19章)。
-  const result = startSession(participantId, { storage: localStorage });
-  participantData = result.data;
-  currentSession = result.session;
-  syncSessionsToServer(); // 前回の放置セッションがここでinterruptedと確定した場合に送る
-  showPracticeIntro();
+// セッションは、練習の説明の「練習を開始」を押したときに作る(2026-11-15 研究者の決定。説明を読んで「戻る」だけなら、記録を残さない)。
+function startAbsolutePitchTest(ctx) {
+  showPracticeIntro(ctx.backToIntro);
 }
 
 // --- 相対音感テスト ---
@@ -270,37 +273,44 @@ function startAbsolutePitchTest() {
 // 簡易版/完全版の選択→練習→本番。回答レイアウトは円環状に固定(仕様11.2、2026-10-09)。
 // 選んだtestVersionを最後まで引き回し、簡易版・完全版で問題セット・回答ボタンを切り替える(仕様6.2)。
 // セッションは練習・本番を通じて1つを使い回す(仕様17〜19章。絶対音感と同じ考え方)。
-function startRelativePitchTest() {
+function startRelativePitchTest(ctx) {
   showVersionSelectionScreen({
     screenEl,
-    onBack: showTestSelection,
+    onBack: ctx.backToIntro,
     onSelect: (testVersion) => {
-      // 練習の要否判定(仕様13.4)は、セッション開始前の保存済みデータで行う
+      // 練習の要否判定(仕様13.4)は、セッションを作る前の保存済みデータで行う
       // (これから始めるセッション自体は完了済みに含めない)。簡易版・完全版は別々に判定する。
       const existingData = loadRelativePitchParticipantData(participantId, localStorage);
       const hasCompletedBefore = hasCompletedSession(existingData.sessions, testVersion);
 
-      // 前回、完了しきれなかったセッションがあればここでinterruptedとして確定し、
-      // 新しいsession_idでこのセッションを開始する(仕様17.1)。
-      const result = startRelativePitchSession(participantId, { storage: localStorage, testVersion });
-      const relativeSession = result.session;
-      syncSessionsToServer(); // 前回の放置セッションがここでinterruptedと確定した場合に送る
+      let sessionResult = null;
+      let relativeSession = null;
       const persistRelativeSession = () => {
-        persistRelativePitchParticipantData(participantId, result.data, localStorage);
+        persistRelativePitchParticipantData(participantId, sessionResult.data, localStorage);
         // 完了・音声エラーによる中断でsessionStatusが確定した直後に送る(API仕様5節)。
         if (relativeSession.sessionStatus) {
           releaseTestUnloadGuard(); // 状態が確定した(結果・音声エラー)ので、ページを閉じる前の確認を解除する
           syncSessionsToServer();
         }
       };
-      holdTestUnloadGuard(); // セッションを始めた時点から、結果・音声エラーまで確認を出す
+      // セッションは、練習を始める(「練習を開始」または「練習をスキップして本番へ」を押す)ときに作る
+      // (2026-11-15 研究者の決定。説明を読んで「戻る」だけなら、記録を残さない)。
+      // 前回、完了しきれなかったセッションがあればここでinterruptedとして確定する(仕様17.1)。
+      const beginSession = () => {
+        sessionResult = startRelativePitchSession(participantId, { storage: localStorage, testVersion });
+        relativeSession = sessionResult.session;
+        syncSessionsToServer(); // 前回の放置セッションがここでinterruptedと確定した場合に送る
+        holdTestUnloadGuard(); // セッションを始めた時点から、結果・音声エラーまで確認を出す
+        return relativeSession;
+      };
 
       showPracticeFlow({
         screenEl,
         testVersion,
         hasCompletedBefore,
-        session: relativeSession,
+        beginSession,
         persistSession: persistRelativeSession,
+        onBackToVersionSelect: () => startRelativePitchTest(ctx),
         onBack: showTestSelection, // 音声エラーの画面から戻る
         onFinished: () => {
           showMainTestFlow({
@@ -313,7 +323,7 @@ function startRelativePitchTest() {
               showRelativePitchHistoryScreen({
                 screenEl,
                 participantId,
-                participantData: result.data,
+                participantData: sessionResult.data,
                 onBack: showTestSelection,
               });
             },
@@ -329,7 +339,7 @@ function startRelativePitchTest() {
 // 測定本体は参加者IDに依存しない。結果はメモリ上で受け取るだけで、保存・送信はしない(仕様未確定)。
 // 結果は参加者IDごとにブラウザ(localStorage)へ1試行ずつ保存し、履歴・CSVで出力できる。
 // サーバーへの送信はしない(送信処理は functional-pitch: のキーを対象にしていない)。
-function startFunctionalPitchTest() {
+function startFunctionalPitchTest(ctx) {
   const { practiceRequired, trialLimit } = resolveFunctionalPitchOptions(window.location);
   const recorder = createFunctionalPitchRecorder(participantId, { storage: localStorage });
   runFunctionalPitchSession({
@@ -337,6 +347,7 @@ function startFunctionalPitchTest() {
     practiceRequired,
     trialLimit,
     onExit: showTestSelection,
+    onBackToIntro: ctx.backToIntro, // 音色の確認の「戻る」(まだセッションはないので、記録は残らない)
     onSessionStarted: recorder.onSessionStarted,
     onTrialStarted: recorder.onTrialStarted,
     onTrialConfirmed: recorder.onTrialConfirmed,
@@ -359,8 +370,12 @@ function startFunctionalPitchTest() {
 // サーバーへの送信はしない(送信処理は training: のキーを対象にしていない。サーバーでの種別は未決定)。
 // メニュー選択で最後に開いていたタブ。訓練から戻ったときに同じタブを開く(ページを閉じると消える。保存はしない)。
 let trainingMenuTabId = null;
+// メニュー選択の「戻る」の戻り先(説明画面。2026-11-15)。説明画面から入ったときに受け取り、履歴・得点推移・訓練から戻ったときも使う。
+let trainingBackToIntro = null;
 
-function showTrainingMenus() {
+// ctx: 説明画面から入ったときだけ { backToIntro }。履歴・訓練から戻ってきたとき(クリックのイベントなど)は、前に受け取った戻り先のまま。
+function showTrainingMenus(ctx) {
+  if (typeof ctx?.backToIntro === "function") trainingBackToIntro = ctx.backToIntro;
   // 将来の問題拡張のサンプルは ?training=dev&samples=on のときだけ並べる(結果は保存しない)。
   const { samples } = resolveTrainingOptions(window.location);
   showTrainingMenuScreen({
@@ -381,7 +396,7 @@ function showTrainingMenus() {
       participantData: loadTrainingParticipantData(participantId, localStorage),
       onBack: showTrainingMenus,
     }),
-    onBack: showTestSelection,
+    onBack: () => (trainingBackToIntro ?? showTestSelection)(),
   });
 }
 
@@ -440,7 +455,7 @@ async function startTraining(menu) {
 
 // --- 練習説明(仕様9章) ---
 
-function showPracticeIntro() {
+function showPracticeIntro(onBack) {
   screenEl.innerHTML = `
     <div class="panel">
       <h2>練習問題</h2>
@@ -452,9 +467,16 @@ function showPracticeIntro() {
         <li>正解・不正解は表示されません。</li>
       </ul>
       <p class="note">練習は原則1回のみで、やり直しはできません。</p>
-      <div class="actions"><button id="practice-start" class="primary">練習を開始</button></div>
+      <div class="actions"><button id="practice-start" class="primary">練習を開始</button><button id="practice-back" class="secondary">戻る</button></div>
     </div>`;
+  document.getElementById("practice-back").addEventListener("click", onBack);
   document.getElementById("practice-start").addEventListener("click", () => {
+    // ここでセッションを作る。前回、完了しきれなかったセッションがあれば、ここでinterruptedとして確定し、
+    // 新しいsession_idでこのセッションを開始する(仕様6.2・19章)。
+    const result = startSession(participantId, { storage: localStorage });
+    participantData = result.data;
+    currentSession = result.session;
+    syncSessionsToServer(); // 前回の放置セッションがここでinterruptedと確定した場合に送る
     // 参加者が最初に音声を伴う操作をするタイミングでAudioContextを有効化する
     // (ブラウザの自動再生制限への対応)。resumeの完了(=時計が実際に動き出す)を待ってから
     // 練習を始める。待たずに始めると、時計が一時停止したままの状態でスケジュールを計算してしまい、
@@ -716,8 +738,8 @@ function showResult(correctCount) {
 // --- 履歴・CSV出力(仕様20〜22章) ---
 
 // data: 表示する保存データ。省略すると、テストを受けたときに読み込んだもの(結果画面から開くとき)。
-// テスト選択から開くときは、その場で読んだ保存データを渡す。
-function showHistory(data = participantData) {
+// 説明画面から開くときは、その場で読んだ保存データと、戻り先(onBack)・戻るボタンの文字(backLabel)を渡す(2026-11-15)。
+function showHistory(data = participantData, { onBack = showTestSelection, backLabel = "テスト選択へ戻る" } = {}) {
   let includeInterruptedInList = false;
   let includeInterruptedInCsv = false;
 
@@ -743,7 +765,7 @@ function showHistory(data = participantData) {
           <button id="download-responses" class="secondary">回答詳細CSVをダウンロード</button>
           <button id="download-sessions" class="secondary">テスト履歴CSVをダウンロード</button>
         </div>
-        <div class="actions"><button id="to-selection" class="primary">テスト選択へ戻る</button></div>
+        <div class="actions"><button id="to-selection" class="primary">${escapeHtml(backLabel)}</button></div>
       </div>`;
 
     document.getElementById("toggle-list-interrupted").addEventListener("change", (e) => {
@@ -761,7 +783,7 @@ function showHistory(data = participantData) {
       const rows = buildSessionHistoryRows(participantId, data.sessions, includeInterruptedInCsv);
       downloadTextFile(buildCsvFilename(participantId, "sessions"), toCsv(SESSION_HISTORY_HEADERS, rows));
     });
-    document.getElementById("to-selection").addEventListener("click", showTestSelection);
+    document.getElementById("to-selection").addEventListener("click", onBack);
   }
 
   render();

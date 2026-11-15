@@ -16,8 +16,11 @@ export const PART_MARK = { idle: "", playing: "", played: "✓" };
 // 画面の中に一瞬出るエラー文。すぐにテスト選択へ戻れるエラー画面に切り替わるため、「再読み込み」を促さない(2026-11-14)。
 export const TONE_CHECK_ERROR_TEXT = "音声を読み込めませんでした。";
 
+export const BACK_BUTTON_TEXT = "戻る";
+
 // 音色確認画面のHTML文字列を返す(初期状態: どちらも未再生、「練習へ進む」は無効)。
-export function buildToneCheckHtml() {
+// showBack: 「戻る」(説明画面へ。2026-11-15 研究者の決定)を出すか。省略すると出さない。
+export function buildToneCheckHtml({ showBack = false } = {}) {
   const items = TONE_CHECK_PARTS.map((part) => `
       <li class="functional-tone-item" data-part="${part}" data-state="idle">
         <button type="button" class="secondary" data-role="play" data-part="${part}">${escapeHtml(PLAY_BUTTON_TEXT(part))}</button>
@@ -33,7 +36,8 @@ export function buildToneCheckHtml() {
       <p class="error" data-role="error"></p>
       <p class="functional-visually-hidden" role="status" data-role="announcer"></p>
       <div class="actions">
-        <button type="button" class="primary" data-role="proceed" disabled>練習へ進む</button>
+        <button type="button" class="primary" data-role="proceed" disabled>練習へ進む</button>${showBack ? `
+        <button type="button" class="secondary" data-role="back">${BACK_BUTTON_TEXT}</button>` : ""}
       </div>
     </div>`;
 }
@@ -68,10 +72,11 @@ function createDomView(screenEl) {
 
 // screenEl に音色確認画面を作り、controller(destroy を持つ)を返す。
 // onProceed: 両方を聴き終えて「練習へ進む」を押したときに呼ぶ(音は止めてから呼ぶ)。
+// onBack: 「戻る」を押したときに呼ぶ(鳴っている音は止めてから呼ぶ)。省略すると、「戻る」を出さない。
 // onError({ kind, error }): 音声エラー時に呼ぶ。
 // controllerOptions: 時計・音声の差し替え(テスト・開発用ページ向け)。
-export function runToneCheck({ screenEl, onProceed, onError = () => {}, controllerOptions = {} }) {
-  screenEl.innerHTML = buildToneCheckHtml();
+export function runToneCheck({ screenEl, onProceed, onBack = null, onError = () => {}, controllerOptions = {} }) {
+  screenEl.innerHTML = buildToneCheckHtml({ showBack: typeof onBack === "function" });
   const controller = createToneCheckController({ view: createDomView(screenEl), onError, ...controllerOptions });
 
   screenEl.querySelectorAll('[data-role="play"]').forEach((button) => {
@@ -81,6 +86,10 @@ export function runToneCheck({ screenEl, onProceed, onError = () => {}, controll
     if (!controller.hasHeardBoth()) return;
     controller.destroy(); // 聴き直しの途中でも、音を止めてから進む
     onProceed();
+  });
+  screenEl.querySelector('[data-role="back"]')?.addEventListener("click", () => {
+    controller.destroy(); // 聴いている途中でも、音を止めてから戻る
+    onBack();
   });
 
   return controller;

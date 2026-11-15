@@ -330,3 +330,20 @@ test("確認: destroy で解除する。practiceRequired が偽(Key選択から�
   setup({ practiceRequired: false, enableUnloadGuardFn: skipGuard.fn });
   assert.equal(skipGuard.enabled, 0);
 });
+
+// 2026-11-15 研究者の決定: 音色の確認の「戻る」は、説明画面へ戻る。まだセッションがないので記録は残らない。
+test("音色確認に onBack を渡す。押すと、音色確認を破棄(音とページを閉じる前の確認も止める)してから onBackToIntro", () => {
+  const log = [];
+  const { stages } = setup({ onBackToIntro: () => log.push("intro"), enableUnloadGuardFn: () => () => log.push("guard-off") });
+  assert.equal(typeof stages.calls.toneCheck[0].onBack, "function");
+  stages.calls.toneCheck[0].onBack();
+  assert.deepEqual(log, ["guard-off", "intro"]);
+  assert.equal(stages.destroyed.toneCheck, 1);
+  assert.equal(stages.calls.practice.length, 0, "練習へは進まない");
+  assert.equal(stages.calls.key.length, 0, "測定は始まらない");
+});
+
+test("onBackToIntro がなければ、音色確認に onBack を渡さない(「戻る」を出さない)", () => {
+  const { stages } = setup();
+  assert.equal(stages.calls.toneCheck[0].onBack, null);
+});

@@ -142,7 +142,7 @@ test("initialTabId のタブを開いた状態で始まる(訓練から戻った
   assert.deepEqual(calls, []);
 });
 
-test("メニューを押すと onSelect にそのメニュー、「履歴・CSVを見る」で onShowHistory、「テスト選択へ戻る」で onBack", () => {
+test("メニューを押すと onSelect にそのメニュー、「履歴・CSVを見る」で onShowHistory、「戻る」で onBack", () => {
   const { screenEl, calls } = mount();
   screenEl.el('[data-menu-id="menu-09"]').click();
   assert.match(screenEl.text('[data-role="history"]'), new RegExp(MENU_SCREEN_TEXT.history));

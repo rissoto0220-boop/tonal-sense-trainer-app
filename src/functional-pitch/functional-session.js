@@ -19,6 +19,7 @@ import { enableUnloadGuard } from "../shared/unload-guard.js";
 // onSessionStarted(info) / onTrialStarted(entry) / onTrialConfirmed(record): Keyごとの測定の通知
 //   (key-measurement.js と同じ。onSessionStarted の info には practice_results も加える)。
 // onExit: 省略可。渡すと、Key選択画面と、音色確認・練習のエラー画面に「テスト選択へ戻る」を表示し、押したときに呼ぶ。
+// onBackToIntro: 省略可。渡すと、音色の確認に「戻る」を表示し、押したとき(音を止めて、確認を外して)呼ぶ(2026-11-15)。
 // onShowHistory(backToKeySelect): 省略可。渡すと、Key選択画面に「履歴・CSVを見る」を表示し、
 //   押したときに呼ぶ。履歴画面から戻るときは、渡された backToKeySelect() を呼ぶ。
 // toneCheckOptions / practiceFlowOptions / keyMeasurementOptions: 各段階への追加の引数
@@ -34,6 +35,7 @@ export function runFunctionalPitchSession({
   onTrialStarted = () => {},
   onTrialConfirmed = () => {},
   onExit = null,
+  onBackToIntro = null,
   onShowHistory = null,
   toneCheckOptions = {},
   practiceFlowOptions = {},
@@ -69,7 +71,14 @@ export function runFunctionalPitchSession({
   function showToneCheck() {
     releaseStageGuard();
     releaseGuard = enableUnloadGuardFn();
-    replaceActive(runToneCheckFn({ screenEl, onProceed: showPractice, onError: showStageError, ...toneCheckOptions }));
+    replaceActive(runToneCheckFn({
+      screenEl,
+      onProceed: showPractice,
+      // 音色の確認の「戻る」: 説明画面へ(まだセッションがないので記録は残らない。確認も外す)
+      onBack: onBackToIntro ? () => { destroy(); onBackToIntro(); } : null,
+      onError: showStageError,
+      ...toneCheckOptions,
+    }));
   }
 
   // 音色確認・練習の音声エラー。鳴っている段階を止めてから、テスト選択へ戻れるエラー画面を出す

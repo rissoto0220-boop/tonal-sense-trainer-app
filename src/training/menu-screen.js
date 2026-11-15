@@ -10,7 +10,7 @@ import { MENU_TABS, groupMenusByTab, resolveSelectedTabId } from "./menu-tabs.js
 export const MENU_SCREEN_TEXT = {
   title: "訓練メニューを選んでください",
   tabListLabel: "メニューの種類",
-  back: "テスト選択へ戻る",
+  back: "戻る", // 説明画面へ戻る(2026-11-15)
   history: "履歴・CSVを見る",
   scoreChart: "得点の推移を見る",
 };
@@ -84,7 +84,7 @@ export function nextTabIndex(key, index, count) {
 
 // onSelect(menu): メニューを押したとき(参加者のクリックの中で呼ぶので、音声の有効化に使える)。
 // onShowHistory(): 「履歴・CSVを見る」を押したとき。onShowScoreChart(): 「得点の推移を見る」を押したとき。
-// onBack(): 「テスト選択へ戻る」を押したとき。
+// onBack(): 「戻る」を押したとき(説明画面へ戻る)。
 // tabs: タブの定義(省略時 MENU_TABS)。initialTabId: 最初に開くタブ(訓練から戻ったときに、前のタブを開くのに使う)。
 // onTabChange(tabId): タブを切り替えたとき(最後に開いていたタブを、呼び出し側が覚えておくのに使う)。
 export function showTrainingMenuScreen({

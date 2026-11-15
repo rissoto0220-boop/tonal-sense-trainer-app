@@ -7,6 +7,7 @@ import {
   PART_MARK,
   PLAY_BUTTON_TEXT,
   PLAYING_BUTTON_TEXT,
+  BACK_BUTTON_TEXT,
   TONE_CHECK_ERROR_TEXT,
 } from "../../src/functional-pitch/tone-check-screen.js";
 
@@ -65,4 +66,13 @@ test("正解・不正解を連想させる語が含まれない", () => {
   for (const word of ["正解", "不正解", "正しい", "間違", "誤り"]) {
     assert.equal(html.includes(word), false, word);
   }
+});
+
+// 2026-11-15 研究者の決定: 音色の確認から、説明画面へ「戻る」。onBack を渡したときだけ出す。
+test("「戻る」は、showBack のときだけ出す(既定は出さない)。「練習へ進む」と同じ行の、控えめなボタン", () => {
+  assert.equal(BACK_BUTTON_TEXT, "戻る");
+  assert.equal(html.includes('data-role="back"'), false);
+  const withBack = buildToneCheckHtml({ showBack: true });
+  assert.match(withBack, /<button type="button" class="secondary" data-role="back">戻る<\/button>/);
+  assert.ok(withBack.indexOf('data-role="proceed"') < withBack.indexOf('data-role="back"'));
 });
