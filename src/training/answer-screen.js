@@ -1,8 +1,9 @@
 // 音感訓練の回答画面(T3)。音声と進行は持たず、操作を呼び出し側へ知らせるだけ(T4でつなぐ)。
 //
 // 画面の構成(研究者の見本・決定、tonal-sense-docs/training-data-design-prototype.md 第7.9節):
-//   進捗 → 上部の表示「? → ド」(和音は「? → Ⅰ」) → 鍵盤 → 「リプレイ」「わからない」 → 正誤の文言 → 「次に進む」
-//   → 「訓練を終了する」(押すと画面内に確認を出す。training_pending_to_decisions.md 第7節)
+//   [見出し・進捗 …… 「中断する」(右上。押すと、すぐ下に確認を出す。training_pending_to_decisions.md 第7節)]
+//   → 上部の表示「? → ド」(和音は「? → Ⅰ」) → 鍵盤 → 「リプレイ」「わからない」 → 正誤の文言 → 「次に進む」
+//   (2026-11-15 研究者の決定: 「訓練を終了する」を「中断する」にし、押し間違えないよう、リプレイ等から離して右上へ移した)
 // - 単音: 横一列の階名鍵盤(ソ ラ シ ド レ ミ ファ)。ドは背を高くする(主音の主張)。
 // - 和音: 6つのボタンを六角形に並べる(Ⅰを上に、時計回りに Ⅰ Ⅳ Ⅲ Ⅵ Ⅱ Ⅴ)。
 // - 出題に使う音(activeOptionCodes)だけ押せる。押せない音は薄い灰色と点線の枠(色だけに頼らない)。
@@ -23,13 +24,13 @@ import { GIVE_UP_RESPONSE_CODE } from "./judge.js";
 // 主音(ド・Ⅰ)のコード。上部の表示の「→ ド」と、鍵盤で背を高くする音に使う。
 export const TONIC_CODE = "n1";
 
-export const BUTTON_TEXT = { replay: "リプレイ", giveUp: "わからない", next: "次に進む", quit: "訓練を終了する" };
+export const BUTTON_TEXT = { replay: "リプレイ", giveUp: "わからない", next: "次に進む", quit: "中断する" };
 
-// 「訓練を終了する」を押したときの確認(研究者の決定の文例どおり)。
+// 「中断する」を押したときの確認(研究者の決定の文例。2026-11-15 に「終了」から「中断」へそろえた)。
 export const QUIT_CONFIRM_TEXT = {
-  title: "訓練を終了しますか?",
+  title: "訓練を中断しますか?",
   lines: ["途中から再開することはできません。", "完了済みの回答は保存されます。"],
-  confirm: "終了する",
+  confirm: "中断する",
   cancel: "続ける",
 };
 
@@ -119,9 +120,19 @@ export function buildAnswerScreenHtml({ optionSetRef, activeOptionCodes, progres
   const nextEnabled = (state.nextEnabled ?? true) && !state.confirmingQuit;
 
   return `
-    <div class="panel training-answer">${heading ? `
-      <h2 class="training-answer-title">${escapeHtml(heading)}</h2>` : ""}
-      <p class="training-progress">${escapeHtml(progressLabel)}</p>
+    <div class="panel training-answer">
+      <div class="training-answer-header">
+        <div class="training-answer-heading">${heading ? `
+          <h2 class="training-answer-title">${escapeHtml(heading)}</h2>` : ""}
+          <p class="training-progress">${escapeHtml(progressLabel)}</p>
+        </div>
+        <button type="button" class="secondary training-quit-button" data-role="quit"${state.confirmingQuit ? " disabled" : ""}>${BUTTON_TEXT.quit}</button>
+      </div>
+      <div class="notice training-quit-confirm" data-role="quit-confirm" role="alertdialog" aria-label="${escapeHtml(QUIT_CONFIRM_TEXT.title)}"${state.confirmingQuit ? "" : " hidden"}>
+        <p class="training-quit-title">${escapeHtml(QUIT_CONFIRM_TEXT.title)}</p>
+        ${QUIT_CONFIRM_TEXT.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}
+        <p class="training-quit-actions"><button type="button" class="primary" data-role="quit-yes">${QUIT_CONFIRM_TEXT.confirm}</button><button type="button" class="secondary" data-role="quit-no">${QUIT_CONFIRM_TEXT.cancel}</button></p>
+      </div>
       <div class="training-prompt" data-role="prompt">${escapeHtml(promptFor(optionSet, selectedCodes, targetCount, tonicCode))}</div>
       <div class="${isChord ? "training-hexagon" : "training-keyboard"}">${buttons}</div>
       <div class="actions centered training-tools">
@@ -130,12 +141,6 @@ export function buildAnswerScreenHtml({ optionSetRef, activeOptionCodes, progres
       </div>
       <div class="training-feedback" data-role="feedback" role="status" aria-live="polite">${feedbackHtml(lines)}</div>
       <div class="actions centered"><button type="button" class="primary" data-role="next"${state.showNext ? "" : " hidden"}${nextEnabled ? "" : " disabled"}>${BUTTON_TEXT.next}</button></div>
-      <div class="actions centered training-quit"><button type="button" class="secondary" data-role="quit"${state.confirmingQuit ? " disabled" : ""}>${BUTTON_TEXT.quit}</button></div>
-      <div class="notice training-quit-confirm" data-role="quit-confirm" role="alertdialog" aria-label="${escapeHtml(QUIT_CONFIRM_TEXT.title)}"${state.confirmingQuit ? "" : " hidden"}>
-        <p class="training-quit-title">${escapeHtml(QUIT_CONFIRM_TEXT.title)}</p>
-        ${QUIT_CONFIRM_TEXT.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}
-        <p class="training-quit-actions"><button type="button" class="primary" data-role="quit-yes">${QUIT_CONFIRM_TEXT.confirm}</button><button type="button" class="secondary" data-role="quit-no">${QUIT_CONFIRM_TEXT.cancel}</button></p>
-      </div>
     </div>`;
 }
 
@@ -147,7 +152,7 @@ function feedbackHtml(lines) {
 //   onAnswer(code, { index, complete }): 鍵盤を押したとき(1問に targetCount 回まで)。code は回答候補のコード、
 //     または "giveup"(「わからない」)。index は何番目の回答か(0始まり)、complete はその問題の回答を終えたか。
 //   onReplay(): 「リプレイ」を押したとき。onNext(): 「次に進む」を押したとき。
-//   onQuit(): 「訓練を終了する」を押したとき(確認は出さない。呼び出し側が音を止めてから showQuitConfirm を呼ぶ)。
+//   onQuit(): 「中断する」を押したとき(確認は出さない。呼び出し側が音を止めてから showQuitConfirm を呼ぶ)。
 // 戻り値:
 //   setAnswerable(enabled): 回答を受け付けるかどうか(音の再生中は受け付けない、など)。
 //   setReplayEnabled(enabled): 「リプレイ」を押せるかどうか(null に戻すと、回答の受付に合わせる)。
@@ -156,7 +161,7 @@ function feedbackHtml(lines) {
 //     nextEnabled が偽なら「次に進む」は見えるが押せない(フィードバックの再生中)。
 //   setNextEnabled(enabled): 「次に進む」を押せるかどうか。
 //   showQuitConfirm({ onConfirm, onCancel }): 終了の確認を出す。確認の間は、他のボタンを押せない。
-//     「続ける」で確認を閉じてから onCancel、「終了する」で onConfirm を呼ぶ。
+//     「続ける」で確認を閉じてから onCancel、「中断する」(確認の中のボタン)で onConfirm を呼ぶ。
 //   destroy(): 以後の操作を無視する。
 // 画面は最初に1回だけ作り、その後は必要な部分(ボタンの押せる/押せない・選択中の印・上部の表示・正誤の文言・
 // 「次に進む」の表示)だけを書き換える。描き直すと、外枠 .panel のフェードイン(styles.css)が毎回やり直され、

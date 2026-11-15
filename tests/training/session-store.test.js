@@ -135,7 +135,7 @@ test("記録係: 回答の確定ごとに保存し、完了後も聞き直しの
   assert.equal(saved().trials.length, 1, "完了後の新しい試行は記録しない");
 });
 
-test("記録係: 「訓練を終了する」は interrupted、音声エラーは audio_error。回答済みの試行は残る", () => {
+test("記録係: 「中断する」は interrupted、音声エラーは audio_error。回答済みの試行は残る", () => {
   const storage = makeFakeStorage();
   let id = 0;
   const run = (end) => {
@@ -261,7 +261,7 @@ test("送信処理は training: のキーを送らない(送信はまだ作ら�
 });
 
 // 2026-11-15: 完了は終了画面を出した時点。全問に回答済みでも、終了画面の前に終えたら中断として残る。
-test("結合: 最終問を間違えて、「次に進む」を押す前に「訓練を終了する」で終えたら、interrupted。全問の記録が残る", async () => {
+test("結合: 最終問を間違えて、「次に進む」を押す前に「中断する」で終えたら、interrupted。全問の記録が残る", async () => {
   const storage = makeFakeStorage();
   const recorder = createSessionRecorder("P00001", { storage, generateId: () => "s1" });
   const env = createFakeAudioEnv();

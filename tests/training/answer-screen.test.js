@@ -153,12 +153,26 @@ test("destroy 後の操作は無視される", () => {
 });
 
 test("ボタンの文言と、既存のボタンの見た目(secondary / primary)", () => {
-  assert.deepEqual(BUTTON_TEXT, { replay: "リプレイ", giveUp: "わからない", next: "次に進む", quit: "訓練を終了する" });
+  assert.deepEqual(BUTTON_TEXT, { replay: "リプレイ", giveUp: "わからない", next: "次に進む", quit: "中断する" });
   const html = buildAnswerScreenHtml({ ...MELODY, state: { ...IDLE, showNext: true } });
   assert.match(html, /class="secondary" data-role="replay"/);
   assert.match(html, /class="secondary" data-role="giveup"/);
   assert.match(html, /class="primary" data-role="next">次に進む</);
-  assert.match(html, /class="secondary" data-role="quit">訓練を終了する</);
+  assert.match(html, /class="secondary training-quit-button" data-role="quit">中断する</);
+});
+
+// 2026-11-15 研究者の決定: 「中断する」は、リプレイ・わからない・次に進むと離し、見出し・進捗の横(右上)に置く。
+test("「中断する」は見出し・進捗と同じ行(右上)にあり、リプレイ・わからない・次に進むより前にある。下の行にはない", () => {
+  const html = buildAnswerScreenHtml({ ...MELODY, state: { ...IDLE, showNext: true }, heading: "① 単音(Key C)" });
+  const header = html.match(/<div class="training-answer-header">[\s\S]*?<\/button>\s*<\/div>/)?.[0] ?? "";
+  assert.match(header, /class="training-progress"/, "進捗と同じ行");
+  assert.match(header, /data-role="quit">中断する</, "「中断する」も同じ行");
+  assert.equal(header.includes("training-answer-title"), true, "見出しも同じ行");
+  const at = (role) => html.indexOf(`data-role="${role}"`);
+  for (const role of ["replay", "giveup", "next"]) assert.ok(at("quit") < at(role), `「中断する」は ${role} より前`);
+  assert.ok(at("quit-confirm") < at("prompt"), "確認は、ボタンのすぐ下(上部の表示より前)に出る");
+  assert.equal(html.includes("training-quit\""), false, "下の行(training-quit)は無い");
+  assert.equal(html.split('data-role="quit"').length - 1, 1, "中断のボタンは1つだけ");
 });
 
 test("styles.css: 和音の6色(決定済み)と、押せない音の点線、正誤用の色を使わない", () => {
@@ -219,16 +233,16 @@ test("「次に進む」は、見えていても押せない状態にできる(�
   assert.deepEqual(calls, [["answer", "n2"], ["next"]]);
 });
 
-test("終了の確認: 最初は隠れている。文言は決定どおり", () => {
+test("中断の確認: 最初は隠れている。文言は決定どおり", () => {
   const html = buildAnswerScreenHtml({ ...MELODY, state: IDLE });
   assert.match(html, /data-role="quit-confirm"[^>]* hidden>/);
-  assert.equal(QUIT_CONFIRM_TEXT.title, "訓練を終了しますか?");
+  assert.equal(QUIT_CONFIRM_TEXT.title, "訓練を中断しますか?");
   assert.deepEqual(QUIT_CONFIRM_TEXT.lines, ["途中から再開することはできません。", "完了済みの回答は保存されます。"]);
-  assert.match(html, /data-role="quit-yes">終了する</);
+  assert.match(html, /data-role="quit-yes">中断する</);
   assert.match(html, /data-role="quit-no">続ける</);
 });
 
-test("終了の確認: 「訓練を終了する」で onQuit。確認の間は他のボタンを押せず、「続ける」で元に戻る", () => {
+test("中断の確認: 「中断する」で onQuit。確認の間は他のボタンを押せず、「続ける」で元に戻る", () => {
   const { screenEl, screen, calls } = mount();
   screen.setAnswerable(true);
   screenEl.el('[data-role="quit"]').click();
@@ -240,7 +254,7 @@ test("終了の確認: 「訓練を終了する」で onQuit。確認の間は�
   assert.ok(screenEl.el('[data-role="replay"]').disabled);
   assert.ok(screenEl.el('[data-role="giveup"]').disabled);
   assert.ok(screenEl.el('[data-role="quit"]').disabled);
-  assert.equal(screenEl.el('[data-role="quit-no"]').focused, true, "誤って終了しないよう「続ける」にフォーカス");
+  assert.equal(screenEl.el('[data-role="quit-no"]').focused, true, "誤って中断しないよう「続ける」にフォーカス");
   screenEl.el('[data-role="quit-no"]').click();
   assert.deepEqual(log, ["cancel"]);
   assert.equal(screenEl.el('[data-role="quit-confirm"]').hidden, true);

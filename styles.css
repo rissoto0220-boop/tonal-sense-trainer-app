@@ -513,6 +513,11 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
    押せない音は、色だけでなく点線の枠と灰色の文字でも示す。選択中は✓印と内側の枠でも示す。 */
 .training-answer { text-align: center; }
 .training-progress { margin: 0 0 12px; color: var(--muted); font-weight: 700; }
+/* 見出し・進捗(左)と「中断する」(右上)を横に並べる(2026-11-15 研究者の決定)。リプレイ等から離し、押し間違えにくくする。
+   右にボタンを置くので、この行の見出し・進捗は左寄せにする(上部の表示・鍵盤・ボタン類は中央のまま)。 */
+.training-answer-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; text-align: left; }
+.training-answer-heading { flex: 1; min-width: 0; }
+.training-quit-button { flex: none; min-height: 40px; padding: 6px 14px; font-size: .9rem; }
 /* 回答画面の見出し(メニュー名)。長い名前でも折り返す */
 .training-answer-title { margin: 0 0 4px; font-size: 1.1rem; overflow-wrap: anywhere; }
 .training-prompt {
@@ -604,8 +609,7 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 .training-tools { margin-top: 8px; }
 .training-feedback { min-height: 3.6em; margin-top: 20px; font-size: 1.15rem; font-weight: 700; }
 .training-feedback p { margin: 4px 0; }
-.training-quit { margin-top: 16px; }
-.training-quit-confirm { margin: 16px 0 0; text-align: left; }
+.training-quit-confirm { margin: 0 0 16px; text-align: left; }
 .training-quit-title { margin: 0 0 4px; font-weight: 700; }
 .training-quit-confirm p { margin: 4px 0; }
 .training-quit-confirm .training-quit-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }

@@ -1,5 +1,5 @@
 // 音感訓練の履歴・CSV出力。機能的音感の history-screen.js と同じ見た目と切り替え。
-// 「中断」には、「訓練を終了する」・ページを閉じた等(interrupted)と、音声エラー(audio_error)の両方を含める。
+// 「中断」には、「中断する」・ページを閉じた等(interrupted)と、音声エラー(audio_error)の両方を含める。
 import { escapeHtml } from "../shared/escape-html.js";
 import { formatDisplayDateTime } from "../shared/display-format.js";
 import { toCsv, downloadTextFile } from "../shared/csv.js";

@@ -302,7 +302,7 @@ test("完了の時点: 最終問が正解なら、フィードバックの後に
   session.destroy();
 });
 
-test("訓練を終了する → 終了する: 回答済みの試行だけを onInterrupted に渡し、onExit。onFinished は呼ばない", async () => {
+test("中断する → 中断する(確認): 回答済みの試行だけを onInterrupted に渡し、onExit。onFinished は呼ばない", async () => {
   const { env, screenEl, session, log } = await start({ questionCount: 3 });
   await answerAll(env, screenEl, session, [(i) => correctCode(session, i)]);
   assert.match(screenEl.innerHTML, /2 \/ 3/);
@@ -320,7 +320,7 @@ test("訓練を終了する → 終了する: 回答済みの試行だけを onI
   session.destroy();
 });
 
-test("訓練を終了する → 続ける(最初の再生の途中): 調セットアップから鳴らし直し、時刻もやり直した再生で記録する", async () => {
+test("中断する → 続ける(最初の再生の途中): 調セットアップから鳴らし直し、時刻もやり直した再生で記録する", async () => {
   const { env, screenEl, session, log } = await start({ questionCount: 1 });
   env.tick(UNTIL_QUESTION_ONSET + 0.5); // 出題音が鳴り始めた後、鳴り終わる前
   screenEl.el('[data-role="quit"]').click();
@@ -337,7 +337,7 @@ test("訓練を終了する → 続ける(最初の再生の途中): 調セッ�
   session.destroy();
 });
 
-test("訓練を終了する → 続ける(必須のフィードバックの途中): フィードバックを最初から鳴らし直す。聞き直しには数えない", async () => {
+test("中断する → 続ける(必須のフィードバックの途中): フィードバックを最初から鳴らし直す。聞き直しには数えない", async () => {
   const { env, screenEl, session, log } = await start({ questionCount: 2 });
   env.tick(UNTIL_ANSWERABLE + 0.1);
   screenEl.el(`[data-code="${wrongCode(MELODY_MENU, correctCode(session, 0))}"]`).click();
@@ -353,7 +353,7 @@ test("訓練を終了する → 続ける(必須のフィードバックの途�
   session.destroy();
 });
 
-test("訓練を終了する → 続ける(正解のフィードバックの途中): 鳴らし直して、終われば自動で次へ", async () => {
+test("中断する → 続ける(正解のフィードバックの途中): 鳴らし直して、終われば自動で次へ", async () => {
   const { env, screenEl, session } = await start({ questionCount: 2 });
   env.tick(UNTIL_ANSWERABLE + 0.1);
   screenEl.el(`[data-code="${correctCode(session, 0)}"]`).click();
@@ -368,7 +368,7 @@ test("訓練を終了する → 続ける(正解のフィードバックの途�
 });
 
 // 2026-11-15: 全問に回答済みでも、終了画面を出す前に終えたら、中断として残す(研究者の決定)。
-test("訓練を終了する: 最終問に回答し、フィードバックが終わった後でも、終了画面の前なら中断として扱う(全問の記録を渡し、onFinished は呼ばない)", async () => {
+test("中断する: 最終問に回答し、フィードバックが終わった後でも、終了画面の前なら中断として扱う(全問の記録を渡し、onFinished は呼ばない)", async () => {
   const { env, screenEl, session, log } = await start({ questionCount: 1 });
   env.tick(UNTIL_ANSWERABLE + 0.1);
   screenEl.el(`[data-code="${wrongCode(MELODY_MENU, correctCode(session, 0))}"]`).click();

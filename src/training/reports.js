@@ -7,7 +7,7 @@
 import { toFilenameTimestamp } from "../shared/iso-time.js";
 import { DEFAULT_QUESTION_COUNT } from "./definitions.js";
 
-// 「中断」の扱いにする状態(「訓練を終了する」・ページを閉じた等の interrupted と、音声エラーの audio_error)。
+// 「中断」の扱いにする状態(「中断する」・ページを閉じた等の interrupted と、音声エラーの audio_error)。
 const isInterrupted = (session) => session.sessionStatus !== "completed";
 
 function byStartedAt(a, b) {
