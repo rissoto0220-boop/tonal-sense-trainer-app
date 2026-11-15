@@ -499,8 +499,12 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
    Key選択の2つのボタンは同じ見た目・同じ大きさにして、どちらかへ誘導しない。 */
 .functional-key-list { display: flex; flex-wrap: wrap; gap: 16px; margin: 28px 0 8px; }
 .functional-key-button { flex: 1 1 140px; font-size: 1.2rem; min-height: 64px; }
-.functional-error-files { margin: 8px 0 16px; padding-left: 1.4em; font-size: .92rem; color: var(--muted); }
-.functional-key-select h2:focus, .functional-completion h2:focus, .functional-measurement-error h2:focus { outline: none; }
+/* エラー画面(src/shared/error-screen.js)。詳細の行(ファイル名・回答済みの数)、データへの影響、次にすべきこと */
+.error-details { margin: 8px 0 12px; padding-left: 1.4em; font-size: .92rem; color: var(--muted); overflow-wrap: anywhere; }
+.error-impact { margin: 8px 0; }
+.error-next { margin: 8px 0 0; }
+.error-screen h2:focus { outline: none; }
+.functional-key-select h2:focus, .functional-completion h2:focus { outline: none; }
 
 /* ===== 音感訓練の回答画面(src/training/answer-screen.js) =====
    既存の画面(.answer系・.answer-panel系・.functional-*系)とは名前を分け、混同・影響が起きないようにする。

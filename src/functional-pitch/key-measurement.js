@@ -8,6 +8,7 @@ import { generateTrialOrder, validateTrialOrder } from "./trial-generator.js";
 import { loadKeyPhrases } from "./key-audio.js";
 import { mountTrialScreen } from "./trial-screen.js";
 import { enableUnloadGuard } from "../shared/unload-guard.js";
+import { kindFromAudioNotice } from "../shared/error-kinds.js";
 import {
   buildLoadingHtml,
   buildCompletionHtml,
@@ -121,7 +122,7 @@ export function runKeyMeasurement({
         if (isLast) finish("completed", buildCompletionHtml(keyCode));
         else startTrial(index + 1);
       },
-      onError: () => finish("audio_error", buildInterruptedHtml(completedTrials.length)),
+      onError: ({ kind } = {}) => finish("audio_error", buildInterruptedHtml(completedTrials.length, kindFromAudioNotice(kind))),
     });
   }
 

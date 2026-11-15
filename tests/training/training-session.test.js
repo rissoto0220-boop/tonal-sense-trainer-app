@@ -394,8 +394,10 @@ test("和音のメニュー: 和音の根音度で判定し、「? → Ⅰ」の
 
 test("音声の読み込みに失敗したら、見出し付きのエラー画面を出し、onAudioError。「メニュー選択へ戻る」で onExit", async () => {
   const { screenEl, session, log } = await start({ envOptions: { failSrc: "-setup-" } });
-  assert.equal(screenEl.text("h2"), SESSION_TEXT.audioErrorTitle);
+  // 見出し・文言はエラーの種類の表(src/shared/error-kinds.js)。ここまでの回答は、audio_error として保存される
   assert.equal(screenEl.text("h2"), "音声を読み込めませんでした");
+  assert.match(screenEl.innerHTML, /音声ファイルを読み込めませんでした。/);
+  assert.match(screenEl.innerHTML, /ここまでの回答は、中断として記録しました。/);
   assert.match(screenEl.innerHTML, /メニュー選択へ戻って、やり直してください。/);
   assert.equal(screenEl.innerHTML.includes("再読み込み"), false, "再読み込みは促さない(戻ってやり直せる)");
   assert.equal(log.audioErrors, 1);

@@ -232,7 +232,7 @@ test("音源の読み込みに失敗したら、測定を始めず、失敗し�
   assert.equal(env.mount.mounts.length, 0);
   assert.equal(env.measured.length, 0);
   assert.equal(env.guard.enabled, 0);
-  assert.match(env.screenEl.innerHTML, /音源を読み込めませんでした/);
+  assert.match(env.screenEl.innerHTML, /音声を読み込めませんでした/);
   assert.match(env.screenEl.innerHTML, /c-phr-ch-n1-maj-mel-n1-v01\.wav/);
   env.screenEl.button('[data-role="back"]').click();
   assert.deepEqual(env.backs, ["back"]);
@@ -242,7 +242,7 @@ test("AudioContextの有効化・読み込み処理そのものが失敗して�
   const env = setup({ resumeAudioContextFn: () => Promise.reject(new Error("blocked")) });
   await flush();
   assert.equal(env.mount.mounts.length, 0);
-  assert.match(env.screenEl.innerHTML, /音源を読み込めませんでした/);
+  assert.match(env.screenEl.innerHTML, /音声を読み込めませんでした/); // 起動失敗を専用の画面にするのはフェーズ5-B
   assert.ok(env.screenEl.button('[data-role="back"]'));
 });
 
@@ -251,7 +251,8 @@ test("試行順の検査に通らなければ、測定を始めず内部エラ�
   await flush();
   assert.equal(env.mount.mounts.length, 0);
   assert.equal(env.measured.length, 0);
-  assert.match(env.screenEl.innerHTML, /測定を開始できませんでした/);
+  assert.match(env.screenEl.innerHTML, /開始できませんでした/);
+  assert.match(env.screenEl.innerHTML, /試行の順序を正しく作れませんでした。/);
   env.screenEl.button('[data-role="back"]').click();
   assert.deepEqual(env.backs, ["back"]);
 });
@@ -266,6 +267,8 @@ test("途中で音声エラーが起きたら、そこまでの結果を audio_e
   assert.equal(env.measured[0].completed_trials.length, 4);
   assert.equal(env.measured[0].generated_trial_order.length, 90);
   assert.match(env.screenEl.innerHTML, /4試行まで回答済み/);
+  assert.match(env.screenEl.innerHTML, /ここまでの回答は、中断として記録しました。/);
+  assert.match(env.screenEl.innerHTML, /音声ファイルを読み込めませんでした。/); // 通知の種類 load → 表の audio-load
   assert.equal(env.mount.mounts[0].destroyed, true);
   env.screenEl.button('[data-role="back"]').click();
   assert.deepEqual(env.backs, ["back"]);
@@ -351,8 +354,8 @@ test("destroy は何度呼んでも安全", async () => {
 });
 
 test("Keyごとの測定はユーザー・保存・CSV・サーバーに依存しない(importの許可リスト)", () => {
-  // error-screen: 音色確認・練習のエラー画面(2026-11-14)。保存・送信には関わらない画面の部品。
-  const allowed = /^(\.\/[\w-]+\.js|\.\.\/shared\/(audio-buffer-player|escape-html|answer-lock|iso-time|error-screen|unload-guard)\.js)$/;
+  // error-screen・error-kinds: エラー画面と、エラーの種類の表(2026-11-14・2026-11-15)。保存・送信には関わらない画面の部品。
+  const allowed = /^(\.\/[\w-]+\.js|\.\.\/shared\/(audio-buffer-player|escape-html|answer-lock|iso-time|error-screen|error-kinds|unload-guard)\.js)$/;
   // unload-guard: ページを閉じる前の確認(2026-11-14 に src/shared へ移した)。保存・送信には関わらない。
   for (const file of ["key-measurement.js", "functional-session.js", "measurement-screens.js", "key-audio.js", "dev-flag.js"]) {
     const source = readFileSync(new URL(`../../src/functional-pitch/${file}`, import.meta.url), "utf8");

@@ -68,6 +68,7 @@ import {
 import { showHistoryScreen as showTrainingHistoryScreen } from "./src/training/history-screen.js";
 import { showScoreChartScreen as showTrainingScoreChartScreen } from "./src/training/score-chart-screen.js";
 import { enableUnloadGuard } from "./src/shared/unload-guard.js";
+import { showErrorScreen } from "./src/shared/error-screen.js";
 
 const QUESTION_MS = 3000;
 const INTER_QUESTION_GAP_MS = 1000; // 問題間の間隔(仕様13.4)
@@ -555,18 +556,17 @@ function showQuestion({ mode, note, questionNumber }, onResult) {
     });
 }
 
+// 見出し・文言はエラーの種類の表(src/shared/error-kinds.js)。問題は誤回答・タイムアウトに数えず、
+// セッションは呼び出し側が中断として保存している(「データへの影響」に書く)。
 function showPlaybackError(note) {
-  screenEl.innerHTML = `
-    <div class="panel center">
-      <h2>音声を再生できませんでした</h2>
-      <p>音声ファイル(${escapeHtml(note.filename)})を再生できませんでした。</p>
-      <p class="note">
-        この問題は誤回答・タイムアウトとして記録されません。<br>
-        テスト選択からやり直してください。
-      </p>
-      <div class="actions centered"><button id="to-selection" class="primary">テスト選択へ戻る</button></div>
-    </div>`;
-  document.getElementById("to-selection").addEventListener("click", showTestSelection);
+  showErrorScreen({
+    screenEl,
+    kind: "audio-load",
+    impact: "interrupted-uncounted",
+    backTo: "テスト選択",
+    details: [`音声ファイル: ${note.filename}`],
+    onBack: showTestSelection,
+  });
 }
 
 // --- 本番開始確認(仕様10章) ---

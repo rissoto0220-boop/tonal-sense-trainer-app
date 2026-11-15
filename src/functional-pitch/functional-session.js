@@ -7,21 +7,8 @@ import { runPracticeFlow } from "./practice-flow.js";
 import { runKeyMeasurement } from "./key-measurement.js";
 import { showKeySelectScreen } from "./measurement-screens.js";
 import { showErrorScreen } from "../shared/error-screen.js";
+import { kindFromAudioNotice } from "../shared/error-kinds.js";
 import { enableUnloadGuard } from "../shared/unload-guard.js";
-
-// 音色確認・練習で音声エラーが起きたときの見出し(エラーの種類ごと)。
-// 以前は画面の中に「ページを再読み込みしてください」と出すだけだったが、テスト選択へ戻れるエラー画面にした(2026-11-14)。
-export const STAGE_ERROR_TITLE = {
-  load: "音声を読み込めませんでした",
-  duration: "音源の長さが想定と異なります",
-  schedule: "音声を再生できませんでした",
-};
-export const STAGE_ERROR_BACK_LABEL = "テスト選択へ戻る";
-
-export function stageErrorMessage(kind) {
-  const restart = "テスト選択へ戻って、最初からやり直してください。";
-  return kind === "duration" ? `研究者へお知らせください。${restart}` : restart;
-}
 
 // screenEl: 描画先のDOM要素。
 // practiceRequired: 真なら音色確認と練習から始める。偽ならKey選択から始める
@@ -91,11 +78,12 @@ export function runFunctionalPitchSession({
     if (destroyed) return;
     replaceActive(null);
     releaseStageGuard();
+    // 見出し・文言はエラーの種類の表(src/shared/error-kinds.js)。まだセッションは始まっていないので、記録はない。
     showErrorScreen({
       screenEl,
-      title: STAGE_ERROR_TITLE[kind] ?? STAGE_ERROR_TITLE.load,
-      message: stageErrorMessage(kind),
-      backLabel: STAGE_ERROR_BACK_LABEL,
+      kind: kindFromAudioNotice(kind),
+      impact: "not-recorded",
+      backTo: "テスト選択",
       onBack: onExit ? () => { destroy(); onExit(); } : null,
     });
   }

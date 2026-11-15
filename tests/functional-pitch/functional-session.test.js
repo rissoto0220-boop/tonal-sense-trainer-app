@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { runFunctionalPitchSession } from "../../src/functional-pitch/functional-session.js";
 import { runKeyMeasurement } from "../../src/functional-pitch/key-measurement.js";
 import { createFakeScreen } from "./helpers/fake-screen.js";
-import { STAGE_ERROR_TITLE, stageErrorMessage } from "../../src/functional-pitch/functional-session.js";
+import { ERROR_KINDS } from "../../src/shared/error-kinds.js";
 
 // 各段階(音色確認・練習・Keyごとの測定)の代わりに、呼び出しと破棄を記録するだけの偽物。
 function createFakeStages() {
@@ -254,7 +254,10 @@ test("音色確認のエラー: 音色確認を破棄し、見出し付きのエ
   stages.calls.toneCheck[0].onError({ kind: "load" });
   assert.equal(stages.destroyed.toneCheck, 1);
   assert.match(screenEl.innerHTML, /<h2 tabindex="-1">音声を読み込めませんでした<\/h2>/);
-  assert.match(screenEl.innerHTML, /テスト選択へ戻って、最初からやり直してください。/);
+  // 文言はエラーの種類の表(src/shared/error-kinds.js)。まだセッションは始まっていないので、記録はない
+  assert.match(screenEl.innerHTML, /音声ファイルを読み込めませんでした。/);
+  assert.match(screenEl.innerHTML, /まだ記録は残っていません。/);
+  assert.match(screenEl.innerHTML, /テスト選択へ戻って、やり直してください。/);
   screenEl.button('[data-role="back"]').click();
   assert.deepEqual(exits, ["exit"]);
 });
@@ -264,17 +267,22 @@ test("練習のエラー: 練習を破棄し、エラーの種類ごとの見出
   stages.calls.toneCheck[0].onProceed();
   stages.calls.practice[0].onError({ kind: "duration" });
   assert.equal(stages.destroyed.practice, 1);
-  assert.match(screenEl.innerHTML, new RegExp(STAGE_ERROR_TITLE.duration));
+  assert.match(screenEl.innerHTML, new RegExp(ERROR_KINDS["audio-duration"].title));
   assert.match(screenEl.innerHTML, /研究者へお知らせください。テスト選択へ戻って/);
   assert.ok(screenEl.button('[data-role="back"]'));
 });
 
-test("エラーの見出し・本文: load / duration / schedule。不明な種類は load と同じ見出し", () => {
-  assert.deepEqual(STAGE_ERROR_TITLE, { load: "音声を読み込めませんでした", duration: "音源の長さが想定と異なります", schedule: "音声を再生できませんでした" });
-  assert.equal(stageErrorMessage("load"), "テスト選択へ戻って、最初からやり直してください。");
-  const { screenEl, stages } = setup({ onExit: () => {} });
-  stages.calls.toneCheck[0].onError({ kind: "unknown" });
-  assert.match(screenEl.innerHTML, /音声を読み込めませんでした/);
+test("エラーの見出し: load / duration / schedule / start は、表の audio-load / audio-duration / audio-play / audio-start。不明な種類は load と同じ", () => {
+  const titleOf = (notice) => {
+    const { screenEl, stages } = setup({ onExit: () => {} });
+    stages.calls.toneCheck[0].onError({ kind: notice });
+    return screenEl.innerHTML.match(/<h2[^>]*>([^<]+)<\/h2>/)[1];
+  };
+  assert.equal(titleOf("load"), ERROR_KINDS["audio-load"].title);
+  assert.equal(titleOf("duration"), ERROR_KINDS["audio-duration"].title);
+  assert.equal(titleOf("schedule"), ERROR_KINDS["audio-play"].title);
+  assert.equal(titleOf("start"), ERROR_KINDS["audio-start"].title);
+  assert.equal(titleOf("unknown"), ERROR_KINDS["audio-load"].title);
 });
 
 test("onExit を渡さないと、エラー画面に戻るボタンを出さない(開発用ページ)", () => {

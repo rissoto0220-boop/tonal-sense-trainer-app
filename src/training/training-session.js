@@ -38,9 +38,6 @@ export const REPLAY_MODES = ["question-only", "with-setup"];
 export const SESSION_TEXT = {
   finishedTitle: "訓練が終了しました",
   backToMenus: "メニュー選択へ戻る",
-  // 音声エラーの画面(メニュー選択へ戻れる。以前は文だけで、再読み込みしかなかった。2026-11-14)。
-  audioErrorTitle: "音声を読み込めませんでした",
-  audioErrorMessage: "メニュー選択へ戻って、やり直してください。",
 };
 
 export function buildFinishedHtml(correctCount, questionCount) {
@@ -103,11 +100,12 @@ export function runTrainingSession({
 
   function showAudioError() {
     teardown();
+    // 見出し・文言はエラーの種類の表(src/shared/error-kinds.js)。ここまでの回答は、audio_error として保存される。
     showErrorScreen({
       screenEl,
-      title: SESSION_TEXT.audioErrorTitle,
-      message: SESSION_TEXT.audioErrorMessage,
-      backLabel: SESSION_TEXT.backToMenus,
+      kind: "audio-load",
+      impact: "recorded-interrupted",
+      backTo: "メニュー選択",
       onBack: () => { if (!destroyed) onExit(); },
     });
     onAudioError();
