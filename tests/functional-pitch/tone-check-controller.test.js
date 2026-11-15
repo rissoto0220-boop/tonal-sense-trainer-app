@@ -271,3 +271,27 @@ test("音源の長さは読み込んだ音源から決める(長さの検査は�
   env.tick(2.6); // 開始10.5 + 2.0 = 12.5秒 を過ぎる
   assert.equal(view.stateOf("recorder"), "played");
 });
+
+// 2026-11-15(フェーズ5-B): 起動の失敗と、読み込みの失敗を、位置で分ける。
+test("音声の起動に失敗: kind \"start\" で onError。音源の読み込みへは進まず、全て無効のまま", async () => {
+  const failure = new Error("blocked");
+  const { env, view, errors, controller } = setup({}, { resumeAudioContextFn: () => Promise.reject(failure) });
+  controller.play("recorder");
+  await flush();
+  assert.deepEqual(errors, [{ kind: "start", error: failure }]);
+  assert.deepEqual(env.loadedSrcs, [], "起動に失敗したら、読み込みを始めない");
+  assert.equal(view.lastPlayEnabled(), false);
+  assert.equal(view.lastProceedEnabled(), false);
+  assert.equal(view.stateOf("recorder"), "idle");
+  controller.play("piano"); // エラー後は何も受け付けない
+  await flush();
+  assert.equal(errors.length, 1);
+});
+
+test("音声の起動は成功し、読み込みに失敗: 今までどおり kind \"load\"", async () => {
+  const failure = new Error("404");
+  const { errors, controller } = setup({}, { loadAudioBufferFn: () => Promise.reject(failure) });
+  controller.play("piano");
+  await flush();
+  assert.deepEqual(errors, [{ kind: "load", error: failure }]);
+});

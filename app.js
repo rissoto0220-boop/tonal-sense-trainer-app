@@ -378,7 +378,21 @@ const NO_OP_TRAINING_RECORDER = {
 // メニューのボタンを押した操作の中で、音声(AudioContext)を有効化してから始める。
 async function startTraining(menu) {
   const { replayMode, questionCount } = resolveTrainingOptions(window.location);
-  await resumeAudioContext();
+  // 音声の起動を待つ間(最大5秒)、他のメニューを押せないよう、先に準備中の画面にする。
+  screenEl.innerHTML = `<div class="panel center"><h2>音声の準備</h2><p class="status">音声を準備しています…</p></div>`;
+  try {
+    await resumeAudioContext();
+  } catch {
+    // 起動できなければ、記録はまだ作っていない(影響 not-recorded)。メニュー選択へ戻れる。
+    showErrorScreen({
+      screenEl,
+      kind: "audio-start",
+      impact: "not-recorded",
+      backTo: "メニュー選択",
+      onBack: showTrainingMenus,
+    });
+    return;
+  }
   // サンプルは保存しない(複数回答の保存形式・CSVの形が未決定のため、研究データに混ぜない)。
   const recorder = menu.sample ? NO_OP_TRAINING_RECORDER : createTrainingRecorder(participantId, { storage: localStorage });
   // 訓練の最中に誤ってページを閉じないよう、ブラウザの確認を出す(終われば解除する)。
@@ -434,9 +448,24 @@ function showPracticeIntro() {
     // (相対音感の練習・本番画面で見つかったのと同じ不具合)。
     holdTestUnloadGuard(); // 練習の開始から、結果・再生エラーまで確認を出す
     screenEl.innerHTML = `<div class="panel center"><h2>音声の準備</h2><p class="status">音声を準備しています…</p></div>`;
+    // 起動の失敗は、resumeAudioContext() だけを包む then の「失敗」側で扱う(成功後の処理の例外を取り違えないため)。
     resumeAudioContext().then(() => {
       runPractice();
-    });
+    }, failAudioStart);
+  });
+}
+
+// 音声の仕組みを始められなかったとき。まだ回答はないが、セッションは中断として保存してから(この保存で、
+// ページを閉じる前の確認も外れる)、エラー画面を出す。見出し・文言はエラーの種類の表(src/shared/error-kinds.js)。
+function failAudioStart() {
+  finalizeSession(currentSession, "interrupted");
+  persistCurrentSession();
+  showErrorScreen({
+    screenEl,
+    kind: "audio-start",
+    impact: "session-interrupted",
+    backTo: "テスト選択",
+    onBack: showTestSelection,
   });
 }
 

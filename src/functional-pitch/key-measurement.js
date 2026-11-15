@@ -15,6 +15,7 @@ import {
   buildLoadErrorHtml,
   buildInterruptedHtml,
   buildInternalErrorHtml,
+  buildAudioStartErrorHtml,
   showBackScreen,
   KEY_LABEL,
 } from "./measurement-screens.js";
@@ -140,16 +141,21 @@ export function runKeyMeasurement({
   const showLoadError = (failures) => showBack(buildLoadErrorHtml(failures));
 
   // AudioContextの有効化(クリックの中で呼ばれる)→ 10個の音源の読み込みと確認 → 測定の開始。
+  // 起動の失敗と、読み込みの失敗は、then の「失敗」側の位置で分ける(起動の失敗は、専用のエラー画面)。
   Promise.resolve()
     .then(() => resumeAudioContextFn())
-    .then(() => loadKeyPhrasesFn(keyCode))
-    .then((result) => {
-      if (destroyed) return;
-      if (!result.ok) showLoadError(result.failures);
-      else startTrials();
-    }, (error) => {
-      if (!destroyed) showLoadError([{ src: "", reason: "load", error }]);
-    });
+    .then(
+      () => loadKeyPhrasesFn(keyCode).then((result) => {
+        if (destroyed) return;
+        if (!result.ok) showLoadError(result.failures);
+        else startTrials();
+      }, (error) => {
+        if (!destroyed) showLoadError([{ src: "", reason: "load", error }]);
+      }),
+      () => {
+        if (!destroyed) showBack(buildAudioStartErrorHtml());
+      },
+    );
 
   return { destroy };
 }

@@ -7,6 +7,7 @@ import {
   buildLoadErrorHtml,
   buildInterruptedHtml,
   buildInternalErrorHtml,
+  buildAudioStartErrorHtml,
   showKeySelectScreen,
   showBackScreen,
 } from "../../src/functional-pitch/measurement-screens.js";
@@ -98,6 +99,16 @@ test("中断画面: 回答済みの試行数を表示し、Key選択へ戻れる
   // エラーの種類(音の時計が通知した種類を表の種類に直したもの)で、見出しが変わる
   assert.match(buildInterruptedHtml(1, "audio-play"), /<h2 tabindex="-1">音声を再生できませんでした<\/h2>/);
   assert.match(buildInterruptedHtml(1, "audio-duration"), /<h2 tabindex="-1">音源の長さが想定と異なります<\/h2>/);
+});
+
+test("音声の起動エラー画面: 見出し・何が起きたか・まだ記録は残っていない・研究者への連絡つきの次にすべきこと・Key選択へ戻る", () => {
+  const html = buildAudioStartErrorHtml();
+  assert.match(html, /<h2 tabindex="-1">音声を始められませんでした<\/h2>/);
+  assert.match(html, /この端末で、音声を使い始められませんでした。/);
+  assert.match(html, /まだ記録は残っていません。/);
+  assert.match(html, /研究者へお知らせください。Key選択へ戻って、やり直してください。/);
+  assert.match(html, /data-role="back">Key選択へ戻る<\/button>/);
+  assertNoScoreWords(html);
 });
 
 test("内部エラー画面: Key選択へ戻れる。まだ記録は残っていない", () => {

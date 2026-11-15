@@ -65,6 +65,11 @@ export function buildInterruptedHtml(completedCount, kind = "audio-load") {
   });
 }
 
+// 音声の仕組みを始められなかったとき(測定の開始前なので、まだ記録は残っていない)。
+export function buildAudioStartErrorHtml() {
+  return buildErrorScreenHtml({ kind: "audio-start", impact: "not-recorded", backTo: "Key選択" });
+}
+
 // 90試行の生成結果が検査に通らなかったとき(通常は起きない内部エラー)。
 export function buildInternalErrorHtml() {
   return buildErrorScreenHtml({ kind: "setup", impact: "not-recorded", backTo: "Key選択" });

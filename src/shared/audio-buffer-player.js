@@ -21,15 +21,50 @@ function getAudioContext() {
   return sharedContext;
 }
 
+// 音声の仕組み(AudioContext)を始められなかったことを表す(2026-11-15 エラーの見せ方の統一 フェーズ5-B)。
+// reason: "unsupported"(AudioContext を作れない)/ "resume-failed"(再開が失敗)/ "timeout"(返事が来ない)。
+// 元のエラーは cause。呼び出し側は、resumeAudioContext() だけを包む then(成功, 失敗) の「失敗」側で、
+// 起動失敗として扱う(エラーの種類 audio-start。src/shared/error-kinds.js)。
+export class AudioStartError extends Error {
+  constructor(reason, options = {}) {
+    super(`音声を始められませんでした(${reason})`, options.cause === undefined ? undefined : { cause: options.cause });
+    this.name = "AudioStartError";
+    this.reason = reason;
+  }
+}
+
+// 起動の返事を待つ時間。これを過ぎたら、起動失敗(timeout)にする(iOS などで、再開の返事が来ないことがあるため)。
+// 対象は起動の手順だけで、音声ファイルの読み込みや、各問題の再生には、時間切れを付けていない。
+export const AUDIO_START_TIMEOUT_MS = 5000;
+
 // ブラウザの自動再生制限により、AudioContextはページ読み込み直後は一時停止(suspended)状態の
 // ことがある。参加者が実際にクリックした操作の中から呼び出すこと(絶対音感の「練習を開始」、
 // 相対音感の本番開始操作など)。
-export function resumeAudioContext() {
-  const context = getAudioContext();
-  if (context.state === "suspended") {
-    return context.resume();
+// 動いていれば(running)すぐ成功する。それ以外(suspended・iOS の interrupted など)は、再開を試みる。
+// AudioContext を作れない・再開が失敗・timeoutMs たっても返事がない、のときは AudioStartError で失敗する。
+export function resumeAudioContext({ timeoutMs = AUDIO_START_TIMEOUT_MS } = {}) {
+  let context;
+  try {
+    context = getAudioContext();
+  } catch (cause) {
+    return Promise.reject(new AudioStartError("unsupported", { cause }));
   }
-  return Promise.resolve();
+  if (context.state === "running") return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new AudioStartError("timeout")), timeoutMs);
+    let resuming;
+    try {
+      resuming = Promise.resolve(context.resume());
+    } catch (cause) {
+      clearTimeout(timer);
+      reject(new AudioStartError("resume-failed", { cause }));
+      return;
+    }
+    resuming.then(
+      () => { clearTimeout(timer); resolve(); },
+      (cause) => { clearTimeout(timer); reject(new AudioStartError("resume-failed", { cause })); },
+    );
+  });
 }
 
 // AudioContextの現在時刻(秒)。スケジュールの基準・反応時間計測に使う。

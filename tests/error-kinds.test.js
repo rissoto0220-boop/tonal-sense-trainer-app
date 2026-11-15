@@ -11,8 +11,9 @@ test("エラーの種類の表: 種類の一覧。どれにも見出し・何が
   }
 });
 
-test("データへの影響の文言: 4つ", () => {
-  assert.deepEqual(Object.keys(ERROR_IMPACTS), ["recorded-interrupted", "interrupted-uncounted", "not-recorded", "kept-as-saved"]);
+test("データへの影響の文言: 5つ", () => {
+  assert.deepEqual(Object.keys(ERROR_IMPACTS), ["session-interrupted", "recorded-interrupted", "interrupted-uncounted", "not-recorded", "kept-as-saved"]);
+  assert.equal(ERROR_IMPACTS["session-interrupted"], "このテストは、中断として記録しました。");
   for (const text of Object.values(ERROR_IMPACTS)) assert.ok(text.endsWith("。"));
 });
 

@@ -79,8 +79,14 @@ export function showPracticeFlow({
       // 待たずに始めると、時計が一時停止したままの状態でスケジュールを計算してしまい、
       // 後から時計が動き出した際にスケジュールが早く(または即座に)発火してしまう。
       screenEl.innerHTML = `<div class="panel center"><h2>音声の準備</h2><p class="status">音声を準備しています…</p></div>`;
+      // 起動の失敗は、resumeAudioContext() だけを包む then の「失敗」側で扱う(成功後の処理の例外を取り違えないため)。
       resumeAudioContext().then(() => {
         runQuestion(0);
+      }, () => {
+        // 起動できなければ、まだ回答はないが、セッションは中断として保存してから、エラー画面を出す(絶対音感と同じ)。
+        sessionStore.finalizeSession(session, "interrupted");
+        persistSession();
+        showRelativeAudioError({ screenEl, kind: "audio-start", impact: "session-interrupted", onBack });
       });
     });
   }

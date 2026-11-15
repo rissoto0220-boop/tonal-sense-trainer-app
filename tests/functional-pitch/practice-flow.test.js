@@ -52,22 +52,24 @@ async function flush() {
   for (let i = 0; i < 5; i += 1) await Promise.resolve();
 }
 
-function setup() {
+function setup({ resumeAudioContextFn } = {}) {
   const screenEl = createFakeScreen();
   const mount = createFakeMount();
   const finished = [];
+  const errors = [];
   let resumeCalls = 0;
   const flow = runPracticeFlow({
     screenEl,
     onFinished: (result) => finished.push(result),
+    onError: (error) => errors.push(error),
     mountTrialScreenFn: mount,
-    resumeAudioContextFn: () => { resumeCalls += 1; return Promise.resolve(); },
+    resumeAudioContextFn: resumeAudioContextFn ?? (() => { resumeCalls += 1; return Promise.resolve(); }),
   });
   const confirmCurrent = (n = 1) => {
     const starts = mount.allStarts();
     starts[starts.length - 1].onConfirmed(CONFIRMED(n));
   };
-  return { screenEl, mount, finished, flow, confirmCurrent, resumeCalls: () => resumeCalls };
+  return { screenEl, mount, finished, errors, flow, confirmCurrent, resumeCalls: () => resumeCalls };
 }
 
 test("終了画面のHTML: 「本番を開始する」と「練習をもう一度行う」の2つのボタン", () => {
@@ -176,4 +178,22 @@ test("練習の試行画面には、見出し「練習」を渡す", async () =>
   const env = setup();
   await flush();
   assert.deepEqual(env.mount.mounts[0].display, { heading: "練習" });
+});
+
+// 2026-11-15(フェーズ5-B): 音声の起動の失敗は、kind "start" として通知する(試行画面は作らない)。
+test("音声の起動に失敗したら、onError({ kind: \"start\" }) を呼び、試行画面を作らない", async () => {
+  const failure = new Error("blocked");
+  const { mount, errors } = setup({ resumeAudioContextFn: () => Promise.reject(failure) });
+  await flush();
+  assert.deepEqual(errors, [{ kind: "start", error: failure }]);
+  assert.equal(mount.mounts.length, 0);
+});
+
+test("起動に失敗する前に destroy されていたら、onError を呼ばない", async () => {
+  let rejectResume;
+  const { errors, flow } = setup({ resumeAudioContextFn: () => new Promise((_, reject) => { rejectResume = reject; }) });
+  flow.destroy();
+  rejectResume(new Error("late"));
+  await flush();
+  assert.deepEqual(errors, []);
 });

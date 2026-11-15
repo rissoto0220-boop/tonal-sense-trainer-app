@@ -29,7 +29,8 @@ test("app.js: 旗がないときの説明文は「現在準備中です。」", 
 // 送信には、引き続き触れない(サーバーでの種別が未決定)。
 test("app.js: 音感訓練の起動は、参加者IDつきでブラウザに保存するが、送信の仕組みには触れない", () => {
   const body = functionBody("async function startTraining(menu)");
-  assert.match(body, /await resumeAudioContext\(\);\n[^\n]*\n\s+const recorder = menu\.sample \? NO_OP_TRAINING_RECORDER : createTrainingRecorder\(participantId, \{ storage: localStorage \}\);/);
+  // 2026-11-15: 音声の起動に失敗したら、記録を作る前にエラー画面を出す(try/catch)。起動に成功してから、記録係を作る
+  assert.match(body, /await resumeAudioContext\(\);\n  \} catch \{[\s\S]*?return;\n  \}\n[^\n]*\n\s+const recorder = menu\.sample \? NO_OP_TRAINING_RECORDER : createTrainingRecorder\(participantId, \{ storage: localStorage \}\);/);
   assert.match(body, /runTrainingSession\(/);
   for (const name of ["onSessionStarted", "onTrialConfirmed", "onTrialUpdated"]) {
     assert.match(body, new RegExp(`${name}: recorder\\.${name},`), name);

@@ -17,3 +17,16 @@ test("見出し・何が起きたか・データへの影響(中断として記�
   screenEl.el('[data-role="back"]').click();
   assert.equal(backs, 1);
 });
+
+// 2026-11-15(フェーズ5-B): 音声の起動の失敗は、kind・impact を渡して、同じ画面を出す。
+test("kind・impact を渡せる: 音声の起動の失敗(audio-start)は、まだ回答がないので「このテストは、中断として記録しました。」", () => {
+  const screenEl = createFakeDom();
+  let backs = 0;
+  showRelativeAudioError({ screenEl, kind: "audio-start", impact: "session-interrupted", onBack: () => { backs += 1; } });
+  assert.equal(screenEl.text("h2"), "音声を始められませんでした");
+  assert.match(screenEl.innerHTML, /この端末で、音声を使い始められませんでした。/);
+  assert.match(screenEl.innerHTML, /このテストは、中断として記録しました。/);
+  assert.match(screenEl.innerHTML, /研究者へお知らせください。テスト選択へ戻って、やり直してください。/);
+  screenEl.el('[data-role="back"]').click();
+  assert.equal(backs, 1);
+});

@@ -238,12 +238,40 @@ test("音源の読み込みに失敗したら、測定を始めず、失敗し�
   assert.deepEqual(env.backs, ["back"]);
 });
 
-test("AudioContextの有効化・読み込み処理そのものが失敗しても、エラー画面になる", async () => {
+// 2026-11-15(フェーズ5-B): 音声の起動の失敗は、専用のエラー画面(以前は、ファイル名が空の読み込みエラー)。
+test("音声の起動に失敗したら、測定を始めず、「音声を始められませんでした」の画面になり、Key選択へ戻れる(まだ記録は残っていない)", async () => {
   const env = setup({ resumeAudioContextFn: () => Promise.reject(new Error("blocked")) });
   await flush();
   assert.equal(env.mount.mounts.length, 0);
-  assert.match(env.screenEl.innerHTML, /音声を読み込めませんでした/); // 起動失敗を専用の画面にするのはフェーズ5-B
+  assert.equal(env.measured.length, 0);
+  assert.equal(env.guard.enabled, 0);
+  assert.equal(env.loaded.length, 0, "起動に失敗したら、音源の読み込みへ進まない");
+  assert.match(env.screenEl.innerHTML, /<h2 tabindex="-1">音声を始められませんでした<\/h2>/);
+  assert.match(env.screenEl.innerHTML, /この端末で、音声を使い始められませんでした。/);
+  assert.match(env.screenEl.innerHTML, /まだ記録は残っていません。/);
+  assert.match(env.screenEl.innerHTML, /研究者へお知らせください。Key選択へ戻って、やり直してください。/);
+  env.screenEl.button('[data-role="back"]').click();
+  assert.deepEqual(env.backs, ["back"]);
+});
+
+test("音源の読み込み処理そのものが失敗したら(起動は成功)、今までどおり読み込みエラーの画面になる", async () => {
+  const env = setup({ loadKeyPhrasesFn: () => Promise.reject(new Error("boom")) });
+  await flush();
+  assert.equal(env.mount.mounts.length, 0);
+  assert.match(env.screenEl.innerHTML, /音声を読み込めませんでした/);
+  assert.equal(env.screenEl.innerHTML.includes("音声を始められませんでした"), false);
   assert.ok(env.screenEl.button('[data-role="back"]'));
+});
+
+test("起動に失敗した後で destroy されていたら、画面を出さない", async () => {
+  let rejectResume;
+  const env = setup({ resumeAudioContextFn: () => new Promise((_, reject) => { rejectResume = reject; }) });
+  await flush(); // 起動は、次のマイクロタスクで始まる(resumeAudioContextFn が呼ばれ、返事を待っている状態になる)
+  const before = env.screenEl.innerHTML;
+  env.flow.destroy();
+  rejectResume(new Error("late"));
+  await flush();
+  assert.equal(env.screenEl.innerHTML, before);
 });
 
 test("試行順の検査に通らなければ、測定を始めず内部エラー画面にする", async () => {
