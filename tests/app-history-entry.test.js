@@ -45,3 +45,14 @@ test("絶対音感の履歴は、保存データを引数で受け取る。結�
   assert.match(source, /document\.getElementById\("history"\)\.addEventListener\("click", \(\) => showHistory\(\)\);/);
   assert.equal(/participantData\.sessions/.test(functionBody("function showHistory(data = participantData)")), false);
 });
+
+// 2026-11-15 研究者の決定: テスト選択は名前だけ。名前を押すと説明画面を出し、「始める」「履歴・CSVを見る」はそこから呼ぶ。
+test("テスト選択は説明画面につながる。「始める」は各テストの onStart、「履歴・CSVを見る」は onShowHistory、戻り先はテスト選択", () => {
+  assert.match(functionBody("function showTestSelection()"), /onSelect: showTestIntro,/);
+  const intro = functionBody("function showTestIntro(test)");
+  assert.match(intro, /showTestIntroScreen\(\{/);
+  assert.match(intro, /lines: TEST_INTRO_TEXT\[test\.id\] \?\? \[\],/);
+  assert.match(intro, /onStart: test\.onStart,/);
+  assert.match(intro, /onShowHistory: test\.onShowHistory,/);
+  assert.match(intro, /onBack: showTestSelection,/);
+});

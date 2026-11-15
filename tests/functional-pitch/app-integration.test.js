@@ -13,8 +13,10 @@ test("app.js: 機能的音感の選択可否は、旗の解釈(resolveFunctional
   assert.equal(/available: true/.test(entry.split("},")[0]), false); // 常に有効になっていない
 });
 
-test("app.js: 旗がないときの説明文は従来どおり「現在準備中です。」", () => {
-  assert.match(entry, /functionalPitchOptions\.enabled \? "[^"]+" : "現在準備中です。"/);
+// 2026-11-15: テスト選択は名前だけにした。旗がないときは、説明文ではなく「準備中」の印(test-selection-screen.js)で選べなくする。
+test("app.js: 旗がないときは選べない(available が旗に従う)。説明文は持たない(説明は test-intro-text.js)", () => {
+  assert.match(entry, /available: functionalPitchOptions\.enabled,/);
+  assert.equal(entry.includes("description:"), false);
 });
 
 // 2026-10-27: 絶対音感・相対音感の「API送信を入れる前」と同じく、参加者IDごとにブラウザへ保存し、

@@ -21,8 +21,10 @@ test("app.js: 音感訓練の選択可否は、旗の解釈(resolveTrainingOptio
   assert.equal(/available: true/.test(entry), false);
 });
 
-test("app.js: 旗がないときの説明文は「現在準備中です。」", () => {
-  assert.match(entry, /trainingOptions\.enabled \? "[^"]+" : "現在準備中です。"/);
+// 2026-11-15: テスト選択は名前だけにした。旗がないときは、説明文ではなく「準備中」の印(test-selection-screen.js)で選べなくする。
+test("app.js: 旗がないときは選べない(available が旗に従う)。説明文は持たない(説明は test-intro-text.js)", () => {
+  assert.match(entry, /available: trainingOptions\.enabled,/);
+  assert.equal(entry.includes("description:"), false);
 });
 
 // 2026-10-28: 機能的音感と同じく、参加者IDごとにブラウザへ保存し、履歴・CSVを出せるようにした(T7)。

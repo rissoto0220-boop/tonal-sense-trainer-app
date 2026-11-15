@@ -197,9 +197,9 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 .test-button:disabled::before { color: #a8b0b9; }
 .test-badge { flex: none; font-size: .8rem; font-weight: 700; color: var(--muted); border: 1.5px solid var(--muted); border-radius: 999px; padding: 2px 12px; }
 .test-description { margin: 0 14px 0 72px; color: var(--muted); font-size: .93rem; line-height: 1.7; }
-/* 各テストの「履歴・CSVを見る」(2026-11-14)。説明と同じ左の余白にそろえ、テストを始めるボタンより控えめにする */
-.test-history { margin: 8px 14px 0 72px; }
-.test-history-button { min-height: 44px; padding: 8px 16px; font-size: .9rem; }
+/* テストの説明画面(src/shared/test-intro-screen.js、2026-11-15)。文章は1段落ずつ、行間をゆったりとる */
+.test-intro h2:focus { outline: none; }
+.test-intro-text { margin: 14px 0 0; line-height: 1.8; overflow-wrap: anywhere; }
 
 /* 音感訓練のメニュー選択のタブ。選択中は、色だけでなく太字と下の太い線(形)で示す。
    タブが入りきらないときは、タブの列の中だけを横にスクロールさせる(ページ全体は横にスクロールさせない)。 */

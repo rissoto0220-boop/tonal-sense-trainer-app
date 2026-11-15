@@ -38,6 +38,8 @@ import { toCsv, downloadTextFile } from "./src/shared/csv.js";
 import { formatDisplayDateTime } from "./src/shared/display-format.js";
 import { showVersionSelectionScreen } from "./src/relative-pitch/version-selection-screen.js";
 import { showTestSelectionScreen } from "./src/shared/test-selection-screen.js";
+import { showTestIntroScreen } from "./src/shared/test-intro-screen.js";
+import { TEST_INTRO_TEXT } from "./src/shared/test-intro-text.js";
 import { showPracticeFlow } from "./src/relative-pitch/practice-screen.js";
 import { showMainTestFlow } from "./src/relative-pitch/main-test-screen.js";
 import {
@@ -170,8 +172,10 @@ function showIdConfirm() {
 
 // --- テスト選択 ---
 
-// テスト選択画面に並べるテストの一覧。テストを追加するときはここに1件足す。
-// onShowHistory: テスト選択の「履歴・CSVを見る」(2026-11-14 研究者の決定)。保存データをその場で読むだけで、
+// テスト選択画面に並べるテストの一覧。テストを追加するときはここに1件足す(説明の文章は src/shared/test-intro-text.js にも足す)。
+// テスト選択は名前だけ。名前を押すと説明画面(showTestIntro)を出し、「始める」で onStart、「履歴・CSVを見る」で onShowHistory を呼ぶ
+// (2026-11-15 研究者の決定)。
+// onShowHistory: 説明画面の「履歴・CSVを見る」(2026-11-14 研究者の決定。2026-11-15 に、テスト選択から説明画面へ移した)。保存データをその場で読むだけで、
 // セッションは始めない(中断の確定もしない)。履歴画面の戻り先はテスト選択。
 function availableTests() {
   // 機能的音感は未完成のため、URLに ?functional=dev があるときだけ選べる(本番では「準備中」のまま)。
@@ -183,7 +187,6 @@ function availableTests() {
     {
       id: "absolute-pitch",
       title: "絶対音感テスト",
-      description: "鳴った音の音名を答えます(練習3問・本番最大60問)",
       available: true,
       onStart: startAbsolutePitchTest,
       onShowHistory: () => showHistory(loadAbsolutePitchParticipantData(participantId, localStorage)),
@@ -191,7 +194,6 @@ function availableTests() {
     {
       id: "relative-pitch",
       title: "相対音感テスト",
-      description: "基準音から目的音の階名を答えます(簡易版12問・完全版44問)",
       available: true,
       onStart: startRelativePitchTest,
       onShowHistory: () => showRelativePitchHistoryScreen({
@@ -204,7 +206,6 @@ function availableTests() {
     {
       id: "functional-pitch",
       title: "機能的音感テスト",
-      description: functionalPitchOptions.enabled ? "2つのフレーズの印象の変化を評定します(開発確認用)" : "現在準備中です。",
       available: functionalPitchOptions.enabled,
       onStart: startFunctionalPitchTest,
       onShowHistory: () => showFunctionalPitchHistoryScreen({
@@ -217,7 +218,6 @@ function availableTests() {
     {
       id: "training",
       title: "音感訓練",
-      description: trainingOptions.enabled ? "メロディの音や和音を答えます(開発確認用)" : "現在準備中です。",
       available: trainingOptions.enabled,
       onStart: showTrainingMenus,
       onShowHistory: () => showTrainingHistoryScreen({
@@ -236,7 +236,20 @@ function showTestSelection() {
     screenEl,
     participantId,
     tests: availableTests(),
+    onSelect: showTestIntro,
     onChangeParticipant: restartApp,
+  });
+}
+
+// テストの説明画面。「始める」を押すまでは、セッションも音声も始めない。
+function showTestIntro(test) {
+  showTestIntroScreen({
+    screenEl,
+    title: test.title,
+    lines: TEST_INTRO_TEXT[test.id] ?? [],
+    onStart: test.onStart,
+    onShowHistory: test.onShowHistory,
+    onBack: showTestSelection,
   });
 }
 
