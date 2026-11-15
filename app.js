@@ -23,6 +23,7 @@ import {
   finalizeQuestion,
   finalizeSession,
   persistParticipantData,
+  loadParticipantData as loadAbsolutePitchParticipantData,
 } from "./src/absolute-pitch/session-store.js";
 import { toLocalIso } from "./src/shared/iso-time.js";
 import {
@@ -167,6 +168,8 @@ function showIdConfirm() {
 // --- テスト選択 ---
 
 // テスト選択画面に並べるテストの一覧。テストを追加するときはここに1件足す。
+// onShowHistory: テスト選択の「履歴・CSVを見る」(2026-11-14 研究者の決定)。保存データをその場で読むだけで、
+// セッションは始めない(中断の確定もしない)。履歴画面の戻り先はテスト選択。
 function availableTests() {
   // 機能的音感は未完成のため、URLに ?functional=dev があるときだけ選べる(本番では「準備中」のまま)。
   const functionalPitchOptions = resolveFunctionalPitchOptions(window.location);
@@ -180,6 +183,7 @@ function availableTests() {
       description: "鳴った音の音名を答えます(練習3問・本番最大60問)",
       available: true,
       onStart: startAbsolutePitchTest,
+      onShowHistory: () => showHistory(loadAbsolutePitchParticipantData(participantId, localStorage)),
     },
     {
       id: "relative-pitch",
@@ -187,6 +191,12 @@ function availableTests() {
       description: "基準音から目的音の階名を答えます(簡易版12問・完全版44問)",
       available: true,
       onStart: startRelativePitchTest,
+      onShowHistory: () => showRelativePitchHistoryScreen({
+        screenEl,
+        participantId,
+        participantData: loadRelativePitchParticipantData(participantId, localStorage),
+        onBack: showTestSelection,
+      }),
     },
     {
       id: "functional-pitch",
@@ -194,6 +204,12 @@ function availableTests() {
       description: functionalPitchOptions.enabled ? "2つのフレーズの印象の変化を評定します(開発確認用)" : "現在準備中です。",
       available: functionalPitchOptions.enabled,
       onStart: startFunctionalPitchTest,
+      onShowHistory: () => showFunctionalPitchHistoryScreen({
+        screenEl,
+        participantId,
+        participantData: loadFunctionalPitchParticipantData(participantId, localStorage),
+        onBack: showTestSelection,
+      }),
     },
     {
       id: "training",
@@ -201,6 +217,12 @@ function availableTests() {
       description: trainingOptions.enabled ? "メロディの音や和音を答えます(開発確認用)" : "現在準備中です。",
       available: trainingOptions.enabled,
       onStart: showTrainingMenus,
+      onShowHistory: () => showTrainingHistoryScreen({
+        screenEl,
+        participantId,
+        participantData: loadTrainingParticipantData(participantId, localStorage),
+        onBack: showTestSelection,
+      }),
     },
   ];
 }
@@ -643,13 +665,15 @@ function showResult(correctCount) {
         <button id="to-selection" class="primary">テスト選択へ戻る</button>
       </div>
     </div>`;
-  document.getElementById("history").addEventListener("click", showHistory);
+  document.getElementById("history").addEventListener("click", () => showHistory());
   document.getElementById("to-selection").addEventListener("click", showTestSelection);
 }
 
 // --- 履歴・CSV出力(仕様20〜22章) ---
 
-function showHistory() {
+// data: 表示する保存データ。省略すると、テストを受けたときに読み込んだもの(結果画面から開くとき)。
+// テスト選択から開くときは、その場で読んだ保存データを渡す。
+function showHistory(data = participantData) {
   let includeInterruptedInList = false;
   let includeInterruptedInCsv = false;
 
@@ -659,7 +683,7 @@ function showHistory() {
   }
 
   function render() {
-    const summary = buildHistorySummary(participantData.sessions, includeInterruptedInList);
+    const summary = buildHistorySummary(data.sessions, includeInterruptedInList);
     const listHtml = summary.length
       ? `<ul class="history-list">${summary.map(formatRow).join("")}</ul>`
       : `<p class="note">まだ記録がありません。</p>`;
@@ -686,11 +710,11 @@ function showHistory() {
       includeInterruptedInCsv = e.target.checked;
     });
     document.getElementById("download-responses").addEventListener("click", () => {
-      const rows = buildResponseDetailRows(participantId, participantData.sessions, includeInterruptedInCsv);
+      const rows = buildResponseDetailRows(participantId, data.sessions, includeInterruptedInCsv);
       downloadTextFile(buildCsvFilename(participantId, "responses"), toCsv(RESPONSE_DETAIL_HEADERS, rows));
     });
     document.getElementById("download-sessions").addEventListener("click", () => {
-      const rows = buildSessionHistoryRows(participantId, participantData.sessions, includeInterruptedInCsv);
+      const rows = buildSessionHistoryRows(participantId, data.sessions, includeInterruptedInCsv);
       downloadTextFile(buildCsvFilename(participantId, "sessions"), toCsv(SESSION_HISTORY_HEADERS, rows));
     });
     document.getElementById("to-selection").addEventListener("click", showTestSelection);
