@@ -11,6 +11,7 @@ import { renderAccount } from "./account.js";
 import { renderPasskeys } from "./passkeys.js";
 import { renderInvitations } from "./invitations.js";
 import { renderMembers } from "./members.js";
+import { renderFamilies } from "./families.js";
 
 // 組織の API は、家族の API とは別の Cookie・別のパス（…/api/v1/org）を使う。
 // ログイン後に 401 UNAUTHENTICATED（期限切れなど）になったら、ログイン画面へ戻す。
@@ -60,6 +61,7 @@ const MENU = [
     about: (org) => (org.isSuper ? "すべてのユーザの利用データ（テスト結果）の閲覧と、CSV・ZIP のダウンロード。" : "この組織に所属している家族のユーザの、利用データ（テスト結果）の閲覧と、CSV・ZIP のダウンロード。"),
     note: (org) => (org.isSuper ? "セッションの削除（O26）は、各セッションの詳細画面に表示します（運用担当者のみ、パスワードの再確認が必要）。" : null),
   },
+  { id: "families", label: "家族の管理", superOnly: true, api: "O27〜O29", render: renderFamilies },
   { id: "organizations", label: "組織の管理", superOnly: true, api: "O17〜O21", render: renderOrganizations },
   { id: "passkeys", label: "パスキーの管理", superOnly: true, api: "O8〜O11", render: renderPasskeys },
   { id: "account", label: "アカウント", api: "O6", render: renderAccount },

@@ -29,6 +29,12 @@ function renderUserChoices() {
   }
 }
 
+// 所属している組織の名前（所属していなければ「なし」）
+function renderOrganization() {
+  const text = family.organization?.name ?? "なし";
+  for (const el of document.querySelectorAll(".orgLabel")) el.textContent = text;
+}
+
 function showUserSelection() {
   currentUserId = null;
   setError("selectError", null);
@@ -179,10 +185,11 @@ async function start() {
     family = current.family;
     const expires = new Date(current.session.expiresAt).toLocaleDateString("ja-JP");
     byId("device").textContent = `${current.session.deviceLabel}（${expires} までログインしたままになります）`;
+    renderOrganization();
     showUserSelection();
   } catch (error) {
     if (error?.status === 401) {
-      location.replace("login/"); // 未ログインなら、ログイン画面へ
+      showScreen("loggedOut"); // 未ログインなら、ログインしていないことを伝えて、ログインか新規登録を選ばせる
       return;
     }
     byId("loadError").textContent = error?.message ?? "読み込めませんでした。";
@@ -203,7 +210,7 @@ byId("backHome").addEventListener("click", showHome);
 byId("logout").addEventListener("click", async () => {
   try {
     await api.sessions.logout();
-    location.href = "login/";
+    showScreen("loggedOut");
   } catch (error) {
     setError("selectError", error);
   }

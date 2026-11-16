@@ -15,6 +15,7 @@ export { OrgAccountApi } from "./OrgAccountApi.js";
 export { OrgPasskeyApi } from "./OrgPasskeyApi.js";
 export { OrgInvitationApi } from "./OrgInvitationApi.js";
 export { OrgAdminApi } from "./OrgAdminApi.js";
+export { OrgFamilyApi } from "./OrgFamilyApi.js";
 export { TestDataApi } from "./TestDataApi.js";
 export { OrgTestDataApi } from "./OrgTestDataApi.js";
 export { RecoveryCode } from "./RecoveryCode.js";

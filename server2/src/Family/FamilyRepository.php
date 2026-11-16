@@ -129,6 +129,36 @@ final class FamilyRepository
         $stmt->execute([$organizationId, Time::toDb($now), $id]);
     }
 
+    /**
+     * すべての家族（登録が新しい順）と、所属している組織・ユーザ（表示順）。運用担当者の家族の管理で使う。
+     *
+     * @return list<array{id: string, createdAt: DateTimeImmutable, organization: ?array{id: string, name: string}, joinedAt: ?DateTimeImmutable, users: list<array{id: string, name: string}>}>
+     */
+    public function listAll(): array
+    {
+        $rows = $this->pdo->query(
+            'SELECT f.id AS family_id, f.created_at AS created_at, f.organization_joined_at AS joined_at, o.id AS organization_id, o.name AS organization_name, '
+            . 'u.id AS user_id, u.name AS user_name '
+            . 'FROM families f LEFT JOIN organizations o ON o.id = f.organization_id LEFT JOIN users u ON u.family_id = f.id '
+            . 'ORDER BY f.created_at DESC, f.id DESC, u.display_order ASC',
+        )->fetchAll();
+        $families = [];
+        foreach ($rows as $row) {
+            $familyId = (string) $row['family_id'];
+            $families[$familyId] ??= [
+                'id' => $familyId,
+                'createdAt' => Time::fromDb((string) $row['created_at']),
+                'organization' => $row['organization_id'] === null ? null : ['id' => (string) $row['organization_id'], 'name' => (string) $row['organization_name']],
+                'joinedAt' => $row['joined_at'] === null ? null : Time::fromDb((string) $row['joined_at']),
+                'users' => [],
+            ];
+            if ($row['user_id'] !== null) {
+                $families[$familyId]['users'][] = ['id' => (string) $row['user_id'], 'name' => (string) $row['user_name']];
+            }
+        }
+        return array_values($families);
+    }
+
     /** 組織への所属を解除する（個人ユーザに戻る）。 */
     public function leaveOrganization(string $id): void
     {

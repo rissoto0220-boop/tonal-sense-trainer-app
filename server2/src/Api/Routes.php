@@ -99,6 +99,9 @@ final class Routes
         self::patch($router, '/api/v1/org/organizations/{organizationId}', $services, fn (Services $s, Request $r, array $p) => (new OrgAdminController($s))->rename($r, $p)); // O19
         self::post($router, '/api/v1/org/organizations/{organizationId}/password-reset', $services, fn (Services $s, Request $r, array $p) => (new OrgAdminController($s))->resetPassword($r, $p)); // O20
         self::delete($router, '/api/v1/org/organizations/{organizationId}', $services, fn (Services $s, Request $r, array $p) => (new OrgAdminController($s))->delete($r, $p)); // O21
+        self::get($router, '/api/v1/org/families', $services, fn (Services $s, Request $r) => (new OrgFamilyController($s))->list($r));                              // O27
+        self::delete($router, '/api/v1/org/families/{familyId}/organization', $services, fn (Services $s, Request $r, array $p) => (new OrgFamilyController($s))->release($r, $p)); // O28
+        self::delete($router, '/api/v1/org/families/{familyId}', $services, fn (Services $s, Request $r, array $p) => (new OrgFamilyController($s))->delete($r, $p));  // O29
 
         // 利用データ（ApiSpec_TestData.md）
         self::post($router, '/api/v1/users/{userId}/test-sessions', $services, fn (Services $s, Request $r, array $p) => (new TestDataController($s))->submit($r, $p));            // #32

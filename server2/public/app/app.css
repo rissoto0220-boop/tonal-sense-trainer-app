@@ -79,6 +79,7 @@ select { font: inherit; color: inherit; background: var(--bg); border: 1px solid
 
 /* ---- ホーム（ユーザの選択・メニュー・家族の編集） ---- */
 .choices { display: flex; flex-direction: column; gap: 10px; margin: 12px 0; }
-.choices button { width: 100%; padding: 14px 18px; font-size: 17px; }
+.choices button, .choices .button { width: 100%; padding: 14px 18px; font-size: 17px; text-align: center; }
+.choice-note { margin: -4px 0 8px; }
 .family-user { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .family-user-name { flex: 1 1 100%; font-weight: 600; word-break: break-all; }

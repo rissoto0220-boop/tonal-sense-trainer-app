@@ -10,6 +10,7 @@ import { OrgAccountApi } from "./OrgAccountApi.js";
 import { OrgPasskeyApi } from "./OrgPasskeyApi.js";
 import { OrgInvitationApi } from "./OrgInvitationApi.js";
 import { OrgAdminApi } from "./OrgAdminApi.js";
+import { OrgFamilyApi } from "./OrgFamilyApi.js";
 import { OrgTestDataApi } from "./OrgTestDataApi.js";
 
 export class OrgClient {
@@ -21,6 +22,7 @@ export class OrgClient {
     this.passkeys = new OrgPasskeyApi(this.http, { credentials: options.credentials });
     this.invitations = new OrgInvitationApi(this.http);
     this.admin = new OrgAdminApi(this.http);
+    this.families = new OrgFamilyApi(this.http);
     this.testData = new OrgTestDataApi(this.http);
   }
 }

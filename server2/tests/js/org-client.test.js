@@ -39,6 +39,9 @@ test("運用担当者・組織の API が、仕様どおりのメソッド・パ
     [(a) => a.admin.update("o1", { nameKana: null }), "PATCH", "/api/v1/org/organizations/o1", { nameKana: null }],
     [(a) => a.admin.resetPassword("o1"), "POST", "/api/v1/org/organizations/o1/password-reset", {}],
     [(a) => a.admin.delete("o1"), "DELETE", "/api/v1/org/organizations/o1", undefined],
+    [(a) => a.families.list(), "GET", "/api/v1/org/families", undefined],
+    [(a) => a.families.release("f1"), "DELETE", "/api/v1/org/families/f1/organization", undefined],
+    [(a) => a.families.delete("f1"), "DELETE", "/api/v1/org/families/f1", undefined],
   ];
   for (const [fn, method, url, body] of cases) {
     const r = recorder([{ status: 200, body: {} }]);

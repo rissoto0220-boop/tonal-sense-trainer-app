@@ -12,6 +12,19 @@
 <main>
   <section data-screen="loading"><p>読み込んでいます…</p></section>
 
+  <!-- ログインしていないとき（初めて開いた・ログアウトした・Cookie を消した）。復旧コードの入力の前に、状況を伝えて、選ばせる -->
+  <section data-screen="loggedOut" hidden>
+    <h1>ログインしていません</h1>
+    <p>この端末では、ログインしていません。どちらかを選んでください。</p>
+    <div class="choices">
+      <a class="button primary" href="login/">復旧コードでログイン</a>
+      <p class="note choice-note">すでに登録している方。登録のときに控えた復旧コードを入力します。ブラウザのデータを消した場合や、別の端末で使う場合も、こちらです。</p>
+      <a class="button" href="signup/">新規ユーザ登録</a>
+      <p class="note choice-note">はじめての方。メールアドレスを入力して、登録します。</p>
+    </div>
+    <p class="note">組織から招待メールが届いている場合は、メールに書かれたリンクから、登録してください。</p>
+  </section>
+
   <section data-screen="select" hidden>
     <h1>ユーザの選択</h1>
     <p class="note">テストや訓練を行う人を選んでください。</p>
@@ -19,6 +32,7 @@
     <div class="card">
       <h2 style="margin-top:0">この端末</h2>
       <p id="device" class="note"></p>
+      <p class="note">所属している組織: <strong class="orgLabel"></strong></p>
     </div>
     <div class="row"><button id="logout" type="button">ログアウト</button></div>
     <p id="selectError" class="error" role="alert" hidden></p>
@@ -26,6 +40,7 @@
 
   <section data-screen="home" hidden>
     <h1 id="homeTitle"></h1>
+    <p class="note">所属している組織: <strong class="orgLabel"></strong></p>
     <div id="menu" class="choices"></div>
     <div id="familyEditArea" class="choices" hidden>
       <button id="editFamily" type="button">家族を編集</button>

@@ -47,7 +47,7 @@ ApiSpec_Auth.md の 0.3 と同じ（`Origin` ヘッダの検証と、`Content-Ty
 取り消せない操作・他の組織に影響する操作は、事前にパスワードを再入力して確認（O7）した端末（セッション）でのみ、5分間実行できる（`organization_sessions.elevated_until`）。
 
 - 確認していない、または5分を過ぎている場合は `403 ELEVATION_REQUIRED` を返す。
-- 対象の操作：パスキーの削除（O11）、組織のパスワードの再発行（O20）、組織の削除（O21）。
+- 対象の操作：パスキーの削除（O11）、組織のパスワードの再発行（O20）、組織の削除（O21）、家族の所属の解除（O28）、家族の削除（O29）。
 
 ### 0.5 入力値の規則
 
@@ -72,6 +72,7 @@ ApiSpec_Auth.md 0.5 のコード（`BAD_REQUEST`、`UNAUTHENTICATED`、`FORBIDDE
 | 403 | `SUPER_ONLY` | 運用担当者の組織のみが実行できる |
 | 409 | `DUPLICATE_ORGANIZATION_NAME` | 同じ組織名がある |
 | 409 | `DUPLICATE_LOGIN_ID` | 同じログインIDがある |
+| 409 | `NOT_A_MEMBER` | 家族が、どの組織にも所属していない（O28） |
 | 409 | `SUPER_ORGANIZATION_PROTECTED` | 運用担当者の組織は、名前の変更・パスワードの再発行・削除の対象外 |
 | 409 | `LAST_PASSKEY` | 最後のパスキーは削除できない |
 | 429 | `ORGANIZATION_PASSWORD_LOCKED` | パスワードの連続失敗によりロック中。`Retry-After` ヘッダにロック解除までの秒数を付ける |
@@ -101,6 +102,9 @@ ApiSpec_Auth.md 0.5 のコード（`BAD_REQUEST`、`UNAUTHENTICATED`、`FORBIDDE
 | O19 | PATCH | `/api/v1/org/organizations/{organizationId}` | 段階1 | | 運用担当者 | 組織名・読み仮名の変更 |
 | O20 | POST | `/api/v1/org/organizations/{organizationId}/password-reset` | 段階1 | 必要 | 運用担当者 | パスワードの再発行 |
 | O21 | DELETE | `/api/v1/org/organizations/{organizationId}` | 段階1 | 必要 | 運用担当者 | 組織の削除 |
+| O27 | GET | `/api/v1/org/families` | 段階1 | | 運用担当者 | すべての家族の一覧 |
+| O28 | DELETE | `/api/v1/org/families/{familyId}/organization` | 段階1 | 必要 | 運用担当者 | 家族の所属の解除 |
+| O29 | DELETE | `/api/v1/org/families/{familyId}` | 段階1 | 必要 | 運用担当者 | 家族の削除（アカウントの削除） |
 
 ### 0.8 共通のデータ形式
 
@@ -461,7 +465,7 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 
 **エラー**：`401 UNAUTHENTICATED`、`404 NOT_FOUND`
 
-## 6. 組織の管理（運用担当者の組織のみ）
+## 6. 組織・家族の管理（運用担当者の組織のみ）
 
 通常の組織が呼び出した場合は、`403 SUPER_ONLY` を返す。運用担当者の組織は、一覧（6.1）には表示されるが、名前の変更・パスワードの再発行・削除の対象外である（`409 SUPER_ORGANIZATION_PROTECTED`）。
 
@@ -592,6 +596,63 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 
 **エラー**：`401 UNAUTHENTICATED`、`403 SUPER_ONLY`、`403 ELEVATION_REQUIRED`、`404 NOT_FOUND`、`409 SUPER_ORGANIZATION_PROTECTED`
 
+### 6.6 すべての家族の一覧 `GET /api/v1/org/families`（O27）
+
+登録されているすべての家族（個人ユーザの家族を含む）の一覧を返す。通常の組織が呼び出した場合は `403 SUPER_ONLY`。
+
+**レスポンス** `200 OK`
+
+```json
+{
+  "families": [
+    {
+      "id": "0192f3e0-...",
+      "createdAt": "2026-11-04T09:30:00.000Z",
+      "organization": { "id": "0192f3c0-...", "name": "○○大学" },
+      "joinedAt": "2026-11-04T09:30:00.000Z",
+      "users": [
+        { "id": "0192f3a0-...", "name": "おとうさん" },
+        { "id": "0192f3a1-...", "name": "はなこ" }
+      ]
+    }
+  ]
+}
+```
+
+- 家族は、登録が新しい順。`users` は、表示順。組織に所属していない家族は、`organization` と `joinedAt` が `null`。
+- 参照できるのは、家族の ID・登録日時・所属・ユーザの ID とユーザ名のみ。復旧コード・パスワード・端末のログインは、参照できない。
+- 件数が多くなった場合のページングは、未決（10.）。
+
+**エラー**：`401 UNAUTHENTICATED`、`403 SUPER_ONLY`
+
+### 6.7 家族の所属の解除 `DELETE /api/v1/org/families/{familyId}/organization`（O28）
+
+家族を、所属している組織から外す（基本方針 10.6）。**確認（0.4）が必要**。家族は、個人ユーザになる。家族のアカウントは削除されない。
+
+**処理**（1つのトランザクション）：指定された家族を、行ロックして読む。存在しなければ `404 NOT_FOUND`。どの組織にも所属していなければ `409 NOT_A_MEMBER`。そうでなければ、`families.organization_id`・`organization_joined_at` を NULL にする。
+
+**レスポンス** `204 No Content`
+
+- 外された家族のユーザの利用データは、以降、元の組織から参照できなくなる。組織がすでにダウンロードしたデータは、消えない。運用担当者は、引き続き参照できる。
+- 自組織の家族を外す O16 と違い、他の組織の家族も対象にできる。
+
+**エラー**：`401 UNAUTHENTICATED`、`403 SUPER_ONLY`、`403 ELEVATION_REQUIRED`、`404 NOT_FOUND`、`409 NOT_A_MEMBER`
+
+### 6.8 家族の削除 `DELETE /api/v1/org/families/{familyId}`（O29）
+
+家族（アカウント）を削除する。**確認（0.4）が必要**。家族自身の退会（ApiSpec_Auth.md #21）と同じ結果になる。
+
+- `families` の行を削除する。ユーザ・パスキー・端末のログインは、外部キーの `ON DELETE CASCADE` で削除される。所属は、行ごとなくなる。
+- **利用データは削除しない**（基本方針 10.7）。外部キーを持たないため、そのまま残り、運用担当者のみが参照できる（7.）。
+- 削除した家族は、復旧コードでもログインできない。取り消せない。
+- クライアントは、家族のユーザ名と、取り消せないこと・利用データは残ることを、確認画面に表示する。
+
+**処理**（1つのトランザクション）：指定された家族を、行ロックして読む。存在しなければ `404 NOT_FOUND`。そうでなければ、`families` の行を削除する。
+
+**レスポンス** `204 No Content`
+
+**エラー**：`401 UNAUTHENTICATED`、`403 SUPER_ONLY`、`403 ELEVATION_REQUIRED`、`404 NOT_FOUND`
+
 ## 7. 利用データの参照
 
 - 利用データ（テスト結果）の参照・ダウンロード・削除の API（O22〜O26）は、ApiSpec_TestData.md で定義する。
@@ -609,7 +670,7 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 - パスキーの登録・削除
 - 組織の登録・名前の変更・削除
 - 招待メールの送信（件数のみ。送信先は記録しない）、招待の取り消し
-- 家族の所属からの除外
+- 家族の所属からの除外（O16・O28）、家族の削除（O29）
 - 利用データのダウンロード・参照（運用担当者・組織。対象の範囲）
 
 - ログの保存期間は未決（10.）。
@@ -640,4 +701,5 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 - 操作の記録（8.）の保存期間
 - 通常の組織にも、パスキーを求めるか、任意で登録できるようにするか
 - 運用担当者のパスキーの確認（O3）の失敗が続いた場合の扱い（現状は、challenge の発行回数の制限のみ）
+- 運用担当者の家族の一覧（O27）のページング・検索（件数が多くなった場合）
 - 組織が、所属している家族の ID を参照できてよいか（`families.id` は、パスキーの user handle と同じ値）
