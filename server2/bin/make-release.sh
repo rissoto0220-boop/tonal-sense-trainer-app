@@ -49,8 +49,8 @@ if [ -e "$dest/$root/.git" ]; then
   exit 1
 fi
 
-echo "作成しました: $(cd "$dest" && pwd)/$root"
-echo "このフォルダ（$root）を、Transmit で、サーバーにドラッグ＆ドロップしてください。"
+echo "作成しました: $(cd "$dest" && pwd)/${root}"
+echo "このフォルダ（${root}）を、Transmit で、サーバーにドラッグ＆ドロップしてください。"
 if command -v open >/dev/null 2>&1; then
   open "$dest"
 fi

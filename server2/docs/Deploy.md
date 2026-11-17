@@ -13,6 +13,16 @@
 | データベース | Amazon RDS for MySQL 8.4。新しく `UECTSTDB` を作る（`/server/` はデータベースを使わないため、衝突しない） |
 | データ | 空の状態から始める（移行なし） |
 
+### 作業の順番
+
+| 順 | 節 | 作業 | 場所 |
+|---|---|---|---|
+| 1 | 1. | 事前の確認 | サーバー |
+| 2 | 2. | ファイルの配置（フォルダを作る → Transmit でドロップ → `composer install`） | 手元 → サーバー |
+| 3 | 3. | RDS の準備（`docs/sql/create_all.sql` でテーブル作成、専用ユーザの作成） | サーバー |
+| 4 | 4. | 設定ファイル（`AppConfig.json`、`DBConfig.json`、権限） | サーバー |
+| 5 | 5. | 初期化と動作確認（運用担当者の作成） | サーバー |
+
 ### 運用上の注意（メール表示ページは、アクセス制限なし）
 
 メール表示ページ（`…/server2/public/index.php/debug/mails`）は、URL を知っていれば、誰でも開ける。仮登録メールと招待メールの**リンク（トークン付き）が、すべて見える**ため、次のことが起きる。
@@ -31,9 +41,56 @@
 - `https://uec-tst.koto.jp/` が HTTPS で配信されている（Cookie の `Secure`・`__Host-` 接頭辞、パスキーが、HTTPS を要求する）
 - RDS に、Web サーバーから接続できる（セキュリティグループで、Web サーバーを許可）。`mysql` クライアントがある
 
-## 2. RDS（データベース）の準備
+## 2. ファイルの配置
 
-> **順序:** この節は、`docs/sql/` を使うため、**3. のファイルの配置と `composer install` の後に、サーバーで**実行する。RDS には、Web サーバーから接続する（セキュリティグループが、Web サーバーだけを許可しているため）。
+ファイルは、Transmit で、**`uec-tst` 全体（`server/` も `server2/` も含む）**を、ドラッグ＆ドロップして配置する。
+
+### 2.1 デプロイ用のフォルダを作る（手元の PC）
+
+手元の PC で、`server2` のディレクトリを開いて実行する。
+
+```bash
+bash bin/make-release.sh
+```
+
+デスクトップに、`uec-tst-release/uec-tst/` ができる（Finder で開く。実行のたびに作り直す）。作業ツリーの現在の状態（コミットしていない変更も含む）が、コピーされる。
+
+**Transmit は、`.gitignore` を見ずに、すべてをアップロードする。** そのため、`uec-tst` を、そのままドロップせず、**このスクリプトで作ったフォルダ**をドロップすること。次のものが、あらかじめ除かれている。
+
+| 除くもの | 理由 |
+|---|---|
+| `server2/config/AppConfig.json`、`DBConfig.json` | 手元の MAMP 用の設定。サーバーの設定（鍵を含む）を壊す |
+| `server2/vendor/` | サーバーで `composer install` する |
+| `server2/tests/` | 不要 |
+| `*.log` | メールのリンク（トークン）を含む |
+| `server/data/` の中身 | サーバーの CSV データを、手元のもので、置き換えないため |
+| `.git/`、`node_modules/`、`dev/`、`.DS_Store` | 不要。`.git` は、公開されると、履歴が読める |
+
+### 2.2 Transmit でアップロードする
+
+1. Transmit で、`uec-tst.koto.jp` に接続する。
+2. これまで、`uec-tst` を置いていた場所と、**同じ場所**を開く（`/server/` の親が、そこになる）。
+3. 手元の `uec-tst-release/` の中の **`uec-tst` フォルダ**を、ドラッグ＆ドロップする。
+4. 同名のファイルがあると聞かれたら、「置き換える」を選ぶ。
+
+> **注意**
+> - `uec-tst-release` ではなく、**その中の `uec-tst`** を、ドロップする。
+> - Transmit の「同期（Synchronize）」を使う場合は、**「コピー元にないファイルを削除する」を、有効にしない**。サーバーにしかない `server2/vendor/`、`server2/config/AppConfig.json`、`DBConfig.json`、`server2/storage/`、`server/data/` の CSV が、消える。
+> - 実行のたびに、`public/` の音声ファイルなど、変更のないファイルも、送られる。Transmit が、変更のないファイルを、スキップする設定なら、それを使う。
+
+### 2.3 サーバーで、依存ライブラリを入れる
+
+サーバーに、SSH で接続して（`vendor/` は、アップロードしない）:
+
+```bash
+cd <DocumentRoot>/server2 && composer install --no-dev --optimize-autoloader
+```
+
+`<DocumentRoot>` は、`/server/` が置かれている親のディレクトリ。
+
+## 3. RDS（データベース）の準備
+
+> この節は、**2. のファイルの配置（`docs/sql/` がサーバーにあること）と、`composer install` が済んだ後に、サーバーで**実行する。RDS には、Web サーバーから接続する（セキュリティグループが、Web サーバーだけを許可しているため）。
 > 以下は、`<DocumentRoot>/server2` で実行する。RDS の接続先は、ホスト `database-1.clais42k2xvo.ap-northeast-1.rds.amazonaws.com`、ポート `3306`。
 
 管理者のユーザ（`admin`）で接続して、データベースと、専用のユーザを作る。**パスワードは、そのつど、自分で入力する**（コマンドや設定ファイルには、書かない）。
@@ -66,51 +123,6 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON UECTSTDB.* TO 'uectst_app'@'%';
 > アプリは、テーブルの作成・変更を行わない（DDL は、手で実行する）。`DROP`・`CREATE` の権限は、与えない。
 > この権限だけで、全機能が動くかは、実機で確認していない。`command denied` のエラーが出たら、権限を見直す。
 
-## 3. ファイルの配置
-
-ファイルは、Transmit で、**`uec-tst` 全体（`server/` も `server2/` も含む）**を、ドラッグ＆ドロップして配置する。
-
-### 3.1 デプロイ用のフォルダを作る（手元の PC）
-
-```bash
-bash bin/make-release.sh
-```
-
-デスクトップに、`uec-tst-release/uec-tst/` ができる（Finder で開く。実行のたびに作り直す）。作業ツリーの現在の状態（コミットしていない変更も含む）が、コピーされる。
-
-**Transmit は、`.gitignore` を見ずに、すべてをアップロードする。** そのため、`uec-tst` を、そのままドロップせず、**このスクリプトで作ったフォルダ**をドロップすること。次のものが、あらかじめ除かれている。
-
-| 除くもの | 理由 |
-|---|---|
-| `server2/config/AppConfig.json`、`DBConfig.json` | 手元の MAMP 用の設定。サーバーの設定（鍵を含む）を壊す |
-| `server2/vendor/` | サーバーで `composer install` する |
-| `server2/tests/` | 不要 |
-| `*.log` | メールのリンク（トークン）を含む |
-| `server/data/` の中身 | サーバーの CSV データを、手元のもので、置き換えないため |
-| `.git/`、`node_modules/`、`dev/`、`.DS_Store` | 不要。`.git` は、公開されると、履歴が読める |
-
-### 3.2 Transmit でアップロードする
-
-1. Transmit で、`uec-tst.koto.jp` に接続する。
-2. これまで、`uec-tst` を置いていた場所と、**同じ場所**を開く（`/server/` の親が、そこになる）。
-3. 手元の `uec-tst-release/` の中の **`uec-tst` フォルダ**を、ドラッグ＆ドロップする。
-4. 同名のファイルがあると聞かれたら、「置き換える」を選ぶ。
-
-> **注意**
-> - `uec-tst-release` ではなく、**その中の `uec-tst`** を、ドロップする。
-> - Transmit の「同期（Synchronize）」を使う場合は、**「コピー元にないファイルを削除する」を、有効にしない**。サーバーにしかない `server2/vendor/`、`server2/config/AppConfig.json`、`DBConfig.json`、`server2/storage/`、`server/data/` の CSV が、消える。
-> - 実行のたびに、`public/` の音声ファイルなど、変更のないファイルも、送られる。Transmit が、変更のないファイルを、スキップする設定なら、それを使う。
-
-### 3.3 サーバーで、依存ライブラリを入れる
-
-サーバーに、SSH で接続して（`vendor/` は、アップロードしない）:
-
-```bash
-cd <DocumentRoot>/server2 && composer install --no-dev --optimize-autoloader
-```
-
-`<DocumentRoot>` は、`/server/` が置かれている親のディレクトリ。
-
 ## 4. 設定ファイル（サーバー）
 
 ### 4.1 AppConfig.json
@@ -140,7 +152,7 @@ chmod 600 config/DBConfig.json
 | `host` | `database-1.clais42k2xvo.ap-northeast-1.rds.amazonaws.com` |
 | `port` | `3306`（ひな形のまま） |
 | `database`・`user` | `UECTSTDB`・`uectst_app`（ひな形のまま） |
-| `password` | 2. の 3. で決めたパスワード |
+| `password` | 3. の 3. で決めたパスワード |
 
 SSL は、`ssl.enabled: true`（通信を暗号化する）、`ssl.verifyServerCert: false`・`ssl.caFile: ""`（サーバー証明書は、検証しない。`mysql` コマンドの既定と同じ）にする。
 同じ VPC 内の試験運用を想定している。接続先のなりすましは、防げない。広く公開する前に、`verifyServerCert: true` と、RDS の CA 証明書（`ssl.caFile`）に、切り替える。
@@ -183,7 +195,7 @@ php bin/create-super-belonging.php operator 運用担当者
 ## 6. 更新（2回目以降）
 
 1. 手元で、`bash bin/make-release.sh`
-2. Transmit で、`uec-tst-release/uec-tst` を、同じ場所に、ドラッグ＆ドロップして、置き換える（3.2 の注意を守る。本物の `config/`、`vendor/`、`storage/`、`server/data/` のファイルは、デプロイ用のフォルダに含まれないため、上書きされない）
+2. Transmit で、`uec-tst-release/uec-tst` を、同じ場所に、ドラッグ＆ドロップして、置き換える（2.2 の注意を守る。本物の `config/`、`vendor/`、`storage/`、`server/data/` のファイルは、デプロイ用のフォルダに含まれないため、上書きされない）
 3. `composer.lock` が変わったときだけ、サーバーで `composer install --no-dev --optimize-autoloader`
 4. テーブルの構造が変わったときは、変更の SQL を、手で実行する（`create_all.sql` は、データを消すため、再実行しない）
 5. アップロードしたファイルの所有者が、SFTP のユーザになるため、PHP が `config/` を読めて、`storage/` に書けるか、確認する（4.3）

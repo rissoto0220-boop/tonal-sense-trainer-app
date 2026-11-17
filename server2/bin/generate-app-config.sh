@@ -23,6 +23,6 @@ rate_limit_key="$(openssl rand -base64 32)"
 umask 077
 sed -e "s|@RECOVERY_CODE_KEY@|${recovery_key}|" -e "s|@RATE_LIMIT_KEY@|${rate_limit_key}|" "$template" > "$target"
 
-echo "作成しました: $target（権限 600）"
+echo "作成しました: ${target}（権限 600）"
 echo "重要: secrets.recoveryCodeKeys を失うと、登録済みの家族の復旧コードが、すべて使えなくなります。"
 echo "      $target を、安全な場所にバックアップしてください。"
