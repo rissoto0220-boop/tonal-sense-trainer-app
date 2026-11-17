@@ -1,7 +1,7 @@
 # テーブル仕様書：セッション・仮登録・回数制限・challenge
 
 基本方針（BasicPolicy.md）の「3. 登録フロー」「4. 認証」に基づき、セッション・仮登録・回数制限のカウンター・WebAuthn の challenge を管理するテーブルを定義する。
-家族・ユーザのテーブルは TableSpec_Account.md、組織のテーブルは TableSpec_Organization.md を参照。
+家族・ユーザのテーブルは TableSpec_Account.md、所属のテーブルは TableSpec_Belonging.md を参照。
 
 ## 0. 共通事項
 
@@ -28,7 +28,7 @@ users    1 ──── 0..n sessions（選択中のユーザ）
 
 pending_registrations（他のテーブルとの関連なし）
 rate_limit_counters（他のテーブルとの関連なし）
-webauthn_challenges（owner_id は sessions.id または organization_sessions.id。外部キーなし）
+webauthn_challenges（owner_id は sessions.id または belonging_sessions.id。外部キーなし）
 ```
 
 ## 2. sessions（セッション）
@@ -188,23 +188,23 @@ CREATE TABLE pending_registrations (
 
 #### キーの一覧
 
-キーの元の文字列を HMAC 化して `key_hash` とする。IP アドレス・家族 ID・組織 ID などの元の値は保存しない（基本方針 4.4）。
+キーの元の文字列を HMAC 化して `key_hash` とする。IP アドレス・家族 ID・所属 ID などの元の値は保存しない（基本方針 4.4）。
 
 | 用途 | キーの元の文字列 | 窓 |
 |---|---|---|
 | 仮登録メール・招待メールの送信回数（システム全体） | `mail:send:global` | 1時間 |
 | 仮登録メールの送信回数（IP 単位、緩めの補助） | `mail:send:ip:<IP>` | 1時間 |
-| 招待メールの送信回数（組織単位） | `invite:send:org:<組織ID>` | 1時間 |
+| 招待メールの送信回数（所属単位） | `invite:send:blg:<所属ID>` | 1時間 |
 | 本登録・招待の照合・所属の回数（IP 単位、緩めの補助） | `register:ip:<IP>` | 10分 |
 | 復旧コードによるログインの失敗回数（システム全体） | `recovery:fail:global` | 1時間 |
 | 復旧コードによるログインの失敗回数（IP 単位、緩めの補助） | `recovery:fail:ip:<IP>` | 1時間 |
 | 復旧コードの再発行の回数（家族単位） | `recovery:reissue:<家族ID>` | 1時間 |
 | challenge の発行の回数（セッション単位） | `challenge:<セッションID>` | 10分 |
-| 組織のログインの失敗回数（システム全体） | `orglogin:fail:global` | 1時間 |
-| 組織のログインの失敗回数（IP 単位、緩めの補助） | `orglogin:fail:ip:<IP>` | 1時間 |
+| 所属のログインの失敗回数（システム全体） | `blglogin:fail:global` | 1時間 |
+| 所属のログインの失敗回数（IP 単位、緩めの補助） | `blglogin:fail:ip:<IP>` | 1時間 |
 
-- しきい値は ApiSpec_Auth.md「9. 回数制限」、ApiSpec_Organization.md「9. 回数制限」を参照。
-- スーパーユーザのパスワードと、組織のパスワードの失敗回数は、家族単位・組織単位で確実にロックする必要があるため、このテーブルではなく、`families`（TableSpec_Account.md 2.3）と `organizations`（TableSpec_Organization.md 2.3）で管理する。
+- しきい値は ApiSpec_Auth.md「9. 回数制限」、ApiSpec_Belonging.md「9. 回数制限」を参照。
+- スーパーユーザのパスワードと、所属のパスワードの失敗回数は、家族単位・所属単位で確実にロックする必要があるため、このテーブルではなく、`families`（TableSpec_Account.md 2.3）と `belongings`（TableSpec_Belonging.md 2.3）で管理する。
 
 #### 補足
 
@@ -225,7 +225,7 @@ CREATE TABLE pending_registrations (
 - 超えた場合の `Retry-After` は、`expires_at` までの秒数とする。
 - 失敗回数のように「失敗したときだけ数える」ものは、失敗が確定した時点で加算する。しきい値を超えているかの確認（加算せずに読み取る）は、加算の前に行う。
 - 窓が固定のため、窓の境界をまたぐと、短時間に、しきい値の最大2倍まで受け付ける場合がある。回数制限の用途では許容する。
-- 書き込みは、仮登録・本登録・復旧コード・challenge・組織のログインなど、利用頻度の低い API に限る。ログイン済みの通常のリクエストでは書き込まない。
+- 書き込みは、仮登録・本登録・復旧コード・challenge・所属のログインなど、利用頻度の低い API に限る。ログイン済みの通常のリクエストでは書き込まない。
 
 #### DDL
 
@@ -248,8 +248,8 @@ CREATE TABLE rate_limit_counters (
 | カラム名 | 型 | NULL | 既定値 | 説明 |
 |---|---|---|---|---|
 | `id` | `BINARY(16)` | NOT NULL | | 主キー（UUID v7） |
-| `owner_id` | `BINARY(16)` | NOT NULL | | challenge を発行したセッション。家族の `sessions.id` または `organization_sessions.id`。2つのテーブルを参照するため、外部キーは定義しない |
-| `purpose` | `VARCHAR(30)` | NOT NULL | | 用途。`family_elevation`（家族の確認）、`family_registration`（家族のパスキーの登録）、`org_login`（組織のログインの確認）、`org_registration`（組織のパスキーの登録） |
+| `owner_id` | `BINARY(16)` | NOT NULL | | challenge を発行したセッション。家族の `sessions.id` または `belonging_sessions.id`。2つのテーブルを参照するため、外部キーは定義しない |
+| `purpose` | `VARCHAR(30)` | NOT NULL | | 用途。`family_elevation`（家族の確認）、`family_registration`（家族のパスキーの登録）、`blg_login`（所属のログインの確認）、`blg_registration`（所属のパスキーの登録） |
 | `challenge` | `VARBINARY(32)` | NOT NULL | | 32バイトの乱数 |
 | `expires_at` | `DATETIME(6)` | NOT NULL | | 有効期限（発行から5分） |
 
@@ -275,7 +275,7 @@ CREATE TABLE rate_limit_counters (
 
 - 使用：トランザクションの中で、`SELECT challenge ... WHERE owner_id = ? AND purpose = ? AND expires_at > UTC_TIMESTAMP(6) FOR UPDATE` で取り出し、**検証の成功・失敗にかかわらず、直ちに行を削除する**（同じ challenge の再利用を防ぐため）。取り出せなければ、検証に失敗として扱う。
 - セッションが削除（ログアウト・失効）されても、challenge の行は、有効期限（5分）が切れるまで残る。定期処理で削除する（5.）。セッションに紐付かない challenge は使えないため、害はない。
-- challenge は、家族・組織とも、元のセッションの Cookie がなければ使えない（`owner_id` は、リクエストのセッションの ID と一致する行だけが対象）。
+- challenge は、家族・所属とも、元のセッションの Cookie がなければ使えない（`owner_id` は、リクエストのセッションの ID と一致する行だけが対象）。
 
 #### DDL
 
@@ -300,8 +300,8 @@ CREATE TABLE webauthn_challenges (
 | 期限切れのセッションの削除 | `DELETE FROM sessions WHERE expires_at < UTC_TIMESTAMP(6)` | 1日ごと |
 | 期限切れの回数制限カウンターの削除 | `DELETE FROM rate_limit_counters WHERE expires_at < UTC_TIMESTAMP(6)` | 1時間ごと |
 | 期限切れの challenge の削除 | `DELETE FROM webauthn_challenges WHERE expires_at < UTC_TIMESTAMP(6)` | 1時間ごと |
-| 期限切れの組織のセッションの削除 | `DELETE FROM organization_sessions WHERE expires_at < UTC_TIMESTAMP(6)` | 1時間ごと |
-| 期限切れの招待の削除 | `DELETE FROM organization_invitations WHERE expires_at < UTC_TIMESTAMP(6)` | 1時間ごと |
+| 期限切れの所属のセッションの削除 | `DELETE FROM belonging_sessions WHERE expires_at < UTC_TIMESTAMP(6)` | 1時間ごと |
+| 期限切れの招待の削除 | `DELETE FROM belonging_invitations WHERE expires_at < UTC_TIMESTAMP(6)` | 1時間ごと |
 
 - 実行には MySQL のイベントスケジューラ（`CREATE EVENT`）か、サーバの cron を使う。
   - イベントスケジューラを使う場合は `event_scheduler = ON` が必要。

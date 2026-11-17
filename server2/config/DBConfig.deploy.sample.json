@@ -1,0 +1,15 @@
+{
+  "host": "database-1.clais42k2xvo.ap-northeast-1.rds.amazonaws.com",
+  "port": 3306,
+  "database": "UECTSTDB",
+  "user": "uectst_app",
+  "password": "",
+  "charset": "utf8mb4",
+  "timezone": "+00:00",
+  "connectTimeoutSeconds": 5,
+  "ssl": {
+    "enabled": true,
+    "caFile": "",
+    "verifyServerCert": false
+  }
+}

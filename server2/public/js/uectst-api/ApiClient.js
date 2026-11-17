@@ -1,5 +1,5 @@
 // API 呼び出しの共通の土台。fetch・JSON・エラーの変換・共通のイベント（未ログイン、確認が必要）を扱う。
-// 家族・ユーザ用（FamilyClient）と、運用担当者・組織用（OrgClient）の、どちらも、これを使う。
+// 家族・ユーザ用（FamilyClient）と、運用担当者・所属用（BlgClient）の、どちらも、これを使う。
 //
 // 認証は HttpOnly Cookie で行うため、このクラスはトークンを扱わない（credentials: "same-origin" で、Cookie が自動で付く）。
 // Origin ヘッダは、ブラウザが自動で付ける。Content-Type: application/json は、本文があるときにこのクラスが付ける
@@ -9,7 +9,7 @@ import { ApiError } from "./ApiError.js";
 
 /**
  * @typedef {object} ApiClientOptions
- * @property {string} [basePath] API のベースパス（既定: "/api/v1"）。運用担当者・組織用は "/api/v1/org" を、それぞれのクライアントで付ける
+ * @property {string} [basePath] API のベースパス（既定: "/api/v1"）。運用担当者・所属用は "/api/v1/blg" を、それぞれのクライアントで付ける
  * @property {typeof fetch} [fetchFn] テスト用に、fetch を差し替える
  * @property {() => Promise<boolean>|boolean} [onElevationRequired]
  *   403 ELEVATION_REQUIRED のときに呼ばれる。確認の画面を出して、確認に成功したら true を返すと、同じ操作を、1回だけ自動でやり直す

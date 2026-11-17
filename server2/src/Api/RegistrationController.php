@@ -139,15 +139,15 @@ final class RegistrationController
             $now = $services->clock->now();
             // 同じトークンで同時に実行されても、片方だけが 1 行を削除できる（二重登録にならない）。
             // 以降の処理に失敗すれば、ロールバックにより、トークン（招待）も元に戻る。
-            $organizationId = null;
+            $belongingId = null;
             if ($hasInvitation) {
-                $organizationId = $services->invitations->consume($tokenHash, $now) ?? throw self::invitationInvalid();
+                $belongingId = $services->invitations->consume($tokenHash, $now) ?? throw self::invitationInvalid();
             } elseif (!$services->pending->consume($tokenHash, $now)) {
                 throw self::registrationTokenInvalid();
             }
 
             $familyId = Uuid7::generateBinary();
-            $code = $this->insertFamilyWithNewCode($familyId, $now, $organizationId);
+            $code = $this->insertFamilyWithNewCode($familyId, $now, $belongingId);
 
             $firstUserId = null;
             foreach ($names as $index => $name) {
@@ -208,12 +208,12 @@ final class RegistrationController
      *
      * @return string 正規化済みの復旧コード（25文字）
      */
-    private function insertFamilyWithNewCode(string $familyId, \DateTimeImmutable $now, ?string $organizationId): string
+    private function insertFamilyWithNewCode(string $familyId, \DateTimeImmutable $now, ?string $belongingId): string
     {
         for ($attempt = 0; $attempt < 5; $attempt++) {
             $code = RecoveryCode::generate();
             $hasher = $this->services->recoveryHasher;
-            if ($this->services->families->insert($familyId, $hasher->hashWithCurrentKey($code), $hasher->currentKeyId(), $now, $organizationId)) {
+            if ($this->services->families->insert($familyId, $hasher->hashWithCurrentKey($code), $hasher->currentKeyId(), $now, $belongingId)) {
                 return $code;
             }
         }

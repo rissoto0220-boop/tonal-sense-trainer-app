@@ -272,7 +272,7 @@ user_id,session_id,test_type,menu_id,attempt_number,session_status,session_key_c
 - ダウンロードの範囲の上限の値と、ZIP のフォルダ構成の詳細
 - 訓練の `testType` の名前（`training` と仮置き）と、訓練の音声エラーの集計の扱い
 - 利用データの削除の手段（運用担当者の SQL、運用担当者の機能）
-- 所属前に作られたデータを、組織に参照させるか（基本方針 10.4）
+- 所属前に作られたデータを、所属に参照させるか（基本方針 10.4）
 
 ## 付録 A. JSON の例
 

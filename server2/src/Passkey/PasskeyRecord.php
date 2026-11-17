@@ -6,7 +6,7 @@ namespace UecTst\Passkey;
 
 use DateTimeImmutable;
 
-/** パスキー（passkeys または organization_passkeys の1行）。ID・クレデンシャル ID・公開鍵はバイナリ。持ち主は、家族または組織の ID。 */
+/** パスキー（passkeys または belonging_passkeys の1行）。ID・クレデンシャル ID・公開鍵はバイナリ。持ち主は、家族または所属の ID。 */
 final class PasskeyRecord
 {
     /** @param list<string> $transports */

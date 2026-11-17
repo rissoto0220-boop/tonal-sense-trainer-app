@@ -4,14 +4,14 @@
 // 照合は、データベースを変更しない。リンクを開いただけでは、招待は使われない。
 import { api, byId, showScreen, setError } from "../common.js";
 import { setupUserRows, setupRecoveryCodeView } from "../registration-ui.js";
-import { field, paragraph, showDialog } from "../org/dialog.js";
+import { field, paragraph, showDialog } from "../console/dialog.js";
 import { readFragmentToken, clearFragment, RecoveryCode } from "../../js/uectst-api/index.js";
 
 const STORAGE_KEY = "uectst.invitationToken";
 
 /** @type {string|null} */
 let token = null;
-let organizationName = "";
+let belongingName = "";
 /** @type {object|null} 所属の追加で使う、ログイン中の家族 */
 let family = null;
 
@@ -54,10 +54,10 @@ async function start() {
   }
   try {
     const info = await api.membership.verifyInvitation(token);
-    organizationName = info.organizationName;
-    byId("orgName").textContent = organizationName;
+    belongingName = info.belongingName;
+    byId("blgName").textContent = belongingName;
     byId("expiresAt").textContent = new Date(info.expiresAt).toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "short" });
-    for (const el of document.querySelectorAll(".orgNameCopy")) el.textContent = `「${organizationName}」`;
+    for (const el of document.querySelectorAll(".blgNameCopy")) el.textContent = `「${belongingName}」`;
     showScreen("intro");
   } catch (error) {
     if (error?.status === 410) {
@@ -154,12 +154,12 @@ byId("loginForm").addEventListener("submit", async (event) => {
 
 /** 現在の所属に応じて、確認の内容を出す。 */
 function showJoin() {
-  const current = family.organization;
-  const same = current?.name === organizationName;
+  const current = family.belonging;
+  const same = current?.name === belongingName;
   const warn = byId("joinWarn");
   warn.hidden = !current || same;
   if (current && !same) {
-    warn.textContent = `現在の組織「${current.name}」から、この組織に移ります。現在の組織は、あなたの家族のデータを見られなくなります。`;
+    warn.textContent = `現在の所属「${current.name}」から、この所属に移ります。現在の所属は、あなたの家族のデータを見られなくなります。`;
   }
   byId("alreadyMember").hidden = !same;
   byId("joinSubmit").disabled = same;
@@ -202,7 +202,7 @@ byId("joinSubmit").addEventListener("click", async () => {
       forgetToken();
       showInvalid();
     } else if (error?.code === "ALREADY_MEMBER") {
-      family.organization = { name: organizationName };
+      family.belonging = { name: belongingName };
       showJoin(); // すでに所属している。招待は使われない。
     } else {
       setError("joinError", error?.code === "ELEVATION_REQUIRED" ? { message: "確認が完了しなかったため、所属していません。" } : error);

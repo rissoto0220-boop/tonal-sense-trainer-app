@@ -28,12 +28,12 @@ final class DebugIndexController
         // 仮実装の画面（public/app/）。URL Rewrite を使わない環境では basePath が …/index.php で終わるため、取り除く。
         $appBase = self::e(preg_replace('#/index\.php$#', '', $base) . '/app');
         $items = '<li><a href="' . $appBase . '/signup/">新規登録（仮登録）</a>／<a href="' . $appBase . '/login/">ログイン</a>／<a href="' . $appBase . '/">ホーム</a>（仮実装の画面）</li>'
-            . '<li>運用担当者・組織: <a href="' . $appBase . '/org/">ログイン</a>（仮実装の画面）</li>';
+            . '<li>運用担当者・所属: <a href="' . $appBase . '/blg/">ログイン</a>（仮実装の画面）</li>';
         if ($mailViewer) {
             $items .= '<li><a href="' . self::e($base . DebugMailLink::PAGE_PATH) . '">メール表示ページ</a>（送ったことにしたメールを表示）</li>';
         }
         $items .= '<li>API の基準パス（家族・ユーザ用）: <code>' . self::e($base . '/api/v1') . '</code></li>';
-        $items .= '<li>API の基準パス（運用担当者・組織用）: <code>' . self::e($base . '/api/v1/org') . '</code></li>';
+        $items .= '<li>API の基準パス（運用担当者・所属用）: <code>' . self::e($base . '/api/v1/blg') . '</code></li>';
 
         $features = [];
         foreach (DebugConfig::FEATURES as $name) {

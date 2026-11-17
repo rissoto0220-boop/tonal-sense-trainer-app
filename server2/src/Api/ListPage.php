@@ -10,7 +10,7 @@ use UecTst\TestData\DataScope;
 use UecTst\TestData\SessionView;
 use UecTst\TestData\TestType;
 
-/** 一覧と詳細の JSON の組み立て（家族の API と、組織の API で共通）。 */
+/** 一覧と詳細の JSON の組み立て（家族の API と、所属の API で共通）。 */
 final class ListPage
 {
     /**

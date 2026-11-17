@@ -3,19 +3,19 @@
 データフォーマット（DataFormat_TestData.md）とテーブル仕様書（TableSpec_TestData.md）に基づき、テスト・訓練の結果（利用データ）の Web API を定義する。
 
 - クライアントアプリ（家族・ユーザ）向け：#32〜#35（ApiSpec_Auth.md の番号の続き）
-- 運用担当者・組織向け：O22〜O26（ApiSpec_Organization.md の番号の続き）
+- 運用担当者・所属向け：B22〜B26（ApiSpec_Belonging.md の番号の続き）
 
-家族・ユーザの認証は ApiSpec_Auth.md、組織の認証は ApiSpec_Organization.md を参照する。
+家族・ユーザの認証は ApiSpec_Auth.md、所属の認証は ApiSpec_Belonging.md を参照する。
 
 ## 0. 共通事項
 
 ### 0.1 基本
 
-- ベースパスは、クライアントアプリ向けが `/api/v1`、運用担当者・組織向けが `/api/v1/org`。
-- 通信、リクエスト・レスポンスの本文、ID、`Cache-Control: no-store`、CSRF 対策、エラーレスポンスの形式は、ApiSpec_Auth.md の 0.1〜0.3・0.5 に従う（組織向けは ApiSpec_Organization.md の 0.1〜0.3）。
+- ベースパスは、クライアントアプリ向けが `/api/v1`、運用担当者・所属向けが `/api/v1/blg`。
+- 通信、リクエスト・レスポンスの本文、ID、`Cache-Control: no-store`、CSRF 対策、エラーレスポンスの形式は、ApiSpec_Auth.md の 0.1〜0.3・0.5 に従う（所属向けは ApiSpec_Belonging.md の 0.1〜0.3）。
 - 日時は、レスポンスでは UTC（`2026-10-29T08:54:03.875Z`）で返す。セッションの開始日時のオフセットは、`utcOffsetMinutes`（分。`+09:00` は `540`）で返す。
   - 送信（#32）の日時は、DataFormat_TestData.md のとおり、オフセット付き（`+09:00` など）で受け取る。
-  - CSV（#35・O25）の日時は、セッションの開始日時のオフセット付きで出す（TableSpec_TestData.md 0.）。
+  - CSV（#35・B25）の日時は、セッションの開始日時のオフセット付きで出す（TableSpec_TestData.md 0.）。
 - 利用データの本文（送信・取得）は、DataFormat_TestData.md の形式。キー名は `camelCase`。
 
 ### 0.2 認証と参照できる範囲
@@ -23,16 +23,16 @@
 | API | 認証 | 参照・書き込みできる範囲 |
 |---|---|---|
 | #32〜#35 | 家族の Cookie（`__Host-sid`） | パスの `userId` が、ログイン中の家族の、現存するユーザであること。そうでなければ `404 NOT_FOUND`（ApiSpec_Auth.md 3.2）。削除されたユーザの `userId` も `404` |
-| O22〜O25 | 組織の Cookie（`__Host-org-sid`）、段階1 | 通常の組織：現在その組織に所属している家族の、現存するユーザのみ。運用担当者：すべて（個人ユーザ・退会した家族・削除されたユーザを含む）。参照できない `userId` は、存在しない場合と区別せず `404 NOT_FOUND`（TableSpec_Organization.md 6.） |
-| O26 | 組織の Cookie、段階1 | 運用担当者のみ（`403 SUPER_ONLY`）。確認（O7）が必要 |
+| B22〜B25 | 所属の Cookie（`__Host-blg-sid`）、段階1 | 通常の所属：現在その所属先に所属している家族の、現存するユーザのみ。運用担当者：すべて（個人ユーザ・退会した家族・削除されたユーザを含む）。参照できない `userId` は、存在しない場合と区別せず `404 NOT_FOUND`（TableSpec_Belonging.md 6.） |
+| B26 | 所属の Cookie、段階1 | 運用担当者のみ（`403 SUPER_ONLY`）。確認（B7）が必要 |
 
 - 参照の可否は、リクエストのたびに、データベース上の所属関係で判定する（セッションに保持した値は使わない）。
-- 組織は、利用データとユーザ名（ニックネーム）のみ参照できる。家族の ID・組織の ID・メールアドレス・復旧コードなどは返さない。
-- 組織向けの API の検証の順序は、ApiSpec_Organization.md 0.2 に従う（`401` → `403 PASSKEY_REQUIRED` → `403 PASSWORD_CHANGE_REQUIRED` → `403 SUPER_ONLY` → `403 ELEVATION_REQUIRED` → `404`・`409` など）。
+- 所属は、利用データとユーザ名（ニックネーム）のみ参照できる。家族の ID・所属の ID・メールアドレス・復旧コードなどは返さない。
+- 所属向けの API の検証の順序は、ApiSpec_Belonging.md 0.2 に従う（`401` → `403 PASSKEY_REQUIRED` → `403 PASSWORD_CHANGE_REQUIRED` → `403 SUPER_ONLY` → `403 ELEVATION_REQUIRED` → `404`・`409` など）。
 
 ### 0.3 エラーコード（利用データの API で追加するもの）
 
-ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、次を使う。
+ApiSpec_Auth.md 0.5 と ApiSpec_Belonging.md 0.6 のコードに加えて、次を使う。
 
 | HTTP ステータス | `code` | 意味 |
 |---|---|---|
@@ -51,19 +51,19 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 | 34 | GET | `/api/v1/users/{userId}/test-sessions/{sessionId}` | 必要 | | セッション 1 件の詳細 |
 | 35 | GET | `/api/v1/users/{userId}/test-exports` | 必要 | | 自分のデータの CSV のダウンロード |
 
-**運用担当者・組織向け**
+**運用担当者・所属向け**
 
 | # | メソッド | パス | 認証 | 確認 | 運用担当者のみ | 概要 |
 |---|---|---|---|---|---|---|
-| O22 | GET | `/api/v1/org/users` | 段階1 | | | 参照できるユーザの一覧 |
-| O23 | GET | `/api/v1/org/users/{userId}/test-sessions` | 段階1 | | | ユーザのセッションの一覧 |
-| O24 | GET | `/api/v1/org/users/{userId}/test-sessions/{sessionId}` | 段階1 | | | セッション 1 件の詳細 |
-| O25 | GET | `/api/v1/org/test-exports` | 段階1 | | | CSV・ZIP のダウンロード |
-| O26 | DELETE | `/api/v1/org/test-sessions/{sessionId}` | 段階1 | 必要 | 運用担当者 | セッション 1 件の削除 |
+| B22 | GET | `/api/v1/blg/users` | 段階1 | | | 参照できるユーザの一覧 |
+| B23 | GET | `/api/v1/blg/users/{userId}/test-sessions` | 段階1 | | | ユーザのセッションの一覧 |
+| B24 | GET | `/api/v1/blg/users/{userId}/test-sessions/{sessionId}` | 段階1 | | | セッション 1 件の詳細 |
+| B25 | GET | `/api/v1/blg/test-exports` | 段階1 | | | CSV・ZIP のダウンロード |
+| B26 | DELETE | `/api/v1/blg/test-sessions/{sessionId}` | 段階1 | 必要 | 運用担当者 | セッション 1 件の削除 |
 
 ### 0.5 共通のデータ形式
 
-**セッションの要約（`SessionSummary`）**：一覧（#33・O23）の 1 件。
+**セッションの要約（`SessionSummary`）**：一覧（#33・B23）の 1 件。
 
 ```json
 {
@@ -95,15 +95,15 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 | `functional_pitch` | `answeredTrialCount`、`totalTrialCount` |
 | `training` | `trialsCompleted`、`correctCount`、`giveupCount` |
 
-**セッションの詳細（`SessionDetail`）**：#34・O24。
+**セッションの詳細（`SessionDetail`）**：#34・B24。
 
 - 送信（DataFormat_TestData.md 4.〜7.）と同じ形に、次を加える。
-  - `utcOffsetMinutes`、`receivedAt`。組織向け（O24）には、`userId` も加える。
+  - `utcOffsetMinutes`、`receivedAt`。所属向け（B24）には、`userId` も加える。
   - 日時は、すべて UTC（`Z`）で返す。
 - 訓練の `trialsCompleted`・`correctCount`・`giveupCount` と、各試行の `scoring` は、保存した回答から数え直した値。
 - 相対音感の `generatedQuestionOrder`、調性感の `generatedTrialOrder`・`practiceResults` は、`attributes` に保存したものを返す。
 
-**一覧のクエリとページング**（#33・O23）
+**一覧のクエリとページング**（#33・B23）
 
 | クエリ | 既定値 | 説明 |
 |---|---|---|
@@ -221,11 +221,11 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 
 **エラー**：`401 UNAUTHENTICATED`、`404 NOT_FOUND`、`422 VALIDATION_FAILED`、`422 EXPORT_TOO_LARGE`、`429 RATE_LIMITED`
 
-## 3. 運用担当者・組織の参照
+## 3. 運用担当者・所属の参照
 
-### 3.1 参照できるユーザの一覧 `GET /api/v1/org/users`（O22）
+### 3.1 参照できるユーザの一覧 `GET /api/v1/blg/users`（B22）
 
-組織が参照できるユーザと、そのデータの概要を返す。
+所属が参照できるユーザと、そのデータの概要を返す。
 
 **クエリ**：`limit`（既定 `50`、1〜100）、`cursor`。並び順は `userId` の順。
 
@@ -239,7 +239,7 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
       "name": "はなこ",
       "sessionCount": 24,
       "lastSessionAt": "2026-10-28T23:57:10.000Z",
-      "organization": { "name": "○○大学" }
+      "belonging": { "name": "○○大学" }
     }
   ],
   "nextCursor": null
@@ -250,20 +250,20 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 |---|---|
 | `name` | ユーザ名（ニックネーム）。削除されたユーザ・退会した家族のユーザは `null`（運用担当者のみ） |
 | `sessionCount`、`lastSessionAt` | そのユーザの保存済みセッションの数と、最後の開始日時。データがないユーザも一覧に含める（`0`、`null`） |
-| `organization` | 運用担当者のみ返す。現在所属している組織の名前。個人ユーザ・削除されたユーザは `null`。通常の組織には、この項目を返さない |
+| `belonging` | 運用担当者のみ返す。現在所属先の名前。個人ユーザ・削除されたユーザは `null`。通常の所属には、この項目を返さない |
 
-- 通常の組織：所属している家族の、現存するユーザ（データのないユーザを含む）。
+- 通常の所属：所属している家族の、現存するユーザ（データのないユーザを含む）。
 - 運用担当者：現存するユーザと、`test_sessions` に `user_id` が残っている削除済みのユーザ。
 
 **エラー**：`401 UNAUTHENTICATED`、`403 PASSKEY_REQUIRED`、`403 PASSWORD_CHANGE_REQUIRED`
 
-### 3.2 ユーザのセッションの一覧 `GET /api/v1/org/users/{userId}/test-sessions`（O23）
+### 3.2 ユーザのセッションの一覧 `GET /api/v1/blg/users/{userId}/test-sessions`（B23）
 
 クエリ・レスポンスは #33 と同じ（0.5）。
 
 **エラー**：`401`、`403 PASSKEY_REQUIRED`、`403 PASSWORD_CHANGE_REQUIRED`、`404 NOT_FOUND`、`422 VALIDATION_FAILED`
 
-### 3.3 セッションの詳細 `GET /api/v1/org/users/{userId}/test-sessions/{sessionId}`（O24）
+### 3.3 セッションの詳細 `GET /api/v1/blg/users/{userId}/test-sessions/{sessionId}`（B24）
 
 レスポンスは #34 と同じ（`SessionDetail`。`userId` を含む）。
 
@@ -271,7 +271,7 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 
 ## 4. ダウンロード（CSV・ZIP）
 
-### 4.1 ダウンロード `GET /api/v1/org/test-exports`（O25）
+### 4.1 ダウンロード `GET /api/v1/blg/test-exports`（B25）
 
 参照できる範囲のデータを、CSV または ZIP として取り出す。
 
@@ -322,7 +322,7 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 1. **サーバ資源の保護：** 範囲が広いと、1 回の要求で数十万行をデータベースから読み、結合し、CSV・ZIP にすることになる。長い要求は、データベースの負荷と PHP の処理時間を占有し、他の利用者の送信（#32）や参照を遅らせる。
 2. **途中で切れることの防止：** 出力を始めた後は、ステータスコードを変えられない。処理が Web サーバやプロキシのタイムアウトで途中で切れると、クライアントには不完全なファイルが残る。出力を始める前に断るために、範囲の大きさを先に確かめる。
 3. **ZIP の作成の負荷：** ファイルの数と大きさが増えるほど、圧縮に CPU を長く使う。
-4. **持ち出しの抑止（補助的）：** 組織の認証情報が漏れたとき、1 回の操作で全データを持ち出されにくくする。回数制限（7.）と合わせて効く、限定的な効果。
+4. **持ち出しの抑止（補助的）：** 所属の認証情報が漏れたとき、1 回の操作で全データを持ち出されにくくする。回数制限（7.）と合わせて効く、限定的な効果。
 
 - メモリの使用量は、行を順に出力するため（4.3）、行数に比例しない。上限の主な理由は、メモリではなく、処理時間とデータベースの負荷である。
 - 5,000 件という値は、実測に基づいていない。運用でデータ量と処理時間を見て、`AppConfig.json` で調整する。
@@ -336,9 +336,9 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 
 ## 5. 削除
 
-### 5.1 セッションの削除 `DELETE /api/v1/org/test-sessions/{sessionId}`（O26）
+### 5.1 セッションの削除 `DELETE /api/v1/blg/test-sessions/{sessionId}`（B26）
 
-運用担当者が、利用データのセッション 1 件を削除する（基本方針 10.7、TableSpec_Account.md 5.2）。**確認（O7）が必要**。
+運用担当者が、利用データのセッション 1 件を削除する（基本方針 10.7、TableSpec_Account.md 5.2）。**確認（B7）が必要**。
 
 **処理**：`test_sessions` の行を削除する（回答のテーブルは、`ON DELETE CASCADE` で連鎖して削除される）。
 
@@ -350,15 +350,15 @@ ApiSpec_Auth.md 0.5 と ApiSpec_Organization.md 0.6 のコードに加えて、�
 
 ## 6. 操作の記録
 
-ApiSpec_Organization.md 8. に従い、次の操作を、アプリケーションのログに記録する（時刻・組織 ID・操作・結果。利用データの内容・ユーザ名は記録しない）。
+ApiSpec_Belonging.md 8. に従い、次の操作を、アプリケーションのログに記録する（時刻・所属 ID・操作・結果。利用データの内容・ユーザ名は記録しない）。
 
 | 操作 | `action` | 記録する項目 |
 |---|---|---|
-| ユーザの一覧（O22） | `org.test_data.users` | 件数 |
-| セッションの一覧（O23） | `org.test_data.sessions` | `userId`、件数 |
-| セッションの詳細（O24） | `org.test_data.session` | `userId`、`sessionId` |
-| ダウンロード（O25） | `org.test_data.export` | 絞り込みの条件（`userId` の数、`testType`、`kind`、`from`、`to`）、セッション数 |
-| 削除（O26） | `org.test_data.delete` | `sessionId`、`userId` |
+| ユーザの一覧（B22） | `blg.test_data.users` | 件数 |
+| セッションの一覧（B23） | `blg.test_data.sessions` | `userId`、件数 |
+| セッションの詳細（B24） | `blg.test_data.session` | `userId`、`sessionId` |
+| ダウンロード（B25） | `blg.test_data.export` | 絞り込みの条件（`userId` の数、`testType`、`kind`、`from`、`to`）、セッション数 |
+| 削除（B26） | `blg.test_data.delete` | `sessionId`、`userId` |
 
 - 家族・ユーザの API（#32〜#35）は、記録しない（通常のアクセスログのみ）。送信の失敗（`422` など）は、原因の種類のみ記録し、内容は記録しない。
 
@@ -368,11 +368,11 @@ ApiSpec_Organization.md 8. に従い、次の操作を、アプリケーショ�
 |---|---|---|---|---|
 | #32 送信 | 家族 | 600 回／1 時間 | `429 RATE_LIMITED` | `testdata:submit:family:<家族 ID>` |
 | #35 ダウンロード | 家族 | 30 回／1 時間 | `429 RATE_LIMITED` | `testdata:export:family:<家族 ID>` |
-| O25 ダウンロード | 組織 | 30 回／1 時間 | `429 RATE_LIMITED` | `testdata:export:org:<組織 ID>` |
+| B25 ダウンロード | 所属 | 30 回／1 時間 | `429 RATE_LIMITED` | `testdata:export:blg:<所属 ID>` |
 
 - しきい値は初期値とし、利用状況を見て調整する。端末内の古い記録を移すときに、多数のセッションを続けて送る場合があるため、#32 は緩めにしている。
 - 超えた場合は `Retry-After` ヘッダに、カウンターの有効期限が切れるまでの秒数を付ける。
-- 一覧・詳細の参照（#33・#34・O22〜O24）には、回数制限を設けない。
+- 一覧・詳細の参照（#33・#34・B22〜B24）には、回数制限を設けない。
 
 ## 8. 未決事項
 
@@ -380,7 +380,7 @@ ApiSpec_Organization.md 8. に従い、次の操作を、アプリケーショ�
 - 各 `summary` の件数の定義。実装時に、現在のクライアントの `reports.js` と突き合わせて確定する。
 - ZIP を出力しながら作る方法（ライブラリの選定。PHP の `ZipArchive` は一時ファイルを使う）。
 - 利用データの一括削除（ユーザごと・期間ごと）を API にするか。
-- O22 のユーザ一覧のページングと、並び順（ユーザ名順、最終データの日時順など）。
-- 組織が、所属している家族の ID を参照できてよいか（ApiSpec_Organization.md 10.）。現在は、家族の ID を返さない。
+- B22 のユーザ一覧のページングと、並び順（ユーザ名順、最終データの日時順など）。
+- 所属が、所属している家族の ID を参照できてよいか（ApiSpec_Belonging.md 10.）。現在は、家族の ID を返さない。
 - クライアントが、複数の端末で同じセッションを送った場合の扱い（`sessionId` が同じなら 1 件になる）。
 - 利用データの保存期間（TableSpec_TestData.md 11.）。

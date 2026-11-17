@@ -1,6 +1,6 @@
 # テーブル仕様書：アカウント・ユーザ
 
-基本方針（BasicPolicy.md）の「2. アカウント構成」「6.1 復旧コード」「9.3 スーパーユーザ」「9.4 生体認証（パスキー）」「10. 組織」に基づき、家族（アカウント）・ユーザ・パスキーを管理するテーブルを定義する。
+基本方針（BasicPolicy.md）の「2. アカウント構成」「6.1 復旧コード」「9.3 スーパーユーザ」「9.4 生体認証（パスキー）」「10. 所属」に基づき、家族（アカウント）・ユーザ・パスキーを管理するテーブルを定義する。
 
 ## 0. 共通事項
 
@@ -18,24 +18,24 @@
   - MySQL 8.4 の既定（`utf8mb4_0900_ai_ci`）は大文字・小文字やアクセントを区別せず、UNIQUE 制約での重複判定がアプリケーションの意図とずれるため。
   - 大文字・小文字や全角・半角を同一とみなすかどうかは、アプリケーションの正規化で決める（3.3 参照）。
 - メールアドレスなど個人情報に繋がる項目は持たない（基本方針 1.）。
-- DDL を実行するための SQL（データベース `UECTSTDB` の作成、テーブルごとの個別のファイル、一括のファイル）は、`sql/` にある。DDL を変更したときは、本仕様書（TableSpec_Account.md・TableSpec_Auth.md・TableSpec_Organization.md）と、`sql/` のすべてのファイルを更新すること。
+- DDL を実行するための SQL（データベース `UECTSTDB` の作成、テーブルごとの個別のファイル、一括のファイル）は、`sql/` にある。DDL を変更したときは、本仕様書（TableSpec_Account.md・TableSpec_Auth.md・TableSpec_Belonging.md）と、`sql/` のすべてのファイルを更新すること。
 - 本仕様書の対象外：
   - セッション（認証トークン）・仮登録・回数制限・WebAuthn の challenge：TableSpec_Auth.md を参照
-  - 組織・組織のパスキー・組織のセッション・招待：TableSpec_Organization.md を参照
+  - 所属・所属のパスキー・所属のセッション・招待：TableSpec_Belonging.md を参照
   - ユーザごとの利用データ（テスト結果）：TableSpec_TestData.md を参照（退会・ユーザの削除の後も保持する。5.2 の規則に従う）
 
 ## 1. テーブル一覧
 
 | テーブル名 | 論理名 | 概要 |
 |---|---|---|
-| `families` | 家族 | アカウントの単位。認証情報（復旧コード）とスーパーユーザのパスワード、所属組織を持つ |
+| `families` | 家族 | アカウントの単位。認証情報（復旧コード）とスーパーユーザのパスワード、所属先を持つ |
 | `users` | ユーザ | 家族に属する利用者（1〜4名）。うち1名がスーパーユーザ。認証情報は持たない |
 | `passkeys` | パスキー | スーパーユーザのパスワードの代わりに、家族向けの重要な操作の確認に使うパスキー（WebAuthn） |
 
 ```
 families 1 ──── 1..4 users（うち1名がスーパーユーザ）
 families 1 ──── 0..n passkeys
-organizations 0..1 ──── 0..n families（所属。組織を削除すると families.organization_id は NULL になる）
+belongings 0..1 ──── 0..n families（所属。所属を削除すると families.belonging_id は NULL になる）
 ```
 
 ## 2. families（家族）
@@ -51,8 +51,8 @@ organizations 0..1 ──── 0..n families（所属。組織を削除する�
 | `superuser_password_hash` | `VARCHAR(255)` | NULL | | スーパーユーザのパスワードのハッシュ（Argon2id の PHC 形式の文字列）。未設定は NULL |
 | `superuser_password_failed_count` | `TINYINT UNSIGNED` | NOT NULL | `0` | パスワードの連続失敗回数 |
 | `superuser_password_locked_until` | `DATETIME(6)` | NULL | | パスワードの入力をロックする期限。ロックしていなければ NULL |
-| `organization_id` | `BINARY(16)` | NULL | | 所属している組織（`organizations.id`）。NULL は、組織に属していない個人ユーザ（基本方針 10.） |
-| `organization_joined_at` | `DATETIME(6)` | NULL | | 組織に所属した日時。所属していなければ NULL |
+| `belonging_id` | `BINARY(16)` | NULL | | 所属先（`belongings.id`）。NULL は、所属していない個人ユーザ（基本方針 10.） |
+| `belonging_joined_at` | `DATETIME(6)` | NULL | | 所属した日時。所属していなければ NULL |
 | `created_at` | `DATETIME(6)` | NOT NULL | `CURRENT_TIMESTAMP(6)` | 登録日時 |
 | `updated_at` | `DATETIME(6)` | NOT NULL | `CURRENT_TIMESTAMP(6)` | 更新日時（`ON UPDATE CURRENT_TIMESTAMP(6)`） |
 
@@ -62,8 +62,8 @@ organizations 0..1 ──── 0..n families（所属。組織を削除する�
 |---|---|---|---|
 | PRIMARY KEY | | `id` | |
 | UNIQUE | `uq_families_recovery_code_hash` | `recovery_code_hash` | 復旧コードは家族の識別子を兼ねるため、ログイン時はこのハッシュで家族を検索する |
-| FOREIGN KEY | `fk_families_organization` | `organization_id` → `organizations.id` | `ON DELETE SET NULL`（組織を削除すると、所属していた家族は個人ユーザになる。基本方針 10.6） |
-| INDEX | `ix_families_organization` | `organization_id` | 組織ごとの所属家族の一覧、組織が参照できる利用データの絞り込み（TableSpec_Organization.md 6.） |
+| FOREIGN KEY | `fk_families_belonging` | `belonging_id` → `belongings.id` | `ON DELETE SET NULL`（所属を削除すると、所属していた家族は個人ユーザになる。基本方針 10.6） |
+| INDEX | `ix_families_belonging` | `belonging_id` | 所属ごとの所属家族の一覧、所属が参照できる利用データの絞り込み（TableSpec_Belonging.md 6.） |
 
 ### 2.3 補足
 
@@ -90,14 +90,14 @@ organizations 0..1 ──── 0..n families（所属。組織を削除する�
     - 成功したら `superuser_password_failed_count` を0に戻す。
     - 同時に入力されても回数を正しく数えるため、照合時は家族の行を `SELECT ... FOR UPDATE` でロックする。
   - パスワードを削除（未設定に）した場合は、3つのカラムをすべて初期値（NULL・0・NULL）に戻す。
-- 組織への所属（基本方針 10.、11.）
-  - 所属は、組織からの招待（TableSpec_Organization.md 5.）を使って、`organization_id` と `organization_joined_at` を設定することで成立する。所属の解除は、2つのカラムを NULL に戻す。
-  - 別の組織へ移る場合は、`organization_id` を新しい組織に更新し、`organization_joined_at` を更新する。
+- 所属（基本方針 10.、11.）
+  - 所属は、所属からの招待（TableSpec_Belonging.md 5.）を使って、`belonging_id` と `belonging_joined_at` を設定することで成立する。所属の解除は、2つのカラムを NULL に戻す。
+  - 別の所属へ移る場合は、`belonging_id` を新しい所属に更新し、`belonging_joined_at` を更新する。
   - 所属の変更・解除は、家族向けの重要な操作（基本方針 9.2）として、確認の後に行う。
-  - 組織が参照できる利用データは、現在の `organization_id` で決まる（TableSpec_Organization.md 6.）。
+  - 所属が参照できる利用データは、現在の `belonging_id` で決まる（TableSpec_Belonging.md 6.）。
   - `families` の行を削除（退会）すると、所属の情報も一緒に消える。
-  - 組織の削除では、外部キーの `ON DELETE SET NULL` は `organization_id` だけを NULL にし、`organization_joined_at` は残る。そのため、組織を削除する処理は、同じトランザクションの中で、先に所属家族の2つのカラムを NULL にしてから、組織の行を削除する（ApiSpec_Organization.md 6.5）。`organization_joined_at` は、`organization_id` が NULL でないときだけ意味を持つ。
-  - `organizations` を `families` より先に作成すること（外部キーの参照先のため）。
+  - 所属の削除では、外部キーの `ON DELETE SET NULL` は `belonging_id` だけを NULL にし、`belonging_joined_at` は残る。そのため、所属を削除する処理は、同じトランザクションの中で、先に所属家族の2つのカラムを NULL にしてから、所属の行を削除する（ApiSpec_Belonging.md 6.5）。`belonging_joined_at` は、`belonging_id` が NULL でないときだけ意味を持つ。
+  - `belongings` を `families` より先に作成すること（外部キーの参照先のため）。
 
 ### 2.4 DDL
 
@@ -110,14 +110,14 @@ CREATE TABLE families (
     superuser_password_hash         VARCHAR(255)      NULL,
     superuser_password_failed_count TINYINT UNSIGNED  NOT NULL DEFAULT 0,
     superuser_password_locked_until DATETIME(6)       NULL,
-    organization_id                 BINARY(16)        NULL,
-    organization_joined_at          DATETIME(6)       NULL,
+    belonging_id                 BINARY(16)        NULL,
+    belonging_joined_at          DATETIME(6)       NULL,
     created_at                      DATETIME(6)       NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at                      DATETIME(6)       NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     PRIMARY KEY (id),
     UNIQUE KEY uq_families_recovery_code_hash (recovery_code_hash),
-    KEY ix_families_organization (organization_id),
-    CONSTRAINT fk_families_organization FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE SET NULL
+    KEY ix_families_belonging (belonging_id),
+    CONSTRAINT fk_families_belonging FOREIGN KEY (belonging_id) REFERENCES belongings (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 ```
 
@@ -282,7 +282,7 @@ CREATE TABLE passkeys (
 ### 5.1 家族の削除（退会）
 
 - 退会時は `families` の行を物理削除する。
-- `ON DELETE CASCADE` により、ユーザ・パスキー・セッション（TableSpec_Auth.md）が削除される。組織への所属（`organization_id`）も、家族の行とともに消える。
+- `ON DELETE CASCADE` により、ユーザ・パスキー・セッション（TableSpec_Auth.md）が削除される。所属（`belonging_id`）も、家族の行とともに消える。
   - 認証器（端末）に残ったパスキー自体はサーバから削除できないため、退会後の画面で、端末のパスキーの管理画面から削除するよう案内する。
 - 削除したアカウント情報（家族・ユーザ名・端末のログイン・所属）は復元できない（バックアップからの個別復元も行わない）。
 - **ユーザごとの利用データは削除しない**（基本方針 10.7）。5.2 を参照。
@@ -296,7 +296,7 @@ CREATE TABLE passkeys (
 - `user_id` にインデックスを付ける。
 - 利用データに、ユーザ名・メールアドレス・氏名などを含めない。ユーザの削除・退会の後は、`user_id` から、ユーザ名や家族を特定できない。
 - 利用データを登録する API は、リクエストの `userId` がログイン中の家族に属することを確認してから、`user_id` に保存する（ApiSpec_Auth.md 3.2）。
-- 利用データを参照できる範囲は、TableSpec_Organization.md 6. で定める。
+- 利用データを参照できる範囲は、TableSpec_Belonging.md 6. で定める。
 - 利用データを削除する手段（運用担当者の SQL、運用担当者の機能）は別途定義する。
 
 ## 6. 未決事項
@@ -305,4 +305,4 @@ CREATE TABLE passkeys (
 - ユーザ名の重複判定で、大文字・小文字や全角・半角を同一とみなすか（正規化を NFC にするか、NFKC ＋ 小文字化にするか）
 - バックアップに残った退会済みの家族のアカウント情報の扱い（バックアップの保存期間）
 - 利用データの削除の依頼への対応（退会・ユーザの削除の後は、`user_id` から本人を特定できない。基本方針 8.）
-- 所属前に作られた利用データを、組織に参照させるか（現状は参照できる。`organization_joined_at` を使えば、所属後のデータだけに絞れる）
+- 所属前に作られた利用データを、所属に参照させるか（現状は参照できる。`belonging_joined_at` を使えば、所属後のデータだけに絞れる）

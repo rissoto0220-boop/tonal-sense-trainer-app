@@ -1,8 +1,8 @@
-// uectst-api の入口。家族・ユーザ用の FamilyClient と、運用担当者・組織用の OrgClient を公開する。
+// uectst-api の入口。家族・ユーザ用の FamilyClient と、運用担当者・所属用の BlgClient を公開する。
 export { ApiClient } from "./ApiClient.js";
 export { ApiError } from "./ApiError.js";
 export { FamilyClient } from "./FamilyClient.js";
-export { OrgClient } from "./OrgClient.js";
+export { BlgClient } from "./BlgClient.js";
 export { RegistrationApi } from "./RegistrationApi.js";
 export { SessionApi } from "./SessionApi.js";
 export { UserApi } from "./UserApi.js";
@@ -10,14 +10,14 @@ export { AccountApi } from "./AccountApi.js";
 export { SuperuserApi } from "./SuperuserApi.js";
 export { PasskeyApi } from "./PasskeyApi.js";
 export { MembershipApi } from "./MembershipApi.js";
-export { OrgSessionApi } from "./OrgSessionApi.js";
-export { OrgAccountApi } from "./OrgAccountApi.js";
-export { OrgPasskeyApi } from "./OrgPasskeyApi.js";
-export { OrgInvitationApi } from "./OrgInvitationApi.js";
-export { OrgAdminApi } from "./OrgAdminApi.js";
-export { OrgFamilyApi } from "./OrgFamilyApi.js";
+export { BlgSessionApi } from "./BlgSessionApi.js";
+export { BlgAccountApi } from "./BlgAccountApi.js";
+export { BlgPasskeyApi } from "./BlgPasskeyApi.js";
+export { BlgInvitationApi } from "./BlgInvitationApi.js";
+export { BlgAdminApi } from "./BlgAdminApi.js";
+export { BlgFamilyApi } from "./BlgFamilyApi.js";
 export { TestDataApi } from "./TestDataApi.js";
-export { OrgTestDataApi } from "./OrgTestDataApi.js";
+export { BlgTestDataApi } from "./BlgTestDataApi.js";
 export { RecoveryCode } from "./RecoveryCode.js";
 export { readFragmentToken, clearFragment } from "./TokenFragment.js";
 export { isPasskeySupported, createCredential, getCredential, base64UrlToBuffer, bufferToBase64Url } from "./WebAuthnBrowser.js";

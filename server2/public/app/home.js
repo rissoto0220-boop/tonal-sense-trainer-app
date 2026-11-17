@@ -2,7 +2,7 @@
 // スーパーユーザのホームからは、家族の編集（ユーザの追加・名前の変更・削除）へ進める。
 // ユーザの切り替えにロックはかけない（基本方針 5.）。起動時は、前回選択したユーザがいても、必ず選択から始める。
 import { api, byId, showScreen, setError } from "./common.js";
-import { field, paragraph, showDialog } from "./org/dialog.js";
+import { field, paragraph, showDialog } from "./console/dialog.js";
 
 const MAX_USERS = 4;
 const MAX_NAME_LENGTH = 20;
@@ -29,10 +29,10 @@ function renderUserChoices() {
   }
 }
 
-// 所属している組織の名前（所属していなければ「なし」）
-function renderOrganization() {
-  const text = family.organization?.name ?? "なし";
-  for (const el of document.querySelectorAll(".orgLabel")) el.textContent = text;
+// 所属先の名前（所属していなければ「なし」）
+function renderBelonging() {
+  const text = family.belonging?.name ?? "なし";
+  for (const el of document.querySelectorAll(".blgLabel")) el.textContent = text;
 }
 
 function showUserSelection() {
@@ -185,7 +185,7 @@ async function start() {
     family = current.family;
     const expires = new Date(current.session.expiresAt).toLocaleDateString("ja-JP");
     byId("device").textContent = `${current.session.deviceLabel}（${expires} までログインしたままになります）`;
-    renderOrganization();
+    renderBelonging();
     showUserSelection();
   } catch (error) {
     if (error?.status === 401) {

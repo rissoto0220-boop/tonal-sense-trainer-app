@@ -13,7 +13,7 @@ use UecTst\Tests\Support\TestCaptcha;
 use UecTst\Tests\Unit\Config\AppConfigTest;
 
 /** デバッグ状態（debug.features.mailViewer）: メール表示ページと、レスポンスへのリンクの追加。 */
-final class DebugMailViewerTest extends OrgApiTestCase
+final class DebugMailViewerTest extends BlgApiTestCase
 {
     private string $mailFile;
 
@@ -117,15 +117,15 @@ final class DebugMailViewerTest extends OrgApiTestCase
     public function testInvitationMailIsLinkedToo(): void
     {
         $this->useLogMailer(['enabled' => true, 'features' => ['mailViewer' => true]]);
-        $this->createOrganization('○○大学', 'example-univ');
-        $org = $this->client('203.0.113.50');
-        $this->orgLogin($org, 'example-univ');
+        $this->createBelonging('○○大学', 'example-univ');
+        $blg = $this->client('203.0.113.50');
+        $this->blgLogin($blg, 'example-univ');
 
-        $send = $org->post('/api/v1/org/invitations', ['email' => 'invitee@example.com']);
+        $send = $blg->post('/api/v1/blg/invitations', ['email' => 'invitee@example.com']);
         $this->assertSame(202, $send->status(), $send->body());
         $this->assertMatchesRegularExpression('#^/debug/mails\?highlight=#', $send->json()['debug']['mailViewUrl']);
 
-        $mails = $org->get('/debug/mails?format=json')->json()['mails'];
+        $mails = $blg->get('/debug/mails?format=json')->json()['mails'];
         $this->assertSame('invitee@example.com', $mails[0]['to']);
         $this->assertStringContainsString('○○大学', $mails[0]['subject']);
         $this->assertMatchesRegularExpression('#http://localhost:8888/invite\#token=[A-Za-z0-9_-]{43}#', $mails[0]['body']);
@@ -146,7 +146,7 @@ final class DebugMailViewerTest extends OrgApiTestCase
         $this->assertSame(200, $page->status());
         $this->assertStringStartsWith('text/html', (string) $page->header('Content-Type'));
         $this->assertStringContainsString('href="/debug/mails"', $page->body());
-        $this->assertStringContainsString('/api/v1/org', $page->body());
+        $this->assertStringContainsString('/api/v1/blg', $page->body());
         // 秘密の値は表示しない
         $this->assertStringNotContainsString('ZGV2LW9ubHkt', $page->body());
 

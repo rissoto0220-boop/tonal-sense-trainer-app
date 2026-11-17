@@ -16,13 +16,13 @@ CREATE TABLE families (
     superuser_password_hash         VARCHAR(255)      NULL,
     superuser_password_failed_count TINYINT UNSIGNED  NOT NULL DEFAULT 0,
     superuser_password_locked_until DATETIME(6)       NULL,
-    organization_id                 BINARY(16)        NULL,
-    organization_joined_at          DATETIME(6)       NULL,
+    belonging_id                    BINARY(16)        NULL,
+    belonging_joined_at            DATETIME(6)       NULL,
     created_at                      DATETIME(6)       NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at                      DATETIME(6)       NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     PRIMARY KEY (id),
     UNIQUE KEY uq_families_recovery_code_hash (recovery_code_hash),
-    KEY ix_families_organization (organization_id),
-    CONSTRAINT fk_families_organization FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE SET NULL
+    KEY ix_families_belonging (belonging_id),
+    CONSTRAINT fk_families_belonging FOREIGN KEY (belonging_id) REFERENCES belongings (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 SET FOREIGN_KEY_CHECKS = 1;

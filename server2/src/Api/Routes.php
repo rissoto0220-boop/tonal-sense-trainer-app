@@ -16,7 +16,7 @@ use UecTst\Mail\MailLog;
 use UecTst\Services;
 
 /**
- * ルートの登録。API の番号は、ApiSpec_Auth.md 0.7 の一覧（#）と、ApiSpec_Organization.md 0.7 の一覧（O）に対応する。
+ * ルートの登録。API の番号は、ApiSpec_Auth.md 0.7 の一覧（#）と、ApiSpec_Belonging.md 0.7 の一覧（O）に対応する。
  *
  * Services は、「取得する関数」で受け取る。実際にルートが呼ばれたときに初めて作られる（DB への接続が、
  * ルートの登録時ではなく、API の処理を始めるときになる）。
@@ -71,48 +71,48 @@ final class Routes
         self::post($router, '/api/v1/superuser/passkeys', $services, fn (Services $s, Request $r) => (new SuperuserController($s))->register($r));                 // #26
         self::delete($router, '/api/v1/superuser/passkeys/{passkeyId}', $services, fn (Services $s, Request $r, array $p) => (new SuperuserController($s))->deletePasskey($r, $p)); // #27
 
-        // 組織への所属（家族側）
+        // 所属（家族側）
         self::post($router, '/api/v1/invitations/verify', $services, fn (Services $s, Request $r) => (new MembershipController($s))->verifyInvitation($r)); // #28
-        self::get($router, '/api/v1/organization-membership', $services, fn (Services $s, Request $r) => (new MembershipController($s))->show($r));         // #29
-        self::post($router, '/api/v1/organization-membership', $services, fn (Services $s, Request $r) => (new MembershipController($s))->join($r));        // #30
-        self::delete($router, '/api/v1/organization-membership', $services, fn (Services $s, Request $r) => (new MembershipController($s))->leave($r));     // #31
+        self::get($router, '/api/v1/belonging', $services, fn (Services $s, Request $r) => (new MembershipController($s))->show($r));         // #29
+        self::post($router, '/api/v1/belonging', $services, fn (Services $s, Request $r) => (new MembershipController($s))->join($r));        // #30
+        self::delete($router, '/api/v1/belonging', $services, fn (Services $s, Request $r) => (new MembershipController($s))->leave($r));     // #31
 
-        // 運用担当者・組織（ApiSpec_Organization.md）
-        self::post($router, '/api/v1/org/sessions', $services, fn (Services $s, Request $r) => (new OrgSessionController($s))->login($r));                          // O1
-        self::post($router, '/api/v1/org/sessions/passkey-options', $services, fn (Services $s, Request $r) => (new OrgSessionController($s))->passkeyOptions($r)); // O2
-        self::post($router, '/api/v1/org/sessions/passkey', $services, fn (Services $s, Request $r) => (new OrgSessionController($s))->passkey($r));               // O3
-        self::get($router, '/api/v1/org/sessions/current', $services, fn (Services $s, Request $r) => (new OrgSessionController($s))->current($r));                 // O4
-        self::delete($router, '/api/v1/org/sessions/current', $services, fn (Services $s, Request $r) => (new OrgSessionController($s))->logout($r));              // O5
-        self::put($router, '/api/v1/org/password', $services, fn (Services $s, Request $r) => (new OrgAccountController($s))->changePassword($r));                  // O6
-        self::post($router, '/api/v1/org/elevation', $services, fn (Services $s, Request $r) => (new OrgAccountController($s))->elevate($r));                       // O7
-        self::get($router, '/api/v1/org/passkeys', $services, fn (Services $s, Request $r) => (new OrgPasskeyController($s))->list($r));                            // O8
-        self::post($router, '/api/v1/org/passkeys/registration-options', $services, fn (Services $s, Request $r) => (new OrgPasskeyController($s))->registrationOptions($r)); // O9
-        self::post($router, '/api/v1/org/passkeys', $services, fn (Services $s, Request $r) => (new OrgPasskeyController($s))->register($r));                      // O10
-        self::delete($router, '/api/v1/org/passkeys/{passkeyId}', $services, fn (Services $s, Request $r, array $p) => (new OrgPasskeyController($s))->delete($r, $p)); // O11
-        self::post($router, '/api/v1/org/invitations', $services, fn (Services $s, Request $r) => (new OrgInvitationController($s))->send($r));                     // O12
-        self::get($router, '/api/v1/org/invitations', $services, fn (Services $s, Request $r) => (new OrgInvitationController($s))->count($r));                     // O13
-        self::delete($router, '/api/v1/org/invitations', $services, fn (Services $s, Request $r) => (new OrgInvitationController($s))->revoke($r));                 // O14
-        self::get($router, '/api/v1/org/members', $services, fn (Services $s, Request $r) => (new OrgMemberController($s))->list($r));                              // O15
-        self::delete($router, '/api/v1/org/members/{familyId}', $services, fn (Services $s, Request $r, array $p) => (new OrgMemberController($s))->remove($r, $p));  // O16
-        self::get($router, '/api/v1/org/organizations', $services, fn (Services $s, Request $r) => (new OrgAdminController($s))->list($r));                         // O17
-        self::post($router, '/api/v1/org/organizations', $services, fn (Services $s, Request $r) => (new OrgAdminController($s))->create($r));                      // O18
-        self::patch($router, '/api/v1/org/organizations/{organizationId}', $services, fn (Services $s, Request $r, array $p) => (new OrgAdminController($s))->rename($r, $p)); // O19
-        self::post($router, '/api/v1/org/organizations/{organizationId}/password-reset', $services, fn (Services $s, Request $r, array $p) => (new OrgAdminController($s))->resetPassword($r, $p)); // O20
-        self::delete($router, '/api/v1/org/organizations/{organizationId}', $services, fn (Services $s, Request $r, array $p) => (new OrgAdminController($s))->delete($r, $p)); // O21
-        self::get($router, '/api/v1/org/families', $services, fn (Services $s, Request $r) => (new OrgFamilyController($s))->list($r));                              // O27
-        self::delete($router, '/api/v1/org/families/{familyId}/organization', $services, fn (Services $s, Request $r, array $p) => (new OrgFamilyController($s))->release($r, $p)); // O28
-        self::delete($router, '/api/v1/org/families/{familyId}', $services, fn (Services $s, Request $r, array $p) => (new OrgFamilyController($s))->delete($r, $p));  // O29
+        // 運用担当者・所属（ApiSpec_Belonging.md）
+        self::post($router, '/api/v1/blg/sessions', $services, fn (Services $s, Request $r) => (new BlgSessionController($s))->login($r));                          // B1
+        self::post($router, '/api/v1/blg/sessions/passkey-options', $services, fn (Services $s, Request $r) => (new BlgSessionController($s))->passkeyOptions($r)); // B2
+        self::post($router, '/api/v1/blg/sessions/passkey', $services, fn (Services $s, Request $r) => (new BlgSessionController($s))->passkey($r));               // B3
+        self::get($router, '/api/v1/blg/sessions/current', $services, fn (Services $s, Request $r) => (new BlgSessionController($s))->current($r));                 // B4
+        self::delete($router, '/api/v1/blg/sessions/current', $services, fn (Services $s, Request $r) => (new BlgSessionController($s))->logout($r));              // B5
+        self::put($router, '/api/v1/blg/password', $services, fn (Services $s, Request $r) => (new BlgAccountController($s))->changePassword($r));                  // B6
+        self::post($router, '/api/v1/blg/elevation', $services, fn (Services $s, Request $r) => (new BlgAccountController($s))->elevate($r));                       // B7
+        self::get($router, '/api/v1/blg/passkeys', $services, fn (Services $s, Request $r) => (new BlgPasskeyController($s))->list($r));                            // B8
+        self::post($router, '/api/v1/blg/passkeys/registration-options', $services, fn (Services $s, Request $r) => (new BlgPasskeyController($s))->registrationOptions($r)); // B9
+        self::post($router, '/api/v1/blg/passkeys', $services, fn (Services $s, Request $r) => (new BlgPasskeyController($s))->register($r));                      // B10
+        self::delete($router, '/api/v1/blg/passkeys/{passkeyId}', $services, fn (Services $s, Request $r, array $p) => (new BlgPasskeyController($s))->delete($r, $p)); // B11
+        self::post($router, '/api/v1/blg/invitations', $services, fn (Services $s, Request $r) => (new BlgInvitationController($s))->send($r));                     // B12
+        self::get($router, '/api/v1/blg/invitations', $services, fn (Services $s, Request $r) => (new BlgInvitationController($s))->count($r));                     // B13
+        self::delete($router, '/api/v1/blg/invitations', $services, fn (Services $s, Request $r) => (new BlgInvitationController($s))->revoke($r));                 // B14
+        self::get($router, '/api/v1/blg/members', $services, fn (Services $s, Request $r) => (new BlgMemberController($s))->list($r));                              // B15
+        self::delete($router, '/api/v1/blg/members/{familyId}', $services, fn (Services $s, Request $r, array $p) => (new BlgMemberController($s))->remove($r, $p));  // B16
+        self::get($router, '/api/v1/blg/belongings', $services, fn (Services $s, Request $r) => (new BlgAdminController($s))->list($r));                         // B17
+        self::post($router, '/api/v1/blg/belongings', $services, fn (Services $s, Request $r) => (new BlgAdminController($s))->create($r));                      // B18
+        self::patch($router, '/api/v1/blg/belongings/{belongingId}', $services, fn (Services $s, Request $r, array $p) => (new BlgAdminController($s))->rename($r, $p)); // B19
+        self::post($router, '/api/v1/blg/belongings/{belongingId}/password-reset', $services, fn (Services $s, Request $r, array $p) => (new BlgAdminController($s))->resetPassword($r, $p)); // B20
+        self::delete($router, '/api/v1/blg/belongings/{belongingId}', $services, fn (Services $s, Request $r, array $p) => (new BlgAdminController($s))->delete($r, $p)); // B21
+        self::get($router, '/api/v1/blg/families', $services, fn (Services $s, Request $r) => (new BlgFamilyController($s))->list($r));                              // B27
+        self::delete($router, '/api/v1/blg/families/{familyId}/belonging', $services, fn (Services $s, Request $r, array $p) => (new BlgFamilyController($s))->release($r, $p)); // B28
+        self::delete($router, '/api/v1/blg/families/{familyId}', $services, fn (Services $s, Request $r, array $p) => (new BlgFamilyController($s))->delete($r, $p));  // B29
 
         // 利用データ（ApiSpec_TestData.md）
         self::post($router, '/api/v1/users/{userId}/test-sessions', $services, fn (Services $s, Request $r, array $p) => (new TestDataController($s))->submit($r, $p));            // #32
         self::get($router, '/api/v1/users/{userId}/test-sessions', $services, fn (Services $s, Request $r, array $p) => (new TestDataController($s))->list($r, $p));             // #33
         self::get($router, '/api/v1/users/{userId}/test-sessions/{sessionId}', $services, fn (Services $s, Request $r, array $p) => (new TestDataController($s))->show($r, $p));  // #34
         self::get($router, '/api/v1/users/{userId}/test-exports', $services, fn (Services $s, Request $r, array $p) => (new TestDataController($s))->export($r, $p));            // #35
-        self::get($router, '/api/v1/org/users', $services, fn (Services $s, Request $r) => (new OrgTestDataController($s))->users($r));                                          // O22
-        self::get($router, '/api/v1/org/users/{userId}/test-sessions', $services, fn (Services $s, Request $r, array $p) => (new OrgTestDataController($s))->sessions($r, $p));   // O23
-        self::get($router, '/api/v1/org/users/{userId}/test-sessions/{sessionId}', $services, fn (Services $s, Request $r, array $p) => (new OrgTestDataController($s))->session($r, $p)); // O24
-        self::get($router, '/api/v1/org/test-exports', $services, fn (Services $s, Request $r) => (new OrgTestDataController($s))->export($r));                                 // O25
-        self::delete($router, '/api/v1/org/test-sessions/{sessionId}', $services, fn (Services $s, Request $r, array $p) => (new OrgTestDataController($s))->delete($r, $p));   // O26
+        self::get($router, '/api/v1/blg/users', $services, fn (Services $s, Request $r) => (new BlgTestDataController($s))->users($r));                                          // B22
+        self::get($router, '/api/v1/blg/users/{userId}/test-sessions', $services, fn (Services $s, Request $r, array $p) => (new BlgTestDataController($s))->sessions($r, $p));   // B23
+        self::get($router, '/api/v1/blg/users/{userId}/test-sessions/{sessionId}', $services, fn (Services $s, Request $r, array $p) => (new BlgTestDataController($s))->session($r, $p)); // B24
+        self::get($router, '/api/v1/blg/test-exports', $services, fn (Services $s, Request $r) => (new BlgTestDataController($s))->export($r));                                 // B25
+        self::delete($router, '/api/v1/blg/test-sessions/{sessionId}', $services, fn (Services $s, Request $r, array $p) => (new BlgTestDataController($s))->delete($r, $p));   // B26
 
         // 確認・復旧コード・退会
         self::post($router, '/api/v1/elevation', $services, fn (Services $s, Request $r) => (new AccountController($s))->elevate($r));                 // #15

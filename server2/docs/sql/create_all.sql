@@ -10,10 +10,10 @@ CREATE DATABASE UECTSTDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_bin;
 
 USE UECTSTDB;
 
--- 01 organizations（組織）  出典: TableSpec_Organization.md 2.4
+-- 01 belongings（所属）  出典: TableSpec_Belonging.md 2.4
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS organizations;
-CREATE TABLE organizations (
+DROP TABLE IF EXISTS belongings;
+CREATE TABLE belongings (
     id                       BINARY(16)       NOT NULL,
     name                     VARCHAR(100)     NOT NULL,
     name_kana                VARCHAR(100)     NULL,
@@ -26,13 +26,13 @@ CREATE TABLE organizations (
     created_at               DATETIME(6)      NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at               DATETIME(6)      NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     PRIMARY KEY (id),
-    UNIQUE KEY uq_organizations_login_id (login_id),
-    UNIQUE KEY uq_organizations_name (name),
-    UNIQUE KEY uq_organizations_super ((IF(is_super = 1, 1, NULL))),
-    CONSTRAINT ck_organizations_name                     CHECK (CHAR_LENGTH(TRIM(name)) >= 1),
-    CONSTRAINT ck_organizations_login_id                 CHECK (CHAR_LENGTH(login_id) >= 4),
-    CONSTRAINT ck_organizations_is_super                 CHECK (is_super IN (0, 1)),
-    CONSTRAINT ck_organizations_password_change_required CHECK (password_change_required IN (0, 1))
+    UNIQUE KEY uq_belongings_login_id (login_id),
+    UNIQUE KEY uq_belongings_name (name),
+    UNIQUE KEY uq_belongings_super ((IF(is_super = 1, 1, NULL))),
+    CONSTRAINT ck_belongings_name                     CHECK (CHAR_LENGTH(TRIM(name)) >= 1),
+    CONSTRAINT ck_belongings_login_id                 CHECK (CHAR_LENGTH(login_id) >= 4),
+    CONSTRAINT ck_belongings_is_super                 CHECK (is_super IN (0, 1)),
+    CONSTRAINT ck_belongings_password_change_required CHECK (password_change_required IN (0, 1))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -47,14 +47,14 @@ CREATE TABLE families (
     superuser_password_hash         VARCHAR(255)      NULL,
     superuser_password_failed_count TINYINT UNSIGNED  NOT NULL DEFAULT 0,
     superuser_password_locked_until DATETIME(6)       NULL,
-    organization_id                 BINARY(16)        NULL,
-    organization_joined_at          DATETIME(6)       NULL,
+    belonging_id                    BINARY(16)        NULL,
+    belonging_joined_at            DATETIME(6)       NULL,
     created_at                      DATETIME(6)       NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     updated_at                      DATETIME(6)       NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
     PRIMARY KEY (id),
     UNIQUE KEY uq_families_recovery_code_hash (recovery_code_hash),
-    KEY ix_families_organization (organization_id),
-    CONSTRAINT fk_families_organization FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE SET NULL
+    KEY ix_families_belonging (belonging_id),
+    CONSTRAINT fk_families_belonging FOREIGN KEY (belonging_id) REFERENCES belongings (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -167,12 +167,12 @@ CREATE TABLE webauthn_challenges (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 SET FOREIGN_KEY_CHECKS = 1;
 
--- 09 organization_passkeys（組織のパスキー）  出典: TableSpec_Organization.md 3.4
+-- 09 belonging_passkeys（所属のパスキー）  出典: TableSpec_Belonging.md 3.4
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS organization_passkeys;
-CREATE TABLE organization_passkeys (
+DROP TABLE IF EXISTS belonging_passkeys;
+CREATE TABLE belonging_passkeys (
     id              BINARY(16)      NOT NULL,
-    organization_id BINARY(16)      NOT NULL,
+    belonging_id    BINARY(16)      NOT NULL,
     credential_id   VARBINARY(255)  NOT NULL,
     public_key      VARBINARY(1024) NOT NULL,
     sign_count      INT UNSIGNED    NOT NULL DEFAULT 0,
@@ -182,19 +182,19 @@ CREATE TABLE organization_passkeys (
     created_at      DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     last_used_at    DATETIME(6)     NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_organization_passkeys_credential_id (credential_id),
-    KEY ix_organization_passkeys_organization (organization_id),
-    CONSTRAINT fk_organization_passkeys_organization FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
-    CONSTRAINT ck_organization_passkeys_backup_eligible CHECK (backup_eligible IN (0, 1))
+    UNIQUE KEY uq_belonging_passkeys_credential_id (credential_id),
+    KEY ix_belonging_passkeys_belonging (belonging_id),
+    CONSTRAINT fk_belonging_passkeys_belonging FOREIGN KEY (belonging_id) REFERENCES belongings (id) ON DELETE CASCADE,
+    CONSTRAINT ck_belonging_passkeys_backup_eligible CHECK (backup_eligible IN (0, 1))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 SET FOREIGN_KEY_CHECKS = 1;
 
--- 10 organization_sessions（組織のセッション）  出典: TableSpec_Organization.md 4.4
+-- 10 belonging_sessions（所属のセッション）  出典: TableSpec_Belonging.md 4.4
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS organization_sessions;
-CREATE TABLE organization_sessions (
+DROP TABLE IF EXISTS belonging_sessions;
+CREATE TABLE belonging_sessions (
     id              BINARY(16)       NOT NULL,
-    organization_id BINARY(16)       NOT NULL,
+    belonging_id    BINARY(16)       NOT NULL,
     token_hash      BINARY(32)       NOT NULL,
     auth_stage      TINYINT UNSIGNED NOT NULL DEFAULT 0,
     created_at      DATETIME(6)      NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
@@ -202,27 +202,27 @@ CREATE TABLE organization_sessions (
     expires_at      DATETIME(6)      NOT NULL,
     elevated_until  DATETIME(6)      NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_organization_sessions_token_hash (token_hash),
-    KEY ix_organization_sessions_organization (organization_id),
-    KEY ix_organization_sessions_expires_at   (expires_at),
-    CONSTRAINT fk_organization_sessions_organization FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE,
-    CONSTRAINT ck_organization_sessions_auth_stage   CHECK (auth_stage IN (0, 1))
+    UNIQUE KEY uq_belonging_sessions_token_hash (token_hash),
+    KEY ix_belonging_sessions_belonging (belonging_id),
+    KEY ix_belonging_sessions_expires_at   (expires_at),
+    CONSTRAINT fk_belonging_sessions_belonging FOREIGN KEY (belonging_id) REFERENCES belongings (id) ON DELETE CASCADE,
+    CONSTRAINT ck_belonging_sessions_auth_stage   CHECK (auth_stage IN (0, 1))
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 SET FOREIGN_KEY_CHECKS = 1;
 
--- 11 organization_invitations（招待）  出典: TableSpec_Organization.md 5.4
+-- 11 belonging_invitations（招待）  出典: TableSpec_Belonging.md 5.4
 SET FOREIGN_KEY_CHECKS = 0;
-DROP TABLE IF EXISTS organization_invitations;
-CREATE TABLE organization_invitations (
+DROP TABLE IF EXISTS belonging_invitations;
+CREATE TABLE belonging_invitations (
     id              BINARY(16)  NOT NULL,
-    organization_id BINARY(16)  NOT NULL,
+    belonging_id    BINARY(16)  NOT NULL,
     token_hash      BINARY(32)  NOT NULL,
     expires_at      DATETIME(6) NOT NULL,
     PRIMARY KEY (id),
-    UNIQUE KEY uq_organization_invitations_token_hash (token_hash),
-    KEY ix_organization_invitations_organization (organization_id),
-    KEY ix_organization_invitations_expires_at   (expires_at),
-    CONSTRAINT fk_organization_invitations_organization FOREIGN KEY (organization_id) REFERENCES organizations (id) ON DELETE CASCADE
+    UNIQUE KEY uq_belonging_invitations_token_hash (token_hash),
+    KEY ix_belonging_invitations_belonging (belonging_id),
+    KEY ix_belonging_invitations_expires_at   (expires_at),
+    CONSTRAINT fk_belonging_invitations_belonging FOREIGN KEY (belonging_id) REFERENCES belongings (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin;
 SET FOREIGN_KEY_CHECKS = 1;
 

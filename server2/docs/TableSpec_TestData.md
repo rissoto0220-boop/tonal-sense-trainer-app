@@ -5,7 +5,7 @@
 ## 0. 共通事項・方針
 
 - 利用データは、`users`・`families` への**外部キーを持たない**。`user_id` のみで利用者を表す（TableSpec_Account.md 5.2）。ユーザの削除・退会で、利用データは消えない。
-- 利用データに、ユーザ名・メールアドレス・氏名・家族の ID・組織の ID を含めない。組織は、現在の所属から決める（TableSpec_Organization.md 6.）。
+- 利用データに、ユーザ名・メールアドレス・氏名・家族の ID・所属の ID を含めない。所属は、現在の所属から決める（TableSpec_Belonging.md 6.）。
 - 外部キーを持つのは、セッションと回答の間のみ（`ON DELETE CASCADE`）。セッションを消すと、回答も消える。
 - 保存の方法は、次のとおり。
   - 共通の項目は `test_sessions` に置く。種類ごとの回答は、種類ごとのテーブルに、型付きの列で置く（検証・集計・CSV の作成を単純にするため）。
@@ -371,14 +371,14 @@ CREATE TABLE training_trial_responses (
 
 ## 10. 参照の権限
 
-TableSpec_Organization.md 6. の条件を、`test_sessions.user_id` に適用する。
+TableSpec_Belonging.md 6. の条件を、`test_sessions.user_id` に適用する。
 
 ```sql
 SELECT s.*
   FROM test_sessions s
   JOIN users    u ON u.id = s.user_id
   JOIN families f ON f.id = u.family_id
- WHERE f.organization_id = :organization_id;
+ WHERE f.belonging_id = :belonging_id;
 ```
 
 - 家族のユーザ：`s.user_id` が、ログイン中の家族の現存するユーザの `id` のいずれか。
@@ -398,5 +398,5 @@ SELECT s.*
 - 種類ごとの項目（相対音感の `answerLayout`・`practiceStatus`）が、絞り込みに必要になった場合は、列に出す。
 - 本文の大きさ・配列の件数の上限の値（DataFormat_TestData.md 9.）。
 - 利用データの保存期間と、削除の手段。
-- 所属前に作られたデータを、組織に参照させるか（TableSpec_Organization.md 6.）。
+- 所属前に作られたデータを、所属に参照させるか（TableSpec_Belonging.md 6.）。
 - `test_sessions.id` は、クライアントが作る UUID なので、主キーの挿入順が不規則になる。件数が増えて、書き込みが遅くなる場合は、連番の主キーを別に持つ形に変える。

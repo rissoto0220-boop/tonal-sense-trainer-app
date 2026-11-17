@@ -14,7 +14,7 @@ final class Logger
     }
 
     /**
-     * 操作の記録（ApiSpec_Organization.md 8.）など。パスワード・トークン・メールアドレスは、渡さないこと。
+     * 操作の記録（ApiSpec_Belonging.md 8.）など。パスワード・トークン・メールアドレスは、渡さないこと。
      *
      * @param array<string, scalar|null> $context
      */

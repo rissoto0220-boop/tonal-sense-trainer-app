@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace UecTst\Auth;
 
 /**
- * 認証 Cookie（ApiSpec_Auth.md 0.2、ApiSpec_Organization.md 0.2）。
+ * 認証 Cookie（ApiSpec_Auth.md 0.2、ApiSpec_Belonging.md 0.2）。
  * 属性は、Secure・HttpOnly・SameSite=Lax・Path=/（Domain は付けない）。
- * 家族の Cookie は有効期限が365日、組織の Cookie は有効期限を持たない（セッション Cookie。$maxAge = null）。
+ * 家族の Cookie は有効期限が365日、所属の Cookie は有効期限を持たない（セッション Cookie。$maxAge = null）。
  * 本番では、__Host- プレフィックスを付ける（Secure・Path=/・Domain なしを、ブラウザが強制する）。
  */
 final class CookieFactory
@@ -15,7 +15,7 @@ final class CookieFactory
     public const MAX_AGE = 31536000; // 365日
 
     /**
-     * @param string $baseName プレフィックスなしの Cookie 名（家族: sid、組織: org-sid）
+     * @param string $baseName プレフィックスなしの Cookie 名（家族: sid、所属: blg-sid）
      * @param int|null $maxAge 有効期限（秒）。null なら付けない（ブラウザを閉じると消える）
      */
     public function __construct(

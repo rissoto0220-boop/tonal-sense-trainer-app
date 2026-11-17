@@ -1,7 +1,7 @@
 # Web API 仕様書：ユーザ管理・認証
 
-基本方針（BasicPolicy.md）とテーブル仕様書（TableSpec_Account.md、TableSpec_Auth.md、TableSpec_Organization.md）に基づき、家族・ユーザの管理・認証の Web API を定義する。
-組織（運用担当者を含む）の認証・管理の Web API は ApiSpec_Organization.md を参照。本仕様書の「10. 組織への所属」は、家族が組織に所属・解除する API である。
+基本方針（BasicPolicy.md）とテーブル仕様書（TableSpec_Account.md、TableSpec_Auth.md、TableSpec_Belonging.md）に基づき、家族・ユーザの管理・認証の Web API を定義する。
+所属（運用担当者を含む）の認証・管理の Web API は ApiSpec_Belonging.md を参照。本仕様書の「10. 所属」は、家族が所属に所属・解除する API である。
 
 ## 0. 共通事項
 
@@ -58,7 +58,7 @@
 | スーパーユーザを他のユーザへ移す | #20 |
 | 退会 | #21 |
 | パスキーの登録・削除 | #25・#26・#27 |
-| 組織への所属の追加・解除 | #30・#31 |
+| 所属の追加・解除 | #30・#31 |
 
 ### 0.5 エラーレスポンス
 
@@ -101,8 +101,8 @@
 | 409 | `SUPERUSER_PASSWORD_ALREADY_SET` | パスワードが設定済みの家族で、復旧コードによる確認が要求された |
 | 409 | `PASSKEYS_REGISTERED` | パスキーが登録されているため、パスワードを削除できない |
 | 409 | `PASSKEY_LIMIT_REACHED` | パスキーが上限（10件）に達している |
-| 409 | `ALREADY_MEMBER` | すでに同じ組織に所属している |
-| 409 | `NOT_A_MEMBER` | 組織に所属していない |
+| 409 | `ALREADY_MEMBER` | すでに同じ所属先に所属している |
+| 409 | `NOT_A_MEMBER` | 所属していない |
 | 410 | `REGISTRATION_TOKEN_INVALID` | 本登録URLのトークンが無効・期限切れ・使用済み |
 | 410 | `INVITATION_INVALID` | 招待URLのトークンが無効・期限切れ・使用済み |
 | 422 | `VALIDATION_FAILED` | 入力値が規則に合わない（`details` に項目ごとのエラー） |
@@ -148,7 +148,7 @@
 |---|---|---|---|---|---|
 | 1 | POST | `/api/v1/registrations` | 不要 | | 仮登録（本登録URLをメールで送る） |
 | 2 | POST | `/api/v1/registrations/verify` | 不要 | | 本登録URLのトークンの照合（DB は変更しない） |
-| 3 | POST | `/api/v1/registrations/complete` | 不要 | | 本登録（家族・ユーザの作成、ログイン。招待経由の場合は組織に所属） |
+| 3 | POST | `/api/v1/registrations/complete` | 不要 | | 本登録（家族・ユーザの作成、ログイン。招待経由の場合は所属） |
 | 4 | POST | `/api/v1/sessions` | 不要 | | 復旧コードによるログイン |
 | 5 | GET | `/api/v1/sessions/current` | 必要 | | ログイン状態と家族の情報の取得 |
 | 6 | DELETE | `/api/v1/sessions/current` | 必要 | | ログアウト |
@@ -173,10 +173,10 @@
 | 25 | POST | `/api/v1/superuser/passkeys/registration-options` | 必要 | 必要 | パスキーの登録の開始（challenge の発行） |
 | 26 | POST | `/api/v1/superuser/passkeys` | 必要 | 必要 | パスキーの登録 |
 | 27 | DELETE | `/api/v1/superuser/passkeys/{passkeyId}` | 必要 | 必要 | パスキーの削除 |
-| 28 | POST | `/api/v1/invitations/verify` | 不要 | | 組織の招待URLのトークンの照合（DB は変更しない） |
-| 29 | GET | `/api/v1/organization-membership` | 必要 | | 所属している組織の取得 |
-| 30 | POST | `/api/v1/organization-membership` | 必要 | 必要 | 登録済みの家族の組織への所属（招待を使う） |
-| 31 | DELETE | `/api/v1/organization-membership` | 必要 | 必要 | 組織への所属の解除 |
+| 28 | POST | `/api/v1/invitations/verify` | 不要 | | 所属の招待URLのトークンの照合（DB は変更しない） |
+| 29 | GET | `/api/v1/belonging` | 必要 | | 所属先の取得 |
+| 30 | POST | `/api/v1/belonging` | 必要 | 必要 | 登録済みの家族の所属（招待を使う） |
+| 31 | DELETE | `/api/v1/belonging` | 必要 | 必要 | 所属の解除 |
 
 ### 0.8 共通のデータ形式
 
@@ -197,7 +197,7 @@
   "selectedUserId": "0192f3a0-...",
   "superuserPasswordSet": true,
   "superuserPasskeyRegistered": true,
-  "organization": { "name": "○○大学", "joinedAt": "2026-11-04T09:30:00.000Z" }
+  "belonging": { "name": "○○大学", "joinedAt": "2026-11-04T09:30:00.000Z" }
 }
 ```
 
@@ -207,7 +207,7 @@
 | `selectedUserId` | この端末で選択中のユーザ。未選択（選択中のユーザが削除された場合など）は `null` |
 | `superuserPasswordSet` | スーパーユーザのパスワードが設定済みなら `true`。確認（6.1）でパスワードと復旧コードのどちらを求めるかの判断に使う |
 | `superuserPasskeyRegistered` | パスキーが1件以上登録されていれば `true`。確認ダイアログに「生体認証で確認」ボタンを表示するかの判断に使う |
-| `organization` | 所属している組織。所属していない（個人ユーザ）なら `null`。`name` は組織名、`joinedAt` は所属した日時（基本方針 10.） |
+| `belonging` | 所属先。所属していない（個人ユーザ）なら `null`。`name` は所属名、`joinedAt` は所属した日時（基本方針 10.） |
 
 ## 1. 登録
 
@@ -323,9 +323,9 @@
 ```
 
 - 処理は下記と同じとする。ただし、次の点が異なる。
-  - 1. は、`pending_registrations` ではなく、`organization_invitations` から招待を取り出して削除する（TableSpec_Organization.md 5.3）。取り出せなければ `410 INVITATION_INVALID`。
-  - 2. で `families` を作成するときに、`organization_id`（招待した組織）と `organization_joined_at`（現在時刻）を設定する。
-- レスポンスの `family` の `organization` に、所属した組織が入る。
+  - 1. は、`pending_registrations` ではなく、`belonging_invitations` から招待を取り出して削除する（TableSpec_Belonging.md 5.3）。取り出せなければ `410 INVITATION_INVALID`。
+  - 2. で `families` を作成するときに、`belonging_id`（招待した所属）と `belonging_joined_at`（現在時刻）を設定する。
+- レスポンスの `family` の `belonging` に、所属先が入る。
 
 **処理**（1つのトランザクション）
 
@@ -451,7 +451,7 @@ Cookie が消えた場合や、別のブラウザ・端末で利用する場合�
 - サーバは、リクエストのたびに `userId` がログイン中の家族に属することを確認し、属していなければ `404 NOT_FOUND` を返す（基本方針 5.）。
 - `selected_user_id` は次回起動時の初期表示のためのもので、利用データの API の認可には使わない（同じ端末の複数のタブで別のユーザを開いても正しく動くようにするため）。
 - 利用データは、ユーザの削除・退会の後も保持される（基本方針 10.7）。利用データを登録する API は、`userId` がログイン中の家族に属することを確認したうえで、`user_id` に保存する（TableSpec_Account.md 5.2）。削除されたユーザの `userId` を指定した API は、`404 NOT_FOUND` を返す。
-- 組織・運用担当者が利用データを参照する API は、ApiSpec_Organization.md の対象とする。
+- 所属・運用担当者が利用データを参照する API は、ApiSpec_Belonging.md の対象とする。
 
 ## 4. 端末の管理
 
@@ -1018,9 +1018,9 @@ Cookie が消えた場合や、別のブラウザ・端末で利用する場合�
 
 ### 8.1 退会 `DELETE /api/v1/family`
 
-家族と、すべてのユーザ・セッション・パスキー・組織への所属を削除する（TableSpec_Account.md 5.1）。**利用データは削除せず、保持する**（基本方針 10.7）。**確認（0.4）が必要**。
+家族と、すべてのユーザ・セッション・パスキー・所属を削除する（TableSpec_Account.md 5.1）。**利用データは削除せず、保持する**（基本方針 10.7）。**確認（0.4）が必要**。
 
-- 削除したアカウント情報は復元できない。クライアントは、削除される内容（すべてのユーザ名、すべての端末のログイン、組織への所属）を表示し、確認ダイアログで同意を得てから呼び出す。
+- 削除したアカウント情報は復元できない。クライアントは、削除される内容（すべてのユーザ名、すべての端末のログイン、所属）を表示し、確認ダイアログで同意を得てから呼び出す。
 - ダイアログには、「記録（テスト結果）は削除されず、研究のために保持されること」と「退会の後は、自分では見られなくなること」を明示する。
 - 他の端末のセッションも削除されるため、他の端末は次のリクエストで `401 UNAUTHENTICATED` になる。
 
@@ -1047,18 +1047,18 @@ Cookie が消えた場合や、別のブラウザ・端末で利用する場合�
 
 - しきい値は初期値とし、利用状況を見て調整する。
 - カウンターは `rate_limit_counters` テーブルで持つ（TableSpec_Auth.md 4.1）。IP アドレスは、鍵付きのハッシュとして保存する（基本方針 4.4）。
-- 組織の招待メールの送信（ApiSpec_Organization.md 4.1）は、システム全体の送信数に、#1 と合算して数える（`mail:send:global`）。
+- 所属の招待メールの送信（ApiSpec_Belonging.md 4.1）は、システム全体の送信数に、#1 と合算して数える（`mail:send:global`）。
 - IP 単位の制限は、CGNAT で多数の利用者が同じ IP を共有することを考え、緩めの値としている（基本方針 4.4）。
 - 復旧コードによるログインのシステム全体の失敗数は、拒否すると全利用者がログインできなくなるため、通知のみとする（総当たりへの主な対策は、復旧コードの強度。基本方針 6.1）。
 - 超えた場合は `Retry-After` ヘッダに、カウンターの有効期限が切れるまでの秒数を付ける。
 
-## 10. 組織への所属
+## 10. 所属
 
-家族が組織に所属する・解除する API。組織が招待を送る API は、ApiSpec_Organization.md 4. を参照する。基本方針 10.、11. に基づく。
+家族が所属する・解除する API。所属が招待を送る API は、ApiSpec_Belonging.md 4. を参照する。基本方針 10.、11. に基づく。
 
 ### 10.1 招待の照合 `POST /api/v1/invitations/verify`
 
-招待ページ（`/invite#token=...`）が表示時に呼び出し、招待が有効かどうかと、所属先の組織名を取得する（基本方針 11.1）。
+招待ページ（`/invite#token=...`）が表示時に呼び出し、招待が有効かどうかと、所属先の所属名を取得する（基本方針 11.1）。
 
 - DB は変更しない。リンクスキャナーが招待ページを開いても、招待は消費されない（本登録URLの照合（1.2）と同じ）。
 - 招待ページ（クライアント）は、本登録ページ（1.2）と同じく、`location.hash` からトークンを読み取り、`sessionStorage` に保持し、`history.replaceState()` でフラグメントを消す。所属の完了時に、`sessionStorage` のトークンを削除する。
@@ -1075,30 +1075,30 @@ Cookie が消えた場合や、別のブラウザ・端末で利用する場合�
 
 ```json
 {
-  "organizationName": "○○大学",
+  "belongingName": "○○大学",
   "expiresAt": "2026-11-11T09:30:00.000Z"
 }
 ```
 
 **エラー**：`410 INVITATION_INVALID`、`429 RATE_LIMITED`
 
-### 10.2 所属している組織の取得 `GET /api/v1/organization-membership`
+### 10.2 所属先の取得 `GET /api/v1/belonging`
 
 **レスポンス** `200 OK`
 
 ```json
 {
-  "organization": { "name": "○○大学", "joinedAt": "2026-11-04T09:30:00.000Z" }
+  "belonging": { "name": "○○大学", "joinedAt": "2026-11-04T09:30:00.000Z" }
 }
 ```
 
-- 所属していない場合は、`"organization": null`。2.2 の `family.organization` と同じ内容で、所属の追加・解除の後の再取得に使う。
+- 所属していない場合は、`"belonging": null`。2.2 の `family.belonging` と同じ内容で、所属の追加・解除の後の再取得に使う。
 
 **エラー**：`401 UNAUTHENTICATED`
 
-### 10.3 登録済みの家族の所属 `POST /api/v1/organization-membership`
+### 10.3 登録済みの家族の所属 `POST /api/v1/belonging`
 
-すでに本アプリに登録している家族が、招待を使って、組織に所属する（基本方針 11.4）。新しく登録する場合は、招待経由の本登録（1.3）を使う。**確認（0.4）が必要**。
+すでに本アプリに登録している家族が、招待を使って、所属する（基本方針 11.4）。新しく登録する場合は、招待経由の本登録（1.3）を使う。**確認（0.4）が必要**。
 
 **リクエスト**
 
@@ -1111,38 +1111,38 @@ Cookie が消えた場合や、別のブラウザ・端末で利用する場合�
 **処理**（1つのトランザクション）
 
 1. `families` の行を `SELECT ... FOR UPDATE` でロックする。
-2. 招待を取り出す（TableSpec_Organization.md 5.3）。取り出せなければ `410 INVITATION_INVALID`。
-3. 家族がすでに、招待の組織に所属していれば `409 ALREADY_MEMBER`（ロールバックし、招待は消費しない）。
-4. `families.organization_id` を招待の組織に、`organization_joined_at` を現在時刻に更新し、招待を削除する。
-   - すでに別の組織に所属している場合は、その組織から移る。元の組織は、以降、この家族のデータを参照できなくなる（基本方針 10.4）。
-   - 別の組織から移ることは、クライアントが警告して同意を得る（基本方針 11.4）。必要なら、事前に 10.2 で現在の所属を確認する。
+2. 招待を取り出す（TableSpec_Belonging.md 5.3）。取り出せなければ `410 INVITATION_INVALID`。
+3. 家族がすでに、招待の所属していれば `409 ALREADY_MEMBER`（ロールバックし、招待は消費しない）。
+4. `families.belonging_id` を招待の所属に、`belonging_joined_at` を現在時刻に更新し、招待を削除する。
+   - すでに別の所属先に所属している場合は、その所属から移る。元の所属は、以降、この家族のデータを参照できなくなる（基本方針 10.4）。
+   - 別の所属から移ることは、クライアントが警告して同意を得る（基本方針 11.4）。必要なら、事前に 10.2 で現在の所属を確認する。
 
 **レスポンス** `200 OK`
 
 ```json
 {
-  "organization": { "name": "○○大学", "joinedAt": "2026-11-04T09:30:00.000Z" },
-  "previousOrganization": { "name": "△△研究室" }
+  "belonging": { "name": "○○大学", "joinedAt": "2026-11-04T09:30:00.000Z" },
+  "previousBelonging": { "name": "△△研究室" }
 }
 ```
 
-- `previousOrganization`：移る前に所属していた組織。所属していなかった場合は `null`。
+- `previousBelonging`：移る前に元の所属先。所属していなかった場合は `null`。
 
 **エラー**：`401 UNAUTHENTICATED`、`403 ELEVATION_REQUIRED`、`409 ALREADY_MEMBER`、`410 INVITATION_INVALID`、`429 RATE_LIMITED`
 
-### 10.4 組織への所属の解除 `DELETE /api/v1/organization-membership`
+### 10.4 所属の解除 `DELETE /api/v1/belonging`
 
-組織への所属を解除し、個人ユーザに戻る（基本方針 10.6）。**確認（0.4）が必要**。
+所属を解除し、個人ユーザに戻る（基本方針 10.6）。**確認（0.4）が必要**。
 
 **処理**（1つのトランザクション）
 
 1. `families` の行を `SELECT ... FOR UPDATE` でロックする。
 2. 所属していなければ `409 NOT_A_MEMBER`。
-3. `organization_id` と `organization_joined_at` を NULL にする。
+3. `belonging_id` と `belonging_joined_at` を NULL にする。
 
 **レスポンス** `204 No Content`
 
-- 解除すると、組織は、以降、この家族のユーザの利用データを参照できなくなる。組織がすでにダウンロードしたデータは、消えない（クライアントは、確認ダイアログでこれを案内する）。
+- 解除すると、所属は、以降、この家族のユーザの利用データを参照できなくなる。所属がすでにダウンロードしたデータは、消えない（クライアントは、確認ダイアログでこれを案内する）。
 
 **エラー**：`401 UNAUTHENTICATED`、`403 ELEVATION_REQUIRED`、`409 NOT_A_MEMBER`
 
@@ -1150,4 +1150,4 @@ Cookie が消えた場合や、別のブラウザ・端末で利用する場合�
 
 - スーパーユーザのパスワードの規則（4〜64文字としている）
 - 基本方針 9.5 のパスキーによるログイン（新しい端末から、復旧コードなしでログインする）を提供するか
-- 所属前に作られた利用データを、組織に参照させるか（基本方針 8.）
+- 所属前に作られた利用データを、所属に参照させるか（基本方針 8.）

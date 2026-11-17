@@ -57,7 +57,7 @@ final class DbConnectionTest extends TestCase
 
     public function testTablesFromTheSpecExist(): void
     {
-        $count = (int) $this->pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('families','users','organizations','sessions','organization_sessions')")->fetchColumn();
+        $count = (int) $this->pdo->query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('families','users','belongings','sessions','belonging_sessions')")->fetchColumn();
         $this->assertSame(5, $count, 'UECTSTDB に、sql/create_all.sql で作ったテーブルがあること');
     }
 

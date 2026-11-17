@@ -13,7 +13,7 @@ final class Input
     public const EMAIL_MAX = 254;
     public const PASSWORD_MIN = 4;
     public const PASSWORD_MAX = 64;
-    public const ORGANIZATION_NAME_MAX = 100;
+    public const BELONGING_NAME_MAX = 100;
     public const LOGIN_ID_MIN = 4;
     public const LOGIN_ID_MAX = 64;
 
@@ -34,18 +34,18 @@ final class Input
         return $normalized === false ? $trimmed : $normalized;
     }
 
-    /** 文字列を正規化する（前後の空白の除去（全角を含む）、Unicode の正規化（NFC））。組織名など。 */
+    /** 文字列を正規化する（前後の空白の除去（全角を含む）、Unicode の正規化（NFC））。所属名など。 */
     public static function normalizeText(string $text): string
     {
         return self::normalizeUserName($text);
     }
 
     /**
-     * 正規化後の組織名の検査（1〜100文字）。
+     * 正規化後の所属名の検査（1〜100文字）。
      *
      * @return string|null 問題がなければ null。あれば、REQUIRED・TOO_LONG・INVALID_CHARACTER
      */
-    public static function organizationNameError(string $normalized): ?string
+    public static function belongingNameError(string $normalized): ?string
     {
         if ($normalized === '') {
             return 'REQUIRED';
@@ -53,7 +53,7 @@ final class Input
         if (!mb_check_encoding($normalized, 'UTF-8') || preg_match('/[\p{C}]/u', $normalized)) {
             return 'INVALID_CHARACTER';
         }
-        return mb_strlen($normalized, 'UTF-8') > self::ORGANIZATION_NAME_MAX ? 'TOO_LONG' : null;
+        return mb_strlen($normalized, 'UTF-8') > self::BELONGING_NAME_MAX ? 'TOO_LONG' : null;
     }
 
     /**
@@ -81,7 +81,7 @@ final class Input
         if (!mb_check_encoding($normalized, 'UTF-8') || preg_match('/^[ぁ-ゖー0-9a-z ]+$/u', $normalized) !== 1) {
             return 'INVALID_CHARACTER';
         }
-        return mb_strlen($normalized, 'UTF-8') > self::ORGANIZATION_NAME_MAX ? 'TOO_LONG' : null;
+        return mb_strlen($normalized, 'UTF-8') > self::BELONGING_NAME_MAX ? 'TOO_LONG' : null;
     }
 
     /**

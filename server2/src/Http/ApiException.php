@@ -104,9 +104,9 @@ class ApiException extends RuntimeException
         return new self(401, 'INVALID_CREDENTIALS', 'ログインIDまたはパスワードが正しくありません。');
     }
 
-    public static function orgPasswordLocked(int $retryAfterSeconds): self
+    public static function blgPasswordLocked(int $retryAfterSeconds): self
     {
-        return new self(429, 'ORGANIZATION_PASSWORD_LOCKED', 'パスワードの入力が続けて失敗したため、しばらく入力できません。', [], ['Retry-After' => (string) max(1, $retryAfterSeconds)]);
+        return new self(429, 'BELONGING_PASSWORD_LOCKED', 'パスワードの入力が続けて失敗したため、しばらく入力できません。', [], ['Retry-After' => (string) max(1, $retryAfterSeconds)]);
     }
 
     public static function passkeyRequired(): self
@@ -121,7 +121,7 @@ class ApiException extends RuntimeException
 
     public static function superOnly(): self
     {
-        return new self(403, 'SUPER_ONLY', 'この操作は、運用担当者の組織だけが実行できます。');
+        return new self(403, 'SUPER_ONLY', 'この操作は、運用担当者の所属だけが実行できます。');
     }
 
     public static function payloadTooLarge(): self

@@ -286,29 +286,29 @@ final class TestSessionRepository
         return $stmt->rowCount() > 0;
     }
 
-    // ---- 運用担当者・組織のユーザ一覧 ----
+    // ---- 運用担当者・所属のユーザ一覧 ----
 
     /**
      * 参照できるユーザの一覧（ユーザ ID の順）。
      *
-     * @param string|null $organizationId 通常の組織の ID。null なら運用担当者（すべて）
+     * @param string|null $belongingId 通常の所属の ID。null なら運用担当者（すべて）
      * @return list<array<string, mixed>>
      */
-    public function users(?string $organizationId, int $limit, ?string $afterUserId): array
+    public function users(?string $belongingId, int $limit, ?string $afterUserId): array
     {
         $counts = '(SELECT COUNT(*) FROM test_sessions t WHERE t.user_id = x.user_id) AS session_count, '
             . '(SELECT MAX(t.started_at) FROM test_sessions t WHERE t.user_id = x.user_id) AS last_started_at';
         $after = $afterUserId === null ? '' : ' AND x.user_id > ?';
-        if ($organizationId !== null) {
+        if ($belongingId !== null) {
             $sql = "SELECT x.user_id, x.name, {$counts} FROM ("
-                . 'SELECT u.id AS user_id, u.name FROM users u JOIN families f ON f.id = u.family_id WHERE f.organization_id = ?'
+                . 'SELECT u.id AS user_id, u.name FROM users u JOIN families f ON f.id = u.family_id WHERE f.belonging_id = ?'
                 . ") x WHERE 1 = 1{$after} ORDER BY x.user_id LIMIT " . ($limit + 1);
-            $params = [$organizationId];
+            $params = [$belongingId];
         } else {
-            $sql = "SELECT x.user_id, u.name, o.name AS organization_name, {$counts} FROM ("
+            $sql = "SELECT x.user_id, u.name, o.name AS belonging_name, {$counts} FROM ("
                 . 'SELECT id AS user_id FROM users UNION SELECT user_id FROM test_sessions'
                 . ') x LEFT JOIN users u ON u.id = x.user_id LEFT JOIN families f ON f.id = u.family_id '
-                . "LEFT JOIN organizations o ON o.id = f.organization_id WHERE 1 = 1{$after} ORDER BY x.user_id LIMIT " . ($limit + 1);
+                . "LEFT JOIN belongings o ON o.id = f.belonging_id WHERE 1 = 1{$after} ORDER BY x.user_id LIMIT " . ($limit + 1);
             $params = [];
         }
         if ($afterUserId !== null) {
@@ -322,13 +322,13 @@ final class TestSessionRepository
     /**
      * そのユーザのデータを参照できるか（ApiSpec_TestData.md 0.2）。
      *
-     * @param string|null $organizationId 通常の組織の ID。null なら運用担当者（すべて）
+     * @param string|null $belongingId 通常の所属の ID。null なら運用担当者（すべて）
      */
-    public function userVisible(?string $organizationId, string $userId): bool
+    public function userVisible(?string $belongingId, string $userId): bool
     {
-        if ($organizationId !== null) {
-            $stmt = $this->pdo->prepare('SELECT 1 FROM users u JOIN families f ON f.id = u.family_id WHERE u.id = ? AND f.organization_id = ?');
-            $stmt->execute([$userId, $organizationId]);
+        if ($belongingId !== null) {
+            $stmt = $this->pdo->prepare('SELECT 1 FROM users u JOIN families f ON f.id = u.family_id WHERE u.id = ? AND f.belonging_id = ?');
+            $stmt->execute([$userId, $belongingId]);
             return $stmt->fetchColumn() !== false;
         }
         $stmt = $this->pdo->prepare('SELECT 1 FROM users WHERE id = ? UNION SELECT 1 FROM test_sessions WHERE user_id = ? LIMIT 1');

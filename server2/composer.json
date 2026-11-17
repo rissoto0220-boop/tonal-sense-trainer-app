@@ -1,6 +1,6 @@
 {
     "name": "uec-tst/server2",
-    "description": "TonalSenseTrainer: user and organization management and authentication API",
+    "description": "TonalSenseTrainer: user and belonging management and authentication API",
     "type": "project",
     "license": "proprietary",
     "require": {

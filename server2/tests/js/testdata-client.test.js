@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { FamilyClient, OrgClient, ApiError } from "../../public/js/uectst-api/index.js";
+import { FamilyClient, BlgClient, ApiError } from "../../public/js/uectst-api/index.js";
 
 function recorder(responses) {
   const calls = [];
@@ -33,16 +33,16 @@ test("利用データの API（家族向け）が、仕様どおりのメソッ�
   }
 });
 
-test("利用データの API（運用担当者・組織向け）が、ベースパス /api/v1/org で呼ぶ", async () => {
+test("利用データの API（運用担当者・所属向け）が、ベースパス /api/v1/blg で呼ぶ", async () => {
   const cases = [
-    [(a) => a.testData.users({ limit: 20 }), "GET", "/api/v1/org/users?limit=20"],
-    [(a) => a.testData.sessions("u1", { testType: "training" }), "GET", "/api/v1/org/users/u1/test-sessions?testType=training"],
-    [(a) => a.testData.session("u1", "s1"), "GET", "/api/v1/org/users/u1/test-sessions/s1"],
-    [(a) => a.testData.deleteSession("s/1"), "DELETE", "/api/v1/org/test-sessions/s%2F1"],
+    [(a) => a.testData.users({ limit: 20 }), "GET", "/api/v1/blg/users?limit=20"],
+    [(a) => a.testData.sessions("u1", { testType: "training" }), "GET", "/api/v1/blg/users/u1/test-sessions?testType=training"],
+    [(a) => a.testData.session("u1", "s1"), "GET", "/api/v1/blg/users/u1/test-sessions/s1"],
+    [(a) => a.testData.deleteSession("s/1"), "DELETE", "/api/v1/blg/test-sessions/s%2F1"],
   ];
   for (const [fn, method, url] of cases) {
     const r = recorder([{ status: 200, body: {} }]);
-    await fn(new OrgClient({ fetchFn: r.fetchFn }));
+    await fn(new BlgClient({ fetchFn: r.fetchFn }));
     assert.equal(r.calls[0].method, method, url);
     assert.equal(r.calls[0].url, url);
   }
@@ -60,14 +60,14 @@ test("CSV・ZIP のダウンロードは、blob とファイル名を返す。�
   assert.deepEqual([...bytes.slice(0, 3)], [0xef, 0xbb, 0xbf]); // BOM 付き UTF-8 のまま渡す
 
   const z = recorder([{ file: "zip", type: "application/zip", disposition: 'attachment; filename="uec-tst_test-data_20261105_153000.zip"' }]);
-  const org = new OrgClient({ fetchFn: z.fetchFn });
-  const zip = await org.testData.export({ userId: ["a", "b"], testType: ["training", "relative_pitch"], kind: "sessions", includeInterrupted: false });
-  assert.equal(z.calls[0].url, "/api/v1/org/test-exports?userId=a%2Cb&testType=training%2Crelative_pitch&kind=sessions&includeInterrupted=false");
+  const blg = new BlgClient({ fetchFn: z.fetchFn });
+  const zip = await blg.testData.export({ userId: ["a", "b"], testType: ["training", "relative_pitch"], kind: "sessions", includeInterrupted: false });
+  assert.equal(z.calls[0].url, "/api/v1/blg/test-exports?userId=a%2Cb&testType=training%2Crelative_pitch&kind=sessions&includeInterrupted=false");
   assert.equal(zip.filename, "uec-tst_test-data_20261105_153000.zip");
 });
 
 test("ダウンロードのエラーは ApiError になる（範囲が大きすぎる場合など）", async () => {
   const r = recorder([{ status: 422, body: { error: { code: "EXPORT_TOO_LARGE", message: "大きすぎます" } } }]);
-  const org = new OrgClient({ fetchFn: r.fetchFn });
-  await assert.rejects(() => org.testData.export({}), (e) => e instanceof ApiError && e.is("EXPORT_TOO_LARGE") && e.status === 422);
+  const blg = new BlgClient({ fetchFn: r.fetchFn });
+  await assert.rejects(() => blg.testData.export({}), (e) => e instanceof ApiError && e.is("EXPORT_TOO_LARGE") && e.status === 422);
 });

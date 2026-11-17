@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace UecTst\TestData;
 
 /**
- * 利用データを参照できる範囲（TableSpec_TestData.md 10.、TableSpec_Organization.md 6.）。
+ * 利用データを参照できる範囲（TableSpec_TestData.md 10.、TableSpec_Belonging.md 6.）。
  * test_sessions を別名 s で参照する FROM 句と WHERE 句の部品を返す。参照の可否は、リクエストのたびに、現在の所属で判定する。
  */
 final class DataScope
@@ -24,13 +24,13 @@ final class DataScope
         return new self('test_sessions s', 's.user_id = ?', [$userId]);
     }
 
-    /** 現在その組織に所属している家族の、現存するユーザ。 */
-    public static function organization(string $organizationId): self
+    /** 現在その所属先に所属している家族の、現存するユーザ。 */
+    public static function belonging(string $belongingId): self
     {
         return new self(
             'test_sessions s JOIN users u ON u.id = s.user_id JOIN families f ON f.id = u.family_id',
-            'f.organization_id = ?',
-            [$organizationId],
+            'f.belonging_id = ?',
+            [$belongingId],
         );
     }
 

@@ -60,10 +60,10 @@ test("DELETE: 本文を付けない", async () => {
   assert.equal(f.calls[0].init.headers["Content-Type"], undefined);
 });
 
-test("basePath を差し替えられる（運用担当者・組織用）", async () => {
+test("basePath を差し替えられる（運用担当者・所属用）", async () => {
   const f = fakeFetch(json(200, {}));
-  await new ApiClient({ basePath: "/api/v1/org", fetchFn: f }).get("/sessions/current");
-  assert.equal(f.calls[0].url, "/api/v1/org/sessions/current");
+  await new ApiClient({ basePath: "/api/v1/blg", fetchFn: f }).get("/sessions/current");
+  assert.equal(f.calls[0].url, "/api/v1/blg/sessions/current");
 });
 
 test("エラー: 仕様のエラー形式を ApiError にする（details・Retry-After を含む）", async () => {

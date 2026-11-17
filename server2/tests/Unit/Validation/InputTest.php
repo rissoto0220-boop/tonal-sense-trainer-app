@@ -19,12 +19,12 @@ final class InputTest extends TestCase
         }
     }
 
-    public function testOrganizationName(): void
+    public function testBelongingName(): void
     {
-        $this->assertNull(Input::organizationNameError(str_repeat('あ', 100)));
-        $this->assertSame('TOO_LONG', Input::organizationNameError(str_repeat('あ', 101)));
-        $this->assertSame('REQUIRED', Input::organizationNameError(''));
-        $this->assertSame('INVALID_CHARACTER', Input::organizationNameError("a
+        $this->assertNull(Input::belongingNameError(str_repeat('あ', 100)));
+        $this->assertSame('TOO_LONG', Input::belongingNameError(str_repeat('あ', 101)));
+        $this->assertSame('REQUIRED', Input::belongingNameError(''));
+        $this->assertSame('INVALID_CHARACTER', Input::belongingNameError("a
 b"));
         $this->assertSame('○○大学', Input::normalizeText("\u{3000}○○大学 "));
     }

@@ -7,7 +7,7 @@ namespace UecTst\Tests\Integration;
 use UecTst\Tests\Support\TestClient;
 
 /** 利用データ（ApiSpec_TestData.md）の結合テストの土台。4種類のセッションの、送信用データを作る。 */
-abstract class TestDataApiTestCase extends OrgApiTestCase
+abstract class TestDataApiTestCase extends BlgApiTestCase
 {
     protected const AP_ID = '3f2504e0-4f89-4f9d-9a7f-2f1e6b6a2b11';
     protected const RP_ID = '0b8f6c1e-2d3a-4e5f-8a7b-9c0d1e2f3a4b';

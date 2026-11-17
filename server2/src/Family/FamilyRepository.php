@@ -12,7 +12,7 @@ use UecTst\Support\Time;
 /** families テーブルの操作（TableSpec_Account.md 2.）。 */
 final class FamilyRepository
 {
-    private const COLUMNS = 'id, recovery_code_hash, recovery_code_key_id, superuser_password_hash, organization_id, organization_joined_at, superuser_password_failed_count, superuser_password_locked_until';
+    private const COLUMNS = 'id, recovery_code_hash, recovery_code_key_id, superuser_password_hash, belonging_id, belonging_joined_at, superuser_password_failed_count, superuser_password_locked_until';
 
     public function __construct(private readonly PDO $pdo)
     {
@@ -21,15 +21,15 @@ final class FamilyRepository
     /**
      * 家族を作る。復旧コードのハッシュが、すでに使われている場合（ごくまれな偶然の衝突）は false を返す。
      */
-    public function insert(string $id, string $recoveryCodeHash, int $keyId, DateTimeImmutable $now, ?string $organizationId = null): bool
+    public function insert(string $id, string $recoveryCodeHash, int $keyId, DateTimeImmutable $now, ?string $belongingId = null): bool
     {
         $stmt = $this->pdo->prepare(
-            'INSERT INTO families (id, recovery_code_hash, recovery_code_key_id, recovery_code_issued_at, organization_id, organization_joined_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO families (id, recovery_code_hash, recovery_code_key_id, recovery_code_issued_at, belonging_id, belonging_joined_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
         );
         $nowDb = Time::toDb($now);
         try {
-            // 招待経由の本登録では、招待した組織への所属を、同時に設定する。
-            $stmt->execute([$id, $recoveryCodeHash, $keyId, $nowDb, $organizationId, $organizationId === null ? null : $nowDb, $nowDb, $nowDb]);
+            // 招待経由の本登録では、招待した所属を、同時に設定する。
+            $stmt->execute([$id, $recoveryCodeHash, $keyId, $nowDb, $belongingId, $belongingId === null ? null : $nowDb, $nowDb, $nowDb]);
         } catch (PDOException $e) {
             if ($this->isDuplicateKey($e)) {
                 return false;
@@ -122,24 +122,24 @@ final class FamilyRepository
         $stmt->execute([$failedCount, $lockedUntil === null ? null : Time::toDb($lockedUntil), $id]);
     }
 
-    /** 組織に所属する（別の組織から移る場合も含む）。 */
-    public function joinOrganization(string $id, string $organizationId, DateTimeImmutable $now): void
+    /** 所属する（別の所属から移る場合も含む）。 */
+    public function joinBelonging(string $id, string $belongingId, DateTimeImmutable $now): void
     {
-        $stmt = $this->pdo->prepare('UPDATE families SET organization_id = ?, organization_joined_at = ? WHERE id = ?');
-        $stmt->execute([$organizationId, Time::toDb($now), $id]);
+        $stmt = $this->pdo->prepare('UPDATE families SET belonging_id = ?, belonging_joined_at = ? WHERE id = ?');
+        $stmt->execute([$belongingId, Time::toDb($now), $id]);
     }
 
     /**
-     * すべての家族（登録が新しい順）と、所属している組織・ユーザ（表示順）。運用担当者の家族の管理で使う。
+     * すべての家族（登録が新しい順）と、所属先・ユーザ（表示順）。運用担当者の家族の管理で使う。
      *
-     * @return list<array{id: string, createdAt: DateTimeImmutable, organization: ?array{id: string, name: string}, joinedAt: ?DateTimeImmutable, users: list<array{id: string, name: string}>}>
+     * @return list<array{id: string, createdAt: DateTimeImmutable, belonging: ?array{id: string, name: string}, joinedAt: ?DateTimeImmutable, users: list<array{id: string, name: string}>}>
      */
     public function listAll(): array
     {
         $rows = $this->pdo->query(
-            'SELECT f.id AS family_id, f.created_at AS created_at, f.organization_joined_at AS joined_at, o.id AS organization_id, o.name AS organization_name, '
+            'SELECT f.id AS family_id, f.created_at AS created_at, f.belonging_joined_at AS joined_at, o.id AS belonging_id, o.name AS belonging_name, '
             . 'u.id AS user_id, u.name AS user_name '
-            . 'FROM families f LEFT JOIN organizations o ON o.id = f.organization_id LEFT JOIN users u ON u.family_id = f.id '
+            . 'FROM families f LEFT JOIN belongings o ON o.id = f.belonging_id LEFT JOIN users u ON u.family_id = f.id '
             . 'ORDER BY f.created_at DESC, f.id DESC, u.display_order ASC',
         )->fetchAll();
         $families = [];
@@ -148,7 +148,7 @@ final class FamilyRepository
             $families[$familyId] ??= [
                 'id' => $familyId,
                 'createdAt' => Time::fromDb((string) $row['created_at']),
-                'organization' => $row['organization_id'] === null ? null : ['id' => (string) $row['organization_id'], 'name' => (string) $row['organization_name']],
+                'belonging' => $row['belonging_id'] === null ? null : ['id' => (string) $row['belonging_id'], 'name' => (string) $row['belonging_name']],
                 'joinedAt' => $row['joined_at'] === null ? null : Time::fromDb((string) $row['joined_at']),
                 'users' => [],
             ];
@@ -159,10 +159,10 @@ final class FamilyRepository
         return array_values($families);
     }
 
-    /** 組織への所属を解除する（個人ユーザに戻る）。 */
-    public function leaveOrganization(string $id): void
+    /** 所属を解除する（個人ユーザに戻る）。 */
+    public function leaveBelonging(string $id): void
     {
-        $stmt = $this->pdo->prepare('UPDATE families SET organization_id = NULL, organization_joined_at = NULL WHERE id = ?');
+        $stmt = $this->pdo->prepare('UPDATE families SET belonging_id = NULL, belonging_joined_at = NULL WHERE id = ?');
         $stmt->execute([$id]);
     }
 
@@ -173,19 +173,19 @@ final class FamilyRepository
         return $stmt->fetchColumn() !== false;
     }
 
-    /** @return array{name: string, joinedAt: string}|null 所属している組織。所属していなければ null */
-    public function organizationOf(FamilyRecord $family): ?array
+    /** @return array{name: string, joinedAt: string}|null 所属先。所属していなければ null */
+    public function belongingOf(FamilyRecord $family): ?array
     {
-        if ($family->organizationId === null) {
+        if ($family->belongingId === null) {
             return null;
         }
-        $stmt = $this->pdo->prepare('SELECT name FROM organizations WHERE id = ?');
-        $stmt->execute([$family->organizationId]);
+        $stmt = $this->pdo->prepare('SELECT name FROM belongings WHERE id = ?');
+        $stmt->execute([$family->belongingId]);
         $name = $stmt->fetchColumn();
-        if ($name === false || $family->organizationJoinedAt === null) {
+        if ($name === false || $family->belongingJoinedAt === null) {
             return null;
         }
-        return ['name' => (string) $name, 'joinedAt' => Time::dbToIso($family->organizationJoinedAt)];
+        return ['name' => (string) $name, 'joinedAt' => Time::dbToIso($family->belongingJoinedAt)];
     }
 
     /** @param array<string, mixed> $row */
@@ -196,8 +196,8 @@ final class FamilyRepository
             recoveryCodeHash: (string) $row['recovery_code_hash'],
             recoveryCodeKeyId: (int) $row['recovery_code_key_id'],
             superuserPasswordSet: $row['superuser_password_hash'] !== null,
-            organizationId: $row['organization_id'] === null ? null : (string) $row['organization_id'],
-            organizationJoinedAt: $row['organization_joined_at'] === null ? null : (string) $row['organization_joined_at'],
+            belongingId: $row['belonging_id'] === null ? null : (string) $row['belonging_id'],
+            belongingJoinedAt: $row['belonging_joined_at'] === null ? null : (string) $row['belonging_joined_at'],
             superuserPasswordHash: $row['superuser_password_hash'] === null ? null : (string) $row['superuser_password_hash'],
             passwordFailedCount: (int) $row['superuser_password_failed_count'],
             passwordLockedUntil: $row['superuser_password_locked_until'] === null ? null : Time::fromDb((string) $row['superuser_password_locked_until']),

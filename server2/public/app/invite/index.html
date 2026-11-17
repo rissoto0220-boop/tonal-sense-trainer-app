@@ -7,13 +7,13 @@
 <!-- 招待のトークンを含む URL を、外部に送らない。アクセス解析などのスクリプトも読み込まない（基本方針 11.1） -->
 <meta name="referrer" content="no-referrer">
 <meta name="robots" content="noindex">
-<title>組織からの招待</title>
+<title>所属からの招待</title>
 <link rel="stylesheet" href="../app.css">
 </head>
 <body>
 <div class="provisional no-print">仮実装の画面です（見た目・文言は、今後変更します）</div>
 <main>
-  <h1 class="no-print">組織からの招待</h1>
+  <h1 class="no-print">所属からの招待</h1>
 
   <section data-screen="checking">
     <p>招待を確認しています…</p>
@@ -29,23 +29,23 @@
   <!-- 招待が無効・期限切れ・使用済み -->
   <section data-screen="invalid" hidden>
     <div class="card">
-      <p id="invalidMessage">リンクが無効または期限切れです。招待した組織に、もう一度招待を依頼してください。</p>
+      <p id="invalidMessage">リンクが無効または期限切れです。招待した所属に、もう一度招待を依頼してください。</p>
     </div>
   </section>
 
   <!-- 招待の内容と、共有される内容（基本方針 11.1・11.2）。ここから、新規登録か所属の追加を選ぶ -->
   <section data-screen="intro" hidden>
     <div class="card">
-      <p><strong id="orgName"></strong> から、招待されています。</p>
+      <p><strong id="blgName"></strong> から、招待されています。</p>
       <p class="note">招待の有効期限: <span id="expiresAt"></span></p>
     </div>
     <div class="card">
       <h2 style="margin-top:0">所属すると、共有される内容</h2>
       <ul class="plain">
-        <li>組織が、<strong>家族のすべてのユーザ</strong>の利用データ（テスト結果）と、ユーザ名（ニックネーム）を見られるようになります。</li>
+        <li>所属が、<strong>家族のすべてのユーザ</strong>の利用データ（テスト結果）と、ユーザ名（ニックネーム）を見られるようになります。</li>
         <li>所属する前に作られたデータも、見られる対象になります。</li>
-        <li>組織が見られないもの: 復旧コード、パスワード、端末のログイン。</li>
-        <li>所属は、あとから解除できます。解除すると、組織は、それ以降のデータを見られなくなります（すでにダウンロードしたデータは、消えません）。</li>
+        <li>所属が見られないもの: 復旧コード、パスワード、端末のログイン。</li>
+        <li>所属は、あとから解除できます。解除すると、所属は、それ以降のデータを見られなくなります（すでにダウンロードしたデータは、消えません）。</li>
       </ul>
     </div>
     <div class="choices">
@@ -57,12 +57,12 @@
 
   <!-- 新規登録: ユーザ名の入力 -->
   <section data-screen="form" hidden>
-    <p><strong class="orgNameCopy"></strong> に所属する家族として、新しく登録します。このアカウントで使う人の名前（1〜4人）を入力してください。</p>
+    <p><strong class="blgNameCopy"></strong> に所属する家族として、新しく登録します。このアカウントで使う人の名前（1〜4人）を入力してください。</p>
     <form id="form" class="card" novalidate>
       <div id="users"></div>
       <div class="row"><button id="addUser" type="button">ユーザを追加</button></div>
       <p class="note">1人目は、<strong>家族の管理をする人（保護者など）</strong>にしてください。名前は、本名ではなく、ニックネームをおすすめします。1人あたり20文字までです。</p>
-      <label class="check"><input id="agree" type="checkbox"> 組織が、家族のすべてのユーザの利用データとユーザ名を見られることに、同意します</label>
+      <label class="check"><input id="agree" type="checkbox"> 所属が、家族のすべてのユーザの利用データとユーザ名を見られることに、同意します</label>
       <p id="formError" class="error" role="alert" hidden></p>
       <div class="row">
         <button id="submit" class="primary" type="submit" disabled>登録して所属する</button>
@@ -89,7 +89,7 @@
       </div>
     </div>
     <div class="no-print">
-      <p><strong class="orgNameCopy"></strong> に所属しました。</p>
+      <p><strong class="blgNameCopy"></strong> に所属しました。</p>
       <label class="check"><input id="saved" type="checkbox"> 復旧コードを控えました</label>
       <div class="row"><a id="next" class="button primary" href="../" aria-disabled="true">次へ</a></div>
     </div>
@@ -113,12 +113,12 @@
   <!-- 所属の追加: 内容を確認して、所属する（確認が必要な操作） -->
   <section data-screen="join" hidden>
     <div class="card">
-      <p><strong class="orgNameCopy"></strong> に、あなたの家族を所属させます。</p>
+      <p><strong class="blgNameCopy"></strong> に、あなたの家族を所属させます。</p>
       <div id="joinWarn" class="warn" hidden></div>
       <div id="alreadyMember" hidden>
-        <p>すでに、この組織に所属しています。変更はありません（招待は、使われません）。</p>
+        <p>すでに、この所属先に所属しています。変更はありません（招待は、使われません）。</p>
       </div>
-      <p class="note">所属すると、組織が、家族のすべてのユーザの利用データとユーザ名を見られるようになります。実行には、スーパーユーザのパスワード（未設定の場合は復旧コード）の確認が必要です。</p>
+      <p class="note">所属すると、所属が、家族のすべてのユーザの利用データとユーザ名を見られるようになります。実行には、スーパーユーザのパスワード（未設定の場合は復旧コード）の確認が必要です。</p>
       <p id="joinError" class="error" role="alert" hidden></p>
       <div class="row">
         <button id="joinSubmit" class="primary" type="button">所属する</button>
@@ -130,7 +130,7 @@
   <!-- 所属の追加: 完了 -->
   <section data-screen="joined" hidden>
     <div class="card">
-      <p><strong class="orgNameCopy"></strong> に所属しました。</p>
+      <p><strong class="blgNameCopy"></strong> に所属しました。</p>
       <p class="note">所属は、あとから解除できます。</p>
       <div class="row"><a class="button primary" href="../">ホームへ</a></div>
     </div>

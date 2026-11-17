@@ -14,11 +14,11 @@ use UecTst\Support\Time;
 use UecTst\Validation\Params;
 
 /**
- * 家族の、組織への所属（ApiSpec_Auth.md 10.）。
+ * 家族の、所属（ApiSpec_Auth.md 10.）。
  *   #28 招待の照合 POST /invitations/verify
- *   #29 所属している組織の取得 GET /organization-membership
- *   #30 登録済みの家族の所属 POST /organization-membership（確認が必要）
- *   #31 組織への所属の解除 DELETE /organization-membership（確認が必要）
+ *   #29 所属先の取得 GET /belonging
+ *   #30 登録済みの家族の所属 POST /belonging（確認が必要）
+ *   #31 所属の解除 DELETE /belonging（確認が必要）
  * 新しく登録する家族の所属は、招待経由の本登録（#3）で行う。
  */
 final class MembershipController extends AuthenticatedController
@@ -36,21 +36,21 @@ final class MembershipController extends AuthenticatedController
             throw self::invitationInvalid();
         }
         return Response::json(200, [
-            'organizationName' => $invitation['organizationName'],
+            'belongingName' => $invitation['belongingName'],
             'expiresAt' => Time::toIso($invitation['expiresAt']),
         ]);
     }
 
-    /** #29 所属している組織の取得（所属していなければ organization: null） */
+    /** #29 所属先の取得（所属していなければ belonging: null） */
     public function show(Request $request): Response
     {
         return $this->authenticated($request, function (AuthContext $c): Response {
             $family = $this->services->families->find($c->familyId()) ?? throw ApiException::unauthenticated();
-            return Response::json(200, ['organization' => $this->services->families->organizationOf($family)]);
+            return Response::json(200, ['belonging' => $this->services->families->belongingOf($family)]);
         });
     }
 
-    /** #30 登録済みの家族の所属（別の組織から移ることもできる） */
+    /** #30 登録済みの家族の所属（別の所属から移ることもできる） */
     public function join(Request $request): Response
     {
         $token = Params::string($request->json(), 'invitationToken');
@@ -65,28 +65,28 @@ final class MembershipController extends AuthenticatedController
                 throw self::invitationInvalid();
             }
 
-            [$organization, $previous] = Transaction::run($services->pdo, function () use ($services, $familyId, $tokenHash): array {
+            [$belonging, $previous] = Transaction::run($services->pdo, function () use ($services, $familyId, $tokenHash): array {
                 $family = $services->families->lock($familyId) ?? throw ApiException::unauthenticated();
                 $now = $services->clock->now();
-                $organizationId = $services->invitations->consume($tokenHash, $now) ?? throw self::invitationInvalid();
-                if ($family->organizationId === $organizationId) {
-                    // すでに同じ組織に所属している。ロールバックにより、招待は消費されない。
-                    throw ApiException::conflict('ALREADY_MEMBER', 'すでに、この組織に所属しています。');
+                $belongingId = $services->invitations->consume($tokenHash, $now) ?? throw self::invitationInvalid();
+                if ($family->belongingId === $belongingId) {
+                    // すでに同じ所属先に所属している。ロールバックにより、招待は消費されない。
+                    throw ApiException::conflict('ALREADY_MEMBER', 'すでに、この所属先に所属しています。');
                 }
-                $previous = $services->families->organizationOf($family);
-                $services->families->joinOrganization($familyId, $organizationId, $now);
+                $previous = $services->families->belongingOf($family);
+                $services->families->joinBelonging($familyId, $belongingId, $now);
                 return [
-                    ['name' => $services->organizations->nameOf($organizationId) ?? throw ApiException::internal(), 'joinedAt' => Time::toIso($now)],
+                    ['name' => $services->belongings->nameOf($belongingId) ?? throw ApiException::internal(), 'joinedAt' => Time::toIso($now)],
                     $previous === null ? null : ['name' => $previous['name']],
                 ];
             });
-            $services->logger->info('org.member.join', ['familyId' => bin2hex($familyId)]);
+            $services->logger->info('blg.member.join', ['familyId' => bin2hex($familyId)]);
 
-            return Response::json(200, ['organization' => $organization, 'previousOrganization' => $previous]);
+            return Response::json(200, ['belonging' => $belonging, 'previousBelonging' => $previous]);
         });
     }
 
-    /** #31 組織への所属の解除（個人ユーザに戻る） */
+    /** #31 所属の解除（個人ユーザに戻る） */
     public function leave(Request $request): Response
     {
         return $this->authenticated($request, function (AuthContext $c): Response {
@@ -96,12 +96,12 @@ final class MembershipController extends AuthenticatedController
 
             Transaction::run($services->pdo, function () use ($services, $familyId): void {
                 $family = $services->families->lock($familyId) ?? throw ApiException::unauthenticated();
-                if ($family->organizationId === null) {
-                    throw ApiException::conflict('NOT_A_MEMBER', '組織に所属していません。');
+                if ($family->belongingId === null) {
+                    throw ApiException::conflict('NOT_A_MEMBER', '所属していません。');
                 }
-                $services->families->leaveOrganization($familyId);
+                $services->families->leaveBelonging($familyId);
             });
-            $services->logger->info('org.member.leave', ['familyId' => bin2hex($familyId)]);
+            $services->logger->info('blg.member.leave', ['familyId' => bin2hex($familyId)]);
 
             return Response::noContent();
         });

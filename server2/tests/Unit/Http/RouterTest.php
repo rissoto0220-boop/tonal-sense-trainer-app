@@ -18,7 +18,7 @@ final class RouterTest extends TestCase
         $router->add('GET', '/api/v1/users', static fn (Request $r, array $p): Response => Response::json(200, ['route' => 'list']));
         $router->add('DELETE', '/api/v1/users/{userId}', static fn (Request $r, array $p): Response => Response::json(200, ['route' => 'delete', 'params' => $p]));
         $router->add('PUT', '/api/v1/users/order', static fn (Request $r, array $p): Response => Response::json(200, ['route' => 'order']));
-        $router->add('DELETE', '/api/v1/org/organizations/{organizationId}/password-reset', static fn (Request $r, array $p): Response => Response::json(200, ['params' => $p]));
+        $router->add('DELETE', '/api/v1/blg/belongings/{belongingId}/password-reset', static fn (Request $r, array $p): Response => Response::json(200, ['params' => $p]));
         return $router;
     }
 
@@ -78,7 +78,7 @@ final class RouterTest extends TestCase
 
     public function testHyphenatedSegmentsAndTrailingLiteralAfterParameter(): void
     {
-        $response = $this->router()->dispatch(new Request('DELETE', '/api/v1/org/organizations/abc/password-reset'));
-        $this->assertSame('{"params":{"organizationId":"abc"}}', $response->body);
+        $response = $this->router()->dispatch(new Request('DELETE', '/api/v1/blg/belongings/abc/password-reset'));
+        $this->assertSame('{"params":{"belongingId":"abc"}}', $response->body);
     }
 }

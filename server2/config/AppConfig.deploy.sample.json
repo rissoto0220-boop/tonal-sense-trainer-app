@@ -1,0 +1,39 @@
+{
+  "environment": "development",
+  "allowedOrigins": ["https://uec-tst.koto.jp"],
+  "publicBaseUrl": "https://uec-tst.koto.jp/server2/public/app",
+  "cookie": {
+    "secure": true,
+    "useHostPrefix": true
+  },
+  "mail": {
+    "driver": "log",
+    "from": "no-reply@uec-tst.koto.jp",
+    "logFile": "storage/logs/mail.log"
+  },
+  "captcha": {
+    "driver": "none",
+    "secretKey": ""
+  },
+  "secrets": {
+    "recoveryCodeKeys": { "1": "@RECOVERY_CODE_KEY@" },
+    "currentRecoveryCodeKeyId": 1,
+    "rateLimitKey": "@RATE_LIMIT_KEY@"
+  },
+  "webauthn": {
+    "rpId": "uec-tst.koto.jp",
+    "rpName": "TonalSenseTrainer"
+  },
+  "debug": {
+    "enabled": true,
+    "features": {
+      "mailViewer": true,
+      "indexPage": false
+    }
+  },
+  "testData": {
+    "exportMaxSessions": 5000
+  },
+  "trustedProxyHeader": null,
+  "logFile": "storage/logs/app.log"
+}

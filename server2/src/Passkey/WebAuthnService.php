@@ -51,8 +51,8 @@ final class WebAuthnService
     /**
      * 登録の開始（navigator.credentials.create に渡す形式）。
      *
-     * @param string $ownerId 持ち主（家族または組織）の ID。WebAuthn の user handle になる（個人情報を含まない）
-     * @param string $userName 端末のパスキーの一覧に表示する名前（家族: 「家族の管理用」、組織: ログインID）
+     * @param string $ownerId 持ち主（家族または所属）の ID。WebAuthn の user handle になる（個人情報を含まない）
+     * @param string $userName 端末のパスキーの一覧に表示する名前（家族: 「家族の管理用」、所属: ログインID）
      * @param list<PasskeyRecord> $existing 登録済みのパスキー（二重登録を防ぐ）
      * @return array<string, mixed>
      */

@@ -57,7 +57,7 @@ final class FamilyView
             'selectedUserId' => $selected,
             'superuserPasswordSet' => $family->superuserPasswordSet,
             'superuserPasskeyRegistered' => $this->families->hasPasskeys($family->id),
-            'organization' => $this->families->organizationOf($family),
+            'belonging' => $this->families->belongingOf($family),
         ];
     }
 }
