@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { enableUnloadGuard } from "../../src/functional-pitch/unload-guard.js";
+import { enableUnloadGuard } from "../src/shared/unload-guard.js";
 
 function createFakeWindow() {
   const listeners = new Set();
@@ -46,4 +46,19 @@ test("解除は何度呼んでも安全で、別の有効化を巻き込まな�
 test("window が無い環境(Node)でも例外にならず、解除関数を返す", () => {
   const disable = enableUnloadGuard(null);
   assert.doesNotThrow(() => disable());
+});
+
+test("releaseAllUnloadGuards: 有効な確認をすべて解除する。個別の解除をあとから呼んでも安全で、そのあとの有効化は効く", async () => {
+  const { releaseAllUnloadGuards } = await import("../src/shared/unload-guard.js");
+  const win = createFakeWindow();
+  const first = enableUnloadGuard(win);
+  const second = enableUnloadGuard(win);
+  assert.equal(win.count(), 2);
+  releaseAllUnloadGuards();
+  assert.equal(win.count(), 0);
+  assert.equal(win.tryClose(), false);
+  assert.doesNotThrow(() => { first(); second(); });
+  enableUnloadGuard(win);
+  assert.equal(win.tryClose(), true);
+  releaseAllUnloadGuards();
 });

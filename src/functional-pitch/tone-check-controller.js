@@ -21,7 +21,8 @@ import { createClockScheduler } from "./audio-clock.js";
 import { TONE_CHECK_PARTS, toneCheckFilenameFor } from "./stimuli.js";
 import { FUNCTIONAL_SOUNDS_BASE_PATH } from "./phrase-audio.js";
 
-// onError({ kind, error }): 読み込み・再生の失敗時に1回だけ呼ぶ。以後このcontrollerは何も受け付けない。
+// onError({ kind, error }): 失敗時に1回だけ呼ぶ。以後このcontrollerは何も受け付けない。
+//   kind: 音の起動の失敗は "start"、それ以外(読み込み・再生の失敗)は "load"。
 // 時計・タイマー・音声は外から差し替えられる(既存と同じ作り)。
 export function createToneCheckController({
   view,
@@ -45,7 +46,7 @@ export function createToneCheckController({
     source = null;
   }
 
-  function fail(part, error) {
+  function fail(part, error, kind = "load") {
     if (stopped) return;
     stopped = true;
     clock.cancelAll();
@@ -55,7 +56,7 @@ export function createToneCheckController({
     view.setPlayEnabled(false);
     view.setProceedEnabled(false);
     view.showError("load");
-    onError({ kind: "load", error });
+    onError({ kind, error });
   }
 
   function onLoaded(part, buffer) {
@@ -86,10 +87,13 @@ export function createToneCheckController({
       view.setPlayEnabled(false);
       view.setPartState(part, "playing");
       const src = `${soundsBasePath}${toneCheckFilenameFor(part)}`;
+      // 起動の失敗と、読み込みの失敗は、then の「失敗」側の位置で分ける(起動の失敗は kind "start")。
       Promise.resolve()
         .then(() => resumeAudioContextFn())
-        .then(() => loadAudioBufferFn(src))
-        .then((buffer) => onLoaded(part, buffer), (error) => fail(part, error));
+        .then(
+          () => loadAudioBufferFn(src).then((buffer) => onLoaded(part, buffer), (error) => fail(part, error)),
+          (error) => fail(part, error, "start"),
+        );
     },
     hasHeardBoth: () => heard.size === TONE_CHECK_PARTS.length,
     isPlaying: () => playing !== null,

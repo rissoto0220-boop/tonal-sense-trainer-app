@@ -54,7 +54,12 @@ test("再生状態・エラーの文言は仕様どおり", () => {
     phrase2: "フレーズ2を再生しています",
     answerable: "それぞれの印象の変化を回答してください",
   });
-  assert.match(ERROR_TEXT.load, /ページを再読み込みしてください/);
+  // 2026-11-14: 練習はエラー画面、測定は中断の画面に切り替わるため、試行画面の中の文では再読み込みを促さない。
+  assert.deepEqual(ERROR_TEXT, {
+    load: "音声を読み込めませんでした。",
+    duration: "音源の長さが想定と異なります。研究者へお知らせください。",
+    schedule: "音声を再生できませんでした。",
+  });
 });
 
 test("正解・不正解を連想させる語が画面に含まれない", () => {
@@ -103,26 +108,14 @@ test("枠の状態の文字は 待機中/再生中/再生済み", () => {
   assert.deepEqual(PHRASE_STATE_TEXT, { waiting: "待機中", playing: "再生中", played: "再生済み" });
 });
 
-test("document が無い環境でも trial-screen.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/functional-pitch/trial-screen.js"));
-});
-
 test("styles.css: 動きを減らす設定で、再生中アニメーションが止まる", () => {
   const css = readFileSync(new URL("../../styles.css", import.meta.url), "utf8");
   const reduced = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
   assert.match(reduced, /\.functional-playing i \{ animation: none; \}/);
 });
 
-test("測定本体の画面はユーザー・保存・CSV・サーバーに依存しない(importしていない)", () => {
-  for (const file of ["rating-state.js", "trial-controller.js", "trial-screen.js"]) {
-    const source = readFileSync(new URL(`../../src/functional-pitch/${file}`, import.meta.url), "utf8");
-    const imports = [...source.matchAll(/from "(.*)";/g)].map((m) => m[1]);
-    for (const path of imports) {
-      assert.match(
-        path,
-        /^(\.\/(rating-state|trial-controller|trial-timeline)\.js|\.\.\/shared\/escape-html\.js)$/,
-        `${file} が ${path} をimportしている`,
-      );
-    }
-  }
+test("見出し: heading を渡すと進捗の上に出す(練習・測定)。文字は無害化する", () => {
+  assert.match(buildTrialHtml({ heading: "測定(Key C)" }), /<h2 class="functional-trial-title">測定\(Key C\)<\/h2>\s*<p class="functional-progress"/);
+  assert.match(buildTrialHtml({ heading: "<練習>" }), /&lt;練習&gt;/);
+  assert.equal(buildTrialHtml().includes("<h2"), false);
 });

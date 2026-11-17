@@ -24,8 +24,8 @@ export const ANSWER_FEATURES = ["degree", "chordRootDegree"];
 // 音度コード。n=自然音、s=シャープ、b=フラット。数字は第何度か。
 export const DEGREE_CODES = ["n", "s", "b"].flatMap((prefix) => [1, 2, 3, 4, 5, 6, 7].map((number) => `${prefix}${number}`));
 
-// 和音の品質コード(機能的音感テストに合わせる)。
-export const CHORD_QUALITIES = ["maj", "dom7"];
+// 和音の品質コード(機能的音感テストに合わせる)。min は拡張サンプル(sample-stimuli.js)の短三和音。
+export const CHORD_QUALITIES = ["maj", "dom7", "min"];
 
 /**
  * @typedef {Object} StimulusEvent 刺激の1イベント(メロディの1音、または和音1つ)
@@ -84,6 +84,11 @@ export const CHORDS = {
   "ch-n1-maj": { rootDegree: "n1", quality: "maj" },
   "ch-n4-maj": { rootDegree: "n4", quality: "maj" },
   "ch-n5-dom7": { rootDegree: "n5", quality: "dom7" },
+  // ここから下は拡張サンプル(sample-stimuli.js)用。ver.1 のメニューでは使わない。
+  "ch-n2-min": { rootDegree: "n2", quality: "min" }, // Ⅱm(短調では iv に当たる)
+  "ch-n3-min": { rootDegree: "n3", quality: "min" }, // Ⅲm
+  "ch-n6-min": { rootDegree: "n6", quality: "min" }, // Ⅵm(短調の主和音)
+  "ch-n3-dom7": { rootDegree: "n3", quality: "dom7" }, // Ⅲ7(和声的短音階の属七。ソ#を含む)
 };
 
 // 回答候補。code は正解判定に使う内部コード、label は画面に出す表示。
@@ -129,6 +134,23 @@ export const TASK_TEMPLATES = {
     schemaVersion: DEFINITIONS_SCHEMA_VERSION,
     answerTargets: [
       { targetId: "t1", partId: "harmony", eventId: "h1", answerFeature: "chordRootDegree", sequenceOrder: 1, optionSetRef: "chord-root-degrees" },
+    ],
+  },
+  // ここから下は拡張サンプル(六和音の進行)用。3イベントの刺激の、最後以外の2つを順に答える。
+  "tt-melody-first-two": {
+    taskTemplateId: "tt-melody-first-two",
+    schemaVersion: DEFINITIONS_SCHEMA_VERSION,
+    answerTargets: [
+      { targetId: "t1", partId: "melody", eventId: "m1", answerFeature: "degree", sequenceOrder: 1, optionSetRef: "melody-keyboard" },
+      { targetId: "t2", partId: "melody", eventId: "m2", answerFeature: "degree", sequenceOrder: 2, optionSetRef: "melody-keyboard" },
+    ],
+  },
+  "tt-chord-first-two": {
+    taskTemplateId: "tt-chord-first-two",
+    schemaVersion: DEFINITIONS_SCHEMA_VERSION,
+    answerTargets: [
+      { targetId: "t1", partId: "harmony", eventId: "h1", answerFeature: "chordRootDegree", sequenceOrder: 1, optionSetRef: "chord-root-degrees" },
+      { targetId: "t2", partId: "harmony", eventId: "h2", answerFeature: "chordRootDegree", sequenceOrder: 2, optionSetRef: "chord-root-degrees" },
     ],
   },
 };

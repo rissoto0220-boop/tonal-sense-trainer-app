@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { resolveTrainingOptions, MAX_DEV_QUESTION_COUNT } from "../../src/training/dev-flag.js";
 
 const at = (search) => resolveTrainingOptions({ search });
-const DISABLED = { enabled: false, replayMode: "question-only", questionCount: null };
+const DISABLED = { enabled: false, replayMode: "question-only", questionCount: null, samples: false };
 
 test("旗(?training=dev)がなければ無効。他のパラメーターは無視", () => {
   assert.deepEqual(at(""), DISABLED);
@@ -14,7 +14,13 @@ test("旗(?training=dev)がなければ無効。他のパラメーターは無�
 });
 
 test("旗があれば有効。既定はリプレイ「出題音だけ」、出題数は指定なし(メニューの15問)", () => {
-  assert.deepEqual(at("?training=dev"), { enabled: true, replayMode: "question-only", questionCount: null });
+  assert.deepEqual(at("?training=dev"), { enabled: true, replayMode: "question-only", questionCount: null, samples: false });
+});
+
+test("&samples=on のときだけ拡張サンプルを並べる。旗がなければ無効", () => {
+  assert.equal(at("?training=dev&samples=on").samples, true);
+  for (const value of ["off", "1", "ON", ""]) assert.equal(at(`?training=dev&samples=${value}`).samples, false, value);
+  assert.deepEqual(at("?samples=on"), DISABLED);
 });
 
 test("&replay=setup でリプレイを「調セットアップから」にする。それ以外の値は既定のまま", () => {

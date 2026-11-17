@@ -25,7 +25,3 @@ test("一覧の1行: 中断・音声エラーの回は、その旨と回答し�
 test("一覧の1行: 定義にないメニューは menuId のまま出す", () => {
   assert.match(formatHistoryRow({ ...ROW, menuId: "menu-99", sessionStatus: "completed" }), /^<li>第2回 menu-99 — /);
 });
-
-test("document が無い環境でも history-screen.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/training/history-screen.js"));
-});

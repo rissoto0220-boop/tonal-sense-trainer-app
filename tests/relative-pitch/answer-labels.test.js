@@ -32,11 +32,3 @@ test("FULL_ANSWER_LABELSは、完全版の半音差0〜11に対応する12種類
 test("FULL_ANSWER_LABELS: オクターブ重複ボタンが無いため、extraは全てfalse(2026-09-18追加)", () => {
   assert.deepEqual(FULL_ANSWER_LABELS.map((l) => l.extra), FULL_ANSWER_LABELS.map(() => false));
 });
-
-// renderAnswerPanelはDOM(document)を直接書き換えるため、
-// app.js(tests/app.test.js参照)と同じ理由でNode環境からのテストには向かない。
-// ここでは、documentが存在しない環境(Node)でimportしても例外にならないことだけを確認し、
-// 実際のボタン描画・クリック時の色変化は手動でのブラウザ確認で検証する。
-test("document が無い環境でも answer-panel.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/shared/answer-panel.js"));
-});

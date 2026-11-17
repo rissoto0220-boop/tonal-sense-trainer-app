@@ -8,12 +8,13 @@ import { ANSWER_BUTTON_SEMITONES, FULL_ANSWER_BUTTON_SEMITONES, isCorrectAnswer,
 import { generateTestSequence, TOTAL_QUESTIONS, generateFullTestSequence, FULL_TOTAL_QUESTIONS } from "./question-generator.js";
 import { formatAccuracyLabel } from "./scoring.js";
 import * as sessionStore from "./session-store.js";
+import { showRelativeAudioError } from "./audio-error-screen.js";
 
 // screenEl: 描画先のDOM要素。
 // testVersion: "simplified"(既定)または"full"。出題順生成・回答ボタンの構成を切り替える(仕様6.2)。
 // session: このセッションの保存対象(練習と共通のセッション)。
 // persistSession: 保存を反映させるために呼ぶ関数。
-// onBack: 結果画面から戻る際に呼ぶ。
+// onBack: 結果画面、または音声エラーの画面から戻る際に呼ぶ。
 // onShowHistory: 結果画面から履歴・CSV出力画面へ進む際に呼ぶ。
 export function showMainTestFlow({
   screenEl,
@@ -36,9 +37,15 @@ export function showMainTestFlow({
 
   // 本番開始時点でAudioContextを有効化する。resumeの完了(=時計が実際に動き出す)を待ってから
   // 最初の問題を始める(practice-screen.jsと同じ理由。待たないとスケジュールがずれる)。
-  screenEl.innerHTML = `<div class="panel center"><p class="status">音声を準備しています…</p></div>`;
+  screenEl.innerHTML = `<div class="panel center"><h2>音声の準備</h2><p class="status">音声を準備しています…</p></div>`;
   resumeAudioContext().then(() => {
     runQuestion(0);
+  }, () => {
+    // 起動の失敗は、resumeAudioContext() だけを包む then の「失敗」側で扱う(成功後の処理の例外を取り違えないため)。
+    // 起動できなければ、まだ回答はないが、セッションは中断として保存してから、エラー画面を出す。
+    sessionStore.finalizeSession(session, "interrupted");
+    persistSession();
+    showRelativeAudioError({ screenEl, kind: "audio-start", impact: "session-interrupted", onBack });
   });
 
   function runQuestion(index) {
@@ -54,7 +61,7 @@ export function showMainTestFlow({
     screenEl.innerHTML = `
       <div class="panel">
         <h2>本番</h2>
-        <p id="test-status" class="status">音を再生しています。しばらくお待ちください。</p>
+        <p id="test-status" class="status">音を再生しています…</p>
         <div id="answer-panel-container"></div>
       </div>`;
 
@@ -106,7 +113,7 @@ export function showMainTestFlow({
         // 音源エラー時はセッションを中断扱いにする(仕様22.1)。
         sessionStore.finalizeSession(session, "interrupted");
         persistSession();
-        document.getElementById("test-status").textContent = "音声の読み込みに失敗しました。お手数ですが、最初からやり直してください。";
+        showRelativeAudioError({ screenEl, onBack });
       },
     });
   }

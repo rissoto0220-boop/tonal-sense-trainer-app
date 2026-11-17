@@ -98,7 +98,8 @@ export function finalizeSession(session, sessionStatus, now = () => toLocalIso()
 
 // 訓練の進行の通知を受けて、そのたびに保存する記録係(app.js から使う)。
 // 戻り値の各関数は、runTrainingSession の同じ名前の引数にそのまま渡せる。
-// 完了(onFinished)の後も、最終問のフィードバックを聞き直した回数(onTrialUpdated)は書き換える。
+// 完了(onFinished)は終了画面を出す直前に来る(2026-11-15 に改めた)ので、最終問のフィードバックを聞き直した回数
+// (onTrialUpdated)は、完了の前に届く。念のため、完了の後に届いても書き換える。
 export function createSessionRecorder(participantId, { storage, now, generateId } = {}) {
   let data = null;
   let session = null;

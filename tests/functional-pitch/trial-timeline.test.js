@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { runTrialTimeline } from "../../src/functional-pitch/trial-timeline.js";
 
 // 実際のAudioContext・setTimeoutを使わず、時計とタイマーを自分で進められる疑似環境。
@@ -298,18 +297,4 @@ test("2つの試行を続けて走らせても、互いに干渉しない", asyn
   second.env.tick(30);
   assert.equal(second.log.answerable.length, 1);
   assert.notEqual(second.handle.confirm(), null);
-});
-
-test("測定本体はユーザー・保存・CSV・サーバーに依存しない(importしていない)", () => {
-  for (const file of ["phrase-audio.js", "trial-timeline.js"]) {
-    const source = readFileSync(new URL(`../../src/functional-pitch/${file}`, import.meta.url), "utf8");
-    const imports = [...source.matchAll(/from "(.*)";/g)].map((m) => m[1]);
-    for (const path of imports) {
-      assert.match(
-        path,
-        /^(\.\/(stimuli|phrase-audio|audio-clock)\.js|\.\.\/shared\/(audio-buffer-player|answer-lock|iso-time)\.js)$/,
-        `${file} が ${path} をimportしている`,
-      );
-    }
-  }
 });

@@ -7,6 +7,7 @@ import {
   buildLoadErrorHtml,
   buildInterruptedHtml,
   buildInternalErrorHtml,
+  buildAudioStartErrorHtml,
   showKeySelectScreen,
   showBackScreen,
 } from "../../src/functional-pitch/measurement-screens.js";
@@ -52,6 +53,7 @@ test("完了画面: 得点・正答率・評定の平均などを表示しない
 
 test("読み込み中の画面", () => {
   assert.match(buildLoadingHtml(), /音声を準備しています…/);
+  assert.match(buildLoadingHtml(), /<h2>音声の準備<\/h2>/);
 });
 
 test("音源の読み込みエラー: 件数と失敗したファイル名(研究者向け)を表示し、Key選択へ戻れる", () => {
@@ -59,12 +61,28 @@ test("音源の読み込みエラー: 件数と失敗したファイル名(研�
     { src: "public/sounds/functional-pitch/c-phr-ch-n1-maj-mel-n1-v01.wav", reason: "load" },
     { src: "public/sounds/functional-pitch/c-phr-ch-n4-maj-mel-n4-v01.wav", reason: "duration", durationSeconds: 2 },
   ]);
-  assert.match(html, /2件/);
+  // 見出し・文言はエラーの種類の表(src/shared/error-kinds.js)。読み込めないファイルがあるので「読み込めませんでした」
+  assert.match(html, /<h2 tabindex="-1">音声を読み込めませんでした<\/h2>/);
+  assert.match(html, /2件の音声ファイルに問題があります。/);
   assert.match(html, /c-phr-ch-n1-maj-mel-n1-v01\.wav\(読み込めません\)/);
   assert.match(html, /c-phr-ch-n4-maj-mel-n4-v01\.wav\(長さが想定と異なります\)/);
   assert.equal(html.includes("public/sounds"), false); // フォルダーは出さずファイル名だけ
-  assert.match(html, /ページを再読み込み/);
+  assert.match(html, /もう一方のKeyは選べます。/);
+  assert.match(html, /まだ記録は残っていません。/);
+  assert.match(html, /Key選択へ戻って、やり直してください。/);
   assert.match(html, /data-role="back">Key選択へ戻る<\/button>/);
+});
+
+test("音源の読み込みエラー: 長さの不一致だけなら、見出しは「長さが想定と異なります」。研究者への連絡も添える", () => {
+  const html = buildLoadErrorHtml([{ src: "a/x.wav", reason: "duration" }]);
+  assert.match(html, /<h2 tabindex="-1">音源の長さが想定と異なります<\/h2>/);
+  assert.match(html, /研究者へお知らせください。Key選択へ戻って、やり直してください。/);
+});
+
+test("音源の読み込みエラー: ファイル名のない失敗(起動の失敗など)は、件数だけ数え、ファイル名の行を出さない", () => {
+  const html = buildLoadErrorHtml([{ src: "", reason: "load" }]);
+  assert.match(html, /1件の音声ファイルに問題があります。/);
+  assert.equal(html.includes("()"), false);
 });
 
 test("音源の読み込みエラー: ファイル名にHTMLの特殊文字があっても安全に表示する", () => {
@@ -75,12 +93,30 @@ test("音源の読み込みエラー: ファイル名にHTMLの特殊文字が�
 
 test("中断画面: 回答済みの試行数を表示し、Key選択へ戻れる", () => {
   const html = buildInterruptedHtml(37);
-  assert.match(html, /音声エラーのため、測定を中断しました。\(37 試行まで回答済み\)/);
+  assert.match(html, /37試行まで回答済み/);
+  assert.match(html, /ここまでの回答は、中断として記録しました。/);
   assert.match(html, /data-role="back">Key選択へ戻る<\/button>/);
+  // エラーの種類(音の時計が通知した種類を表の種類に直したもの)で、見出しが変わる
+  assert.match(buildInterruptedHtml(1, "audio-play"), /<h2 tabindex="-1">音声を再生できませんでした<\/h2>/);
+  assert.match(buildInterruptedHtml(1, "audio-duration"), /<h2 tabindex="-1">音源の長さが想定と異なります<\/h2>/);
 });
 
-test("内部エラー画面: Key選択へ戻れる", () => {
-  assert.match(buildInternalErrorHtml(), /data-role="back">Key選択へ戻る<\/button>/);
+test("音声の起動エラー画面: 見出し・何が起きたか・まだ記録は残っていない・研究者への連絡つきの次にすべきこと・Key選択へ戻る", () => {
+  const html = buildAudioStartErrorHtml();
+  assert.match(html, /<h2 tabindex="-1">音声を始められませんでした<\/h2>/);
+  assert.match(html, /この端末で、音声を使い始められませんでした。/);
+  assert.match(html, /まだ記録は残っていません。/);
+  assert.match(html, /研究者へお知らせください。Key選択へ戻って、やり直してください。/);
+  assert.match(html, /data-role="back">Key選択へ戻る<\/button>/);
+  assertNoScoreWords(html);
+});
+
+test("内部エラー画面: Key選択へ戻れる。まだ記録は残っていない", () => {
+  const html = buildInternalErrorHtml();
+  assert.match(html, /<h2 tabindex="-1">開始できませんでした<\/h2>/);
+  assert.match(html, /試行の順序を正しく作れませんでした。/);
+  assert.match(html, /まだ記録は残っていません。/);
+  assert.match(html, /data-role="back">Key選択へ戻る<\/button>/);
 });
 
 test("エラー画面にも、得点・正解などの語を含まない", () => {
@@ -136,8 +172,4 @@ test("showBackScreen: 「Key選択へ戻る」を押すと onBack が1回だけ�
   back.click();
   back.click(); // 二重押し(ボタンは無効になっている)
   assert.equal(backs, 1);
-});
-
-test("document が無い環境でも measurement-screens.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/functional-pitch/measurement-screens.js"));
 });

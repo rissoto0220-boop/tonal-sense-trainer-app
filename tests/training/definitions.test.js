@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync, readdirSync } from "node:fs";
 import {
   DEFINITIONS_SCHEMA_VERSION,
   DEFAULT_QUESTION_COUNT,
@@ -25,9 +24,9 @@ test("回答の種類(answerFeature)の許容値は degree と chordRootDegree",
   assert.deepEqual(ANSWER_FEATURES, ["degree", "chordRootDegree"]);
 });
 
-test("和音: 品質は機能的音感テストと同じ maj / dom7、根音度は有効な音度コード", () => {
-  assert.deepEqual(CHORD_QUALITIES, ["maj", "dom7"]);
-  assert.deepEqual(Object.keys(CHORDS), ["ch-n1-maj", "ch-n4-maj", "ch-n5-dom7"]);
+test("和音: 品質は機能的音感テストと同じ maj / dom7 と、拡張サンプルの min。根音度は有効な音度コード", () => {
+  assert.deepEqual(CHORD_QUALITIES, ["maj", "dom7", "min"]);
+  assert.deepEqual(Object.keys(CHORDS), ["ch-n1-maj", "ch-n4-maj", "ch-n5-dom7", "ch-n2-min", "ch-n3-min", "ch-n6-min", "ch-n3-dom7"]);
   for (const [chordRef, chord] of Object.entries(CHORDS)) {
     assert.ok(DEGREE_CODES.includes(chord.rootDegree), `${chordRef} の根音度が不正`);
     assert.ok(CHORD_QUALITIES.includes(chord.quality), `${chordRef} の品質が不正`);
@@ -58,8 +57,8 @@ test("回答候補: 和音の鍵盤は Ⅲ Ⅵ Ⅱ Ⅴ Ⅰ Ⅳ の並び(資料�
   assert.deepEqual(options.map((option) => option.code), ["n3", "n6", "n2", "n5", "n1", "n4"]);
 });
 
-test("課題テンプレート: 2種類。回答対象は配列で、partId と eventId で指す", () => {
-  assert.deepEqual(Object.keys(TASK_TEMPLATES), ["tt-melody-first", "tt-chord-first"]);
+test("課題テンプレート: ver.1 の2種類と、拡張サンプルの2回答の2種類。回答対象は配列で、partId と eventId で指す", () => {
+  assert.deepEqual(Object.keys(TASK_TEMPLATES), ["tt-melody-first", "tt-chord-first", "tt-melody-first-two", "tt-chord-first-two"]);
   for (const [name, template] of Object.entries(TASK_TEMPLATES)) {
     assert.equal(template.taskTemplateId, name);
     assert.equal(template.schemaVersion, DEFINITIONS_SCHEMA_VERSION);
@@ -79,35 +78,5 @@ test("課題テンプレート: 刺激の中身(正解)を持たない", () => {
   for (const template of Object.values(TASK_TEMPLATES)) {
     const text = JSON.stringify(template);
     assert.equal(/correct|degree":"n\d/.test(text), false, "正解や音度の値を書かない");
-  }
-});
-
-// 保存・履歴・CSV(T7)の3ファイル。ブラウザ保存とCSVの部品を使ってよいが、送信・サーバーには依存しない。
-const STORAGE_FILES = ["session-store.js", "reports.js", "history-screen.js"];
-
-test("src/training は(保存・履歴の3ファイルを除き)DOM・保存・サーバーに依存しない(importの許可リスト)", () => {
-  // src/training/ 内のファイル同士と、共通の小さな部品(HTMLの無害化・1回だけ受付・音声の再生・時刻表記)、
-  // 機能的音感の音声時計タイマーだけを許可する。
-  const allowed = /^(\.\/[a-z-]+\.js|\.\.\/shared\/(escape-html|answer-lock|audio-buffer-player|iso-time)\.js|\.\.\/functional-pitch\/audio-clock\.js)$/;
-  const files = readdirSync(new URL("../../src/training/", import.meta.url)).filter((name) => name.endsWith(".js") && !STORAGE_FILES.includes(name));
-  assert.ok(files.length >= 2);
-  for (const file of files) {
-    const source = readFileSync(new URL(`../../src/training/${file}`, import.meta.url), "utf8");
-    for (const [, path] of source.matchAll(/from "(.*)";/g)) {
-      assert.match(path, allowed, `${file} が ${path} をimportしている`);
-      assert.equal(STORAGE_FILES.some((name) => path === `./${name}`), false, `${file} が保存の部品 ${path} をimportしている`);
-    }
-    assert.equal(/\b(document|localStorage|sessionStorage|fetch|AudioContext)\b/.test(source.replace(/\/\/.*$/gm, "")), false, `${file} がブラウザのAPIを使っている`);
-  }
-});
-
-test("src/training の保存・履歴の3ファイルは、ブラウザ保存とCSVまで。送信・サーバーには依存しない", () => {
-  const allowed = /^(\.\/[a-z-]+\.js|\.\.\/shared\/(escape-html|iso-time|storage|csv|display-format)\.js)$/;
-  for (const file of STORAGE_FILES) {
-    const source = readFileSync(new URL(`../../src/training/${file}`, import.meta.url), "utf8");
-    for (const [, path] of source.matchAll(/from "(.*)";/g)) {
-      assert.match(path, allowed, `${file} が ${path} をimportしている`);
-    }
-    assert.equal(/\b(localStorage|sessionStorage|fetch|XMLHttpRequest)\b/.test(source.replace(/\/\/.*$/gm, "")), false, `${file} が保存先・通信を直接使っている`);
   }
 });

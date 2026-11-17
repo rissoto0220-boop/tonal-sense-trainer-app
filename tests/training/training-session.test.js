@@ -267,25 +267,42 @@ test("全問が終わると終了画面(正解数/出題数)。onFinished は1�
   session.destroy();
 });
 
-test("完了の時点: 最終問が不正解なら、必須のフィードバックが鳴り終わった時点(「次に進む」を押す前)", async () => {
+// 2026-11-15: 完了の時点は、終了画面を出した時点(以前は、最終問の必須のフィードバックが終わった時点)。
+test("完了の時点: 最終問が不正解なら、フィードバックが鳴り終わっても、聞き直しても、まだ完了ではない。「次に進む」で終了画面が出た時点で完了", async () => {
   const { env, screenEl, session, log } = await start({ questionCount: 1 });
   env.tick(UNTIL_ANSWERABLE + 0.1);
   screenEl.el(`[data-code="${wrongCode(MELODY_MENU, correctCode(session, 0))}"]`).click();
   env.tick(UNTIL_FEEDBACK_ONSET);
   assert.equal(log.finishedCalls, 0, "必須のフィードバックの途中はまだ完了しない");
   env.tick(UNTIL_FEEDBACK_END - UNTIL_FEEDBACK_ONSET);
-  assert.equal(log.finishedCalls, 1);
+  assert.equal(log.finishedCalls, 0, "必須のフィードバックが鳴り終わっても、まだ完了しない");
+  assert.equal(next(screenEl).disabled, false, "「次に進む」は押せる(ボタンの文字は変えない)");
   screenEl.el('[data-role="replay"]').click();
-  assert.equal(log.updated.at(-1).feedbackReplayCount, 1, "完了の後も聞き直しの回数は通知する");
+  assert.equal(log.updated.at(-1).feedbackReplayCount, 1, "聞き直しの回数は、完了の前に通知する");
   env.tick(UNTIL_FEEDBACK_END);
+  assert.equal(log.finishedCalls, 0, "聞き直しの後も、まだ完了しない");
   next(screenEl).click();
   assert.match(screenEl.innerHTML, /正解数 0 \/ 1/);
-  assert.equal(log.finishedCalls, 1, "終了画面で二重に通知しない");
-  assert.equal(log.finished[0].feedbackReplayCount, 0, "通知した時点の記録(後の変化は onTrialUpdated で届く)");
+  assert.equal(log.finishedCalls, 1, "終了画面を出した時点で、1回だけ完了を通知する");
+  assert.equal(log.finished[0].feedbackReplayCount, 1, "聞き直しの回数は、完了の記録に含まれる");
   session.destroy();
 });
 
-test("訓練を終了する → 終了する: 回答済みの試行だけを onInterrupted に渡し、onExit。onFinished は呼ばない", async () => {
+test("完了の時点: 最終問が正解なら、フィードバックの後に自動で終了画面へ進み、その時点で完了(それまでは完了しない)", async () => {
+  const { env, screenEl, session, log } = await start({ questionCount: 1 });
+  env.tick(UNTIL_ANSWERABLE + 0.1);
+  screenEl.el(`[data-code="${correctCode(session, 0)}"]`).click();
+  env.tick(UNTIL_FEEDBACK_ONSET);
+  assert.equal(log.finishedCalls, 0, "フィードバックの途中は、まだ完了しない(結果の文言を出しただけ)");
+  assert.equal(screenEl.innerHTML.includes("正解数"), false, "終了画面はまだ出ていない");
+  env.tick(UNTIL_FEEDBACK_END - UNTIL_FEEDBACK_ONSET);
+  await flushMicrotasks();
+  assert.match(screenEl.innerHTML, /正解数 1 \/ 1/, "フィードバックの後、自動で終了画面へ進む");
+  assert.equal(log.finishedCalls, 1, "終了画面を出した時点で完了");
+  session.destroy();
+});
+
+test("中断する → 中断する(確認): 回答済みの試行だけを onInterrupted に渡し、onExit。onFinished は呼ばない", async () => {
   const { env, screenEl, session, log } = await start({ questionCount: 3 });
   await answerAll(env, screenEl, session, [(i) => correctCode(session, i)]);
   assert.match(screenEl.innerHTML, /2 \/ 3/);
@@ -303,7 +320,7 @@ test("訓練を終了する → 終了する: 回答済みの試行だけを onI
   session.destroy();
 });
 
-test("訓練を終了する → 続ける(最初の再生の途中): 調セットアップから鳴らし直し、時刻もやり直した再生で記録する", async () => {
+test("中断する → 続ける(最初の再生の途中): 調セットアップから鳴らし直し、時刻もやり直した再生で記録する", async () => {
   const { env, screenEl, session, log } = await start({ questionCount: 1 });
   env.tick(UNTIL_QUESTION_ONSET + 0.5); // 出題音が鳴り始めた後、鳴り終わる前
   screenEl.el('[data-role="quit"]').click();
@@ -320,7 +337,7 @@ test("訓練を終了する → 続ける(最初の再生の途中): 調セッ�
   session.destroy();
 });
 
-test("訓練を終了する → 続ける(必須のフィードバックの途中): フィードバックを最初から鳴らし直す。聞き直しには数えない", async () => {
+test("中断する → 続ける(必須のフィードバックの途中): フィードバックを最初から鳴らし直す。聞き直しには数えない", async () => {
   const { env, screenEl, session, log } = await start({ questionCount: 2 });
   env.tick(UNTIL_ANSWERABLE + 0.1);
   screenEl.el(`[data-code="${wrongCode(MELODY_MENU, correctCode(session, 0))}"]`).click();
@@ -336,7 +353,7 @@ test("訓練を終了する → 続ける(必須のフィードバックの途�
   session.destroy();
 });
 
-test("訓練を終了する → 続ける(正解のフィードバックの途中): 鳴らし直して、終われば自動で次へ", async () => {
+test("中断する → 続ける(正解のフィードバックの途中): 鳴らし直して、終われば自動で次へ", async () => {
   const { env, screenEl, session } = await start({ questionCount: 2 });
   env.tick(UNTIL_ANSWERABLE + 0.1);
   screenEl.el(`[data-code="${correctCode(session, 0)}"]`).click();
@@ -350,15 +367,16 @@ test("訓練を終了する → 続ける(正解のフィードバックの途�
   session.destroy();
 });
 
-test("訓練を終了する: 最終問の必須のフィードバックが終わった後なら完了として扱い、onInterrupted は呼ばない", async () => {
+// 2026-11-15: 全問に回答済みでも、終了画面を出す前に終えたら、中断として残す(研究者の決定)。
+test("中断する: 最終問に回答し、フィードバックが終わった後でも、終了画面の前なら中断として扱う(全問の記録を渡し、onFinished は呼ばない)", async () => {
   const { env, screenEl, session, log } = await start({ questionCount: 1 });
   env.tick(UNTIL_ANSWERABLE + 0.1);
   screenEl.el(`[data-code="${wrongCode(MELODY_MENU, correctCode(session, 0))}"]`).click();
   env.tick(UNTIL_FEEDBACK_END);
   screenEl.el('[data-role="quit"]').click();
   screenEl.el('[data-role="quit-yes"]').click();
-  assert.equal(log.finishedCalls, 1);
-  assert.equal(log.interrupted, null);
+  assert.equal(log.finishedCalls, 0);
+  assert.equal(log.interrupted.length, 1, "回答済みの全問(ここでは1問)の記録を、中断の記録として渡す");
   assert.equal(log.exits, 1);
   session.destroy();
 });
@@ -374,10 +392,24 @@ test("和音のメニュー: 和音の根音度で判定し、「? → Ⅰ」の
   session.destroy();
 });
 
-test("音声の読み込みに失敗したら、再読み込みを促す文言を出し、onAudioError", async () => {
+test("音声の読み込みに失敗したら、見出し付きのエラー画面を出し、onAudioError。「メニュー選択へ戻る」で onExit", async () => {
   const { screenEl, session, log } = await start({ envOptions: { failSrc: "-setup-" } });
-  assert.match(screenEl.innerHTML, new RegExp(SESSION_TEXT.audioError));
+  // 見出し・文言はエラーの種類の表(src/shared/error-kinds.js)。ここまでの回答は、audio_error として保存される
+  assert.equal(screenEl.text("h2"), "音声を読み込めませんでした");
+  assert.match(screenEl.innerHTML, /音声ファイルを読み込めませんでした。/);
+  assert.match(screenEl.innerHTML, /ここまでの回答は、中断として記録しました。/);
+  assert.match(screenEl.innerHTML, /メニュー選択へ戻って、やり直してください。/);
+  assert.equal(screenEl.innerHTML.includes("再読み込み"), false, "再読み込みは促さない(戻ってやり直せる)");
   assert.equal(log.audioErrors, 1);
+  assert.equal(log.exits, 0);
+  screenEl.el('[data-role="back"]').click();
+  assert.equal(log.exits, 1);
+  session.destroy();
+});
+
+test("回答画面の見出しは、メニュー名", async () => {
+  const { screenEl, session } = await start();
+  assert.match(screenEl.text("h2"), /^① 単音 シドレの判別\(Key C\)$/);
   session.destroy();
 });
 

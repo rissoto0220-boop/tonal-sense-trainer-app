@@ -5,7 +5,15 @@
 // 入れ子の同じタグ(div の中の div など)は扱わない(訓練の画面では、data-role 付きの div は入れ子にならない)。
 // 対応するセレクター: "h2" / "button" / "[data-code]" / '[data-role="x"]'
 // data-menu-id → dataset.menuId(ブラウザと同じく、ハイフンの後ろを大文字にする)
+// 属性は getAttribute・setAttribute で読み書きできる(aria-selected・tabindex など)。
+// keydown(key) で、キーを押したときの処理を呼べる(戻り値のイベントの defaultPrevented で、既定の動作を止めたか分かる)。
 const camel = (name) => name.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+
+function parseAttributes(attrs) {
+  const map = new Map();
+  for (const [, name, value] of attrs.matchAll(/([\w-]+)(?:="([^"]*)")?/g)) map.set(name, value ?? "");
+  return map;
+}
 
 function decode(text) {
   return text.replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
@@ -15,8 +23,16 @@ function createElement(tag, attrs, inner) {
   const dataset = {};
   for (const [, name, value] of attrs.matchAll(/data-([\w-]+)="([^"]*)"/g)) dataset[camel(name)] = value;
   const classes = new Set((attrs.match(/class="([^"]*)"/)?.[1] ?? "").split(" ").filter(Boolean));
+  const attributes = parseAttributes(attrs);
   let innerHtml = inner;
   return {
+    getAttribute: (name) => attributes.get(name) ?? null,
+    setAttribute: (name, value) => { attributes.set(name, String(value)); },
+    keydown(key) {
+      const event = { key, defaultPrevented: false, preventDefault() { this.defaultPrevented = true; } };
+      this.listeners.keydown?.(event);
+      return event;
+    },
     tag,
     dataset,
     disabled: /\sdisabled(\s|$)/.test(` ${attrs}`),

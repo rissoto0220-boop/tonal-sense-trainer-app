@@ -138,8 +138,8 @@ test("異常: 課題と回答候補の answerFeature が食い違う", () => {
 });
 
 test("異常: 和音が辞書にない(chordRef)", () => {
-  const stimulus = { ...STIMULUS_1, parts: { ...STIMULUS_1.parts, harmony: { events: [chord("h1", 0, 4, "ch-n2-min")] } } };
-  assert.throws(() => resolveAnswerTargets(stimulus, TASK_TEMPLATES["tt-chord-first"]), /和音「ch-n2-min」が辞書にありません/);
+  const stimulus = { ...STIMULUS_1, parts: { ...STIMULUS_1.parts, harmony: { events: [chord("h1", 0, 4, "ch-n7-dim")] } } };
+  assert.throws(() => resolveAnswerTargets(stimulus, TASK_TEMPLATES["tt-chord-first"]), /和音「ch-n7-dim」が辞書にありません/);
 });
 
 test("異常: メロディのイベントに degree がない", () => {

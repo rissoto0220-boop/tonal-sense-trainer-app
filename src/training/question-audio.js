@@ -29,7 +29,7 @@ export const AUTO_NEXT_DELAY_SECONDS = 0.5;
 // (どのWAVも先頭に無音があるため、冒頭が欠けても音は欠けない)。
 const REPLAY_LEAD_SECONDS = 0.05;
 
-// question: buildQuestions の1問({ stimulusId, keyCode, ... })。
+// question: buildQuestions の1問({ stimulusId, keyCode, scale, ... })。scale を省くと長調の調セットアップを使う。
 // 戻り値の操作:
 //   load(): 3つのWAVを読み込む(Promise)。
 //   playQuestion({ withSetup, first, onQuestionOnset(audioTime), onQuestionSoundEnd(audioTime), onEnd() }):
@@ -48,7 +48,7 @@ export function createQuestionAudio(question, {
   clearTimeoutFn = (id) => clearTimeout(id),
 } = {}) {
   const srcs = {
-    setup: soundsBasePath + keySetupAudioFilenameFor(question.keyCode),
+    setup: soundsBasePath + keySetupAudioFilenameFor(question.keyCode, question.scale),
     question: soundsBasePath + questionAudioFilenameFor(question.keyCode, question.stimulusId),
     feedback: soundsBasePath + feedbackAudioFilenameFor(question.keyCode, question.stimulusId),
   };

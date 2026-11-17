@@ -10,7 +10,6 @@ export function buildPracticeEndHtml() {
   return `
     <div class="panel center functional-practice-end">
       <h2 tabindex="-1">練習が終わりました</h2>
-      <p>本番を開始するか、練習をもう一度行うかを選んでください。</p>
       <div class="actions centered">
         <button type="button" class="primary" data-role="start-main">本番を開始する</button>
         <button type="button" class="secondary" data-role="retry">練習をもう一度行う</button>
@@ -19,7 +18,7 @@ export function buildPracticeEndHtml() {
 }
 
 // onFinished({ practice_results }): 「本番を開始する」を押したときに呼ぶ(全ラウンドの練習結果)。
-// onError({ kind, error }): 音声エラー時に呼ぶ(画面にはエラーが表示される)。
+// onError({ kind, error }): 音声エラー時に呼ぶ(画面にはエラーが表示される)。音の起動の失敗は kind "start"。
 // 戻り値の destroy(): 画面を離れるときに呼ぶ。鳴っている音を止め、タイマーを消す。
 // session / mountTrialScreenFn / resumeAudioContextFn / trialControllerOptions は、テスト・開発用ページ向けの差し替え。
 export function runPracticeFlow({
@@ -42,11 +41,14 @@ export function runPracticeFlow({
 
   // 参加者の操作(クリック)の中で呼ぶこと。AudioContextの時計が動き出してから最初の試行を始める。
   function startRound() {
+    // 起動の失敗は、resumeAudioContextFn() だけを包む then の「失敗」側で、kind "start" として通知する。
     resumeAudioContextFn().then(() => {
       if (destroyed) return;
       controller?.destroy();
-      controller = mountTrialScreenFn(screenEl, trialControllerOptions);
+      controller = mountTrialScreenFn(screenEl, trialControllerOptions, { heading: "練習" });
       startCurrentTrial();
+    }, (error) => {
+      if (!destroyed) onError({ kind: "start", error });
     });
   }
 

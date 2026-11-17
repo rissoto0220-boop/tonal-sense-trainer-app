@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { runFunctionalPitchSession } from "../../src/functional-pitch/functional-session.js";
 import { runKeyMeasurement } from "../../src/functional-pitch/key-measurement.js";
 import { createFakeScreen } from "./helpers/fake-screen.js";
+import { ERROR_KINDS } from "../../src/shared/error-kinds.js";
 
 // 各段階(音色確認・練習・Keyごとの測定)の代わりに、呼び出しと破棄を記録するだけの偽物。
 function createFakeStages() {
@@ -241,6 +242,108 @@ test("結合: 本物の runKeyMeasurement とつなぐと、練習結果つき�
   assert.deepEqual(trialStarts.map((s) => s.trial.keyCode), ["Fis", "Fis"]);
 });
 
-test("document が無い環境でも functional-session.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/functional-pitch/functional-session.js"));
+// --- 音色確認・練習の音声エラー(2026-11-14: テスト選択へ戻れるエラー画面) ---
+
+test("音色確認のエラー: 音色確認を破棄し、見出し付きのエラー画面。「テスト選択へ戻る」で onExit", () => {
+  const exits = [];
+  const { screenEl, stages } = setup({ onExit: () => exits.push("exit") });
+  stages.calls.toneCheck[0].onError({ kind: "load" });
+  assert.equal(stages.destroyed.toneCheck, 1);
+  assert.match(screenEl.innerHTML, /<h2 tabindex="-1">音声を読み込めませんでした<\/h2>/);
+  // 文言はエラーの種類の表(src/shared/error-kinds.js)。まだセッションは始まっていないので、記録はない
+  assert.match(screenEl.innerHTML, /音声ファイルを読み込めませんでした。/);
+  assert.match(screenEl.innerHTML, /まだ記録は残っていません。/);
+  assert.match(screenEl.innerHTML, /テスト選択へ戻って、やり直してください。/);
+  screenEl.button('[data-role="back"]').click();
+  assert.deepEqual(exits, ["exit"]);
+});
+
+test("練習のエラー: 練習を破棄し、エラーの種類ごとの見出し。長さの不一致は研究者への連絡も促す", () => {
+  const { screenEl, stages } = setup({ onExit: () => {} });
+  stages.calls.toneCheck[0].onProceed();
+  stages.calls.practice[0].onError({ kind: "duration" });
+  assert.equal(stages.destroyed.practice, 1);
+  assert.match(screenEl.innerHTML, new RegExp(ERROR_KINDS["audio-duration"].title));
+  assert.match(screenEl.innerHTML, /研究者へお知らせください。テスト選択へ戻って/);
+  assert.ok(screenEl.button('[data-role="back"]'));
+});
+
+test("エラーの見出し: load / duration / schedule / start は、表の audio-load / audio-duration / audio-play / audio-start。不明な種類は load と同じ", () => {
+  const titleOf = (notice) => {
+    const { screenEl, stages } = setup({ onExit: () => {} });
+    stages.calls.toneCheck[0].onError({ kind: notice });
+    return screenEl.innerHTML.match(/<h2[^>]*>([^<]+)<\/h2>/)[1];
+  };
+  assert.equal(titleOf("load"), ERROR_KINDS["audio-load"].title);
+  assert.equal(titleOf("duration"), ERROR_KINDS["audio-duration"].title);
+  assert.equal(titleOf("schedule"), ERROR_KINDS["audio-play"].title);
+  assert.equal(titleOf("start"), ERROR_KINDS["audio-start"].title);
+  assert.equal(titleOf("unknown"), ERROR_KINDS["audio-load"].title);
+});
+
+test("onExit を渡さないと、エラー画面に戻るボタンを出さない(開発用ページ)", () => {
+  const { screenEl, stages } = setup();
+  stages.calls.toneCheck[0].onError({ kind: "load" });
+  assert.equal(screenEl.button('[data-role="back"]'), undefined);
+});
+
+// --- ページを閉じる前の確認(2026-11-14: 練習の開始から結果まで) ---
+
+function createFakeGuard() {
+  const guard = { enabled: 0, released: 0, active: () => guard.enabled - guard.released };
+  guard.fn = () => {
+    guard.enabled += 1;
+    let done = false;
+    return () => { if (!done) { done = true; guard.released += 1; } };
+  };
+  return guard;
+}
+
+test("確認: 音色確認の開始で有効、練習の間も続き、Key選択で解除する", () => {
+  const guard = createFakeGuard();
+  const { stages } = setup({ enableUnloadGuardFn: guard.fn });
+  assert.equal(guard.active(), 1, "音色確認の開始で有効");
+  stages.calls.toneCheck[0].onProceed();
+  assert.equal(guard.active(), 1, "練習の間も有効のまま");
+  stages.calls.practice[0].onFinished({ practice_results: PRACTICE_RESULTS });
+  assert.equal(guard.active(), 0, "Key選択で解除");
+  assert.equal(guard.enabled, 1, "途中で付け直さない");
+});
+
+test("確認: 音色確認・練習のエラー画面で解除する", () => {
+  const toneGuard = createFakeGuard();
+  setup({ enableUnloadGuardFn: toneGuard.fn, onExit: () => {} }).stages.calls.toneCheck[0].onError({ kind: "load" });
+  assert.equal(toneGuard.active(), 0);
+  const practiceGuard = createFakeGuard();
+  const { stages } = setup({ enableUnloadGuardFn: practiceGuard.fn, onExit: () => {} });
+  stages.calls.toneCheck[0].onProceed();
+  stages.calls.practice[0].onError({ kind: "load" });
+  assert.equal(practiceGuard.active(), 0);
+});
+
+test("確認: destroy で解除する。practiceRequired が偽(Key選択から始める)なら有効にしない", () => {
+  const guard = createFakeGuard();
+  const { session } = setup({ enableUnloadGuardFn: guard.fn });
+  session.destroy();
+  assert.equal(guard.active(), 0);
+  const skipGuard = createFakeGuard();
+  setup({ practiceRequired: false, enableUnloadGuardFn: skipGuard.fn });
+  assert.equal(skipGuard.enabled, 0);
+});
+
+// 2026-11-15 研究者の決定: 音色の確認の「戻る」は、説明画面へ戻る。まだセッションがないので記録は残らない。
+test("音色確認に onBack を渡す。押すと、音色確認を破棄(音とページを閉じる前の確認も止める)してから onBackToIntro", () => {
+  const log = [];
+  const { stages } = setup({ onBackToIntro: () => log.push("intro"), enableUnloadGuardFn: () => () => log.push("guard-off") });
+  assert.equal(typeof stages.calls.toneCheck[0].onBack, "function");
+  stages.calls.toneCheck[0].onBack();
+  assert.deepEqual(log, ["guard-off", "intro"]);
+  assert.equal(stages.destroyed.toneCheck, 1);
+  assert.equal(stages.calls.practice.length, 0, "練習へは進まない");
+  assert.equal(stages.calls.key.length, 0, "測定は始まらない");
+});
+
+test("onBackToIntro がなければ、音色確認に onBack を渡さない(「戻る」を出さない)", () => {
+  const { stages } = setup();
+  assert.equal(stages.calls.toneCheck[0].onBack, null);
 });

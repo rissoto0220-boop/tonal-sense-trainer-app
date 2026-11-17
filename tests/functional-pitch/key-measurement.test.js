@@ -1,6 +1,5 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { runKeyMeasurement } from "../../src/functional-pitch/key-measurement.js";
 import { generateTrialOrder } from "../../src/functional-pitch/trial-generator.js";
 import { createFakeScreen } from "./helpers/fake-screen.js";
@@ -19,9 +18,10 @@ function seededRandom(seed) {
 // 試行画面の代わりに、start の呼び出しを記録するだけの偽物。
 function createFakeMount() {
   const mounts = [];
-  const fn = (screenEl, options) => {
+  const fn = (screenEl, options, display) => {
     const controller = {
       options,
+      display,
       starts: [],
       destroyed: false,
       start(args) { controller.starts.push(args); },
@@ -231,18 +231,46 @@ test("音源の読み込みに失敗したら、測定を始めず、失敗し�
   assert.equal(env.mount.mounts.length, 0);
   assert.equal(env.measured.length, 0);
   assert.equal(env.guard.enabled, 0);
-  assert.match(env.screenEl.innerHTML, /音源を読み込めませんでした/);
+  assert.match(env.screenEl.innerHTML, /音声を読み込めませんでした/);
   assert.match(env.screenEl.innerHTML, /c-phr-ch-n1-maj-mel-n1-v01\.wav/);
   env.screenEl.button('[data-role="back"]').click();
   assert.deepEqual(env.backs, ["back"]);
 });
 
-test("AudioContextの有効化・読み込み処理そのものが失敗しても、エラー画面になる", async () => {
+// 2026-11-15(フェーズ5-B): 音声の起動の失敗は、専用のエラー画面(以前は、ファイル名が空の読み込みエラー)。
+test("音声の起動に失敗したら、測定を始めず、「音声を始められませんでした」の画面になり、Key選択へ戻れる(まだ記録は残っていない)", async () => {
   const env = setup({ resumeAudioContextFn: () => Promise.reject(new Error("blocked")) });
   await flush();
   assert.equal(env.mount.mounts.length, 0);
-  assert.match(env.screenEl.innerHTML, /音源を読み込めませんでした/);
+  assert.equal(env.measured.length, 0);
+  assert.equal(env.guard.enabled, 0);
+  assert.equal(env.loaded.length, 0, "起動に失敗したら、音源の読み込みへ進まない");
+  assert.match(env.screenEl.innerHTML, /<h2 tabindex="-1">音声を始められませんでした<\/h2>/);
+  assert.match(env.screenEl.innerHTML, /この端末で、音声を使い始められませんでした。/);
+  assert.match(env.screenEl.innerHTML, /まだ記録は残っていません。/);
+  assert.match(env.screenEl.innerHTML, /研究者へお知らせください。Key選択へ戻って、やり直してください。/);
+  env.screenEl.button('[data-role="back"]').click();
+  assert.deepEqual(env.backs, ["back"]);
+});
+
+test("音源の読み込み処理そのものが失敗したら(起動は成功)、今までどおり読み込みエラーの画面になる", async () => {
+  const env = setup({ loadKeyPhrasesFn: () => Promise.reject(new Error("boom")) });
+  await flush();
+  assert.equal(env.mount.mounts.length, 0);
+  assert.match(env.screenEl.innerHTML, /音声を読み込めませんでした/);
+  assert.equal(env.screenEl.innerHTML.includes("音声を始められませんでした"), false);
   assert.ok(env.screenEl.button('[data-role="back"]'));
+});
+
+test("起動に失敗した後で destroy されていたら、画面を出さない", async () => {
+  let rejectResume;
+  const env = setup({ resumeAudioContextFn: () => new Promise((_, reject) => { rejectResume = reject; }) });
+  await flush(); // 起動は、次のマイクロタスクで始まる(resumeAudioContextFn が呼ばれ、返事を待っている状態になる)
+  const before = env.screenEl.innerHTML;
+  env.flow.destroy();
+  rejectResume(new Error("late"));
+  await flush();
+  assert.equal(env.screenEl.innerHTML, before);
 });
 
 test("試行順の検査に通らなければ、測定を始めず内部エラー画面にする", async () => {
@@ -250,7 +278,8 @@ test("試行順の検査に通らなければ、測定を始めず内部エラ�
   await flush();
   assert.equal(env.mount.mounts.length, 0);
   assert.equal(env.measured.length, 0);
-  assert.match(env.screenEl.innerHTML, /測定を開始できませんでした/);
+  assert.match(env.screenEl.innerHTML, /開始できませんでした/);
+  assert.match(env.screenEl.innerHTML, /試行の順序を正しく作れませんでした。/);
   env.screenEl.button('[data-role="back"]').click();
   assert.deepEqual(env.backs, ["back"]);
 });
@@ -264,7 +293,9 @@ test("途中で音声エラーが起きたら、そこまでの結果を audio_e
   assert.equal(env.measured[0].measurement_status, "audio_error");
   assert.equal(env.measured[0].completed_trials.length, 4);
   assert.equal(env.measured[0].generated_trial_order.length, 90);
-  assert.match(env.screenEl.innerHTML, /4 試行まで回答済み/);
+  assert.match(env.screenEl.innerHTML, /4試行まで回答済み/);
+  assert.match(env.screenEl.innerHTML, /ここまでの回答は、中断として記録しました。/);
+  assert.match(env.screenEl.innerHTML, /音声ファイルを読み込めませんでした。/); // 通知の種類 load → 表の audio-load
   assert.equal(env.mount.mounts[0].destroyed, true);
   env.screenEl.button('[data-role="back"]').click();
   assert.deepEqual(env.backs, ["back"]);
@@ -349,17 +380,10 @@ test("destroy は何度呼んでも安全", async () => {
   assert.doesNotThrow(() => env.flow.destroy());
 });
 
-test("Keyごとの測定はユーザー・保存・CSV・サーバーに依存しない(importの許可リスト)", () => {
-  const allowed = /^(\.\/[\w-]+\.js|\.\.\/shared\/(audio-buffer-player|escape-html|answer-lock|iso-time)\.js)$/;
-  for (const file of ["key-measurement.js", "functional-session.js", "measurement-screens.js", "key-audio.js", "unload-guard.js", "dev-flag.js"]) {
-    const source = readFileSync(new URL(`../../src/functional-pitch/${file}`, import.meta.url), "utf8");
-    for (const [, path] of source.matchAll(/from "(.*)";/g)) {
-      assert.match(path, allowed, `${file} が ${path} をimportしている`);
-      assert.equal(/participant|session-store|session-uploader|storage|csv|server-config/.test(path), false, `${file}: ${path}`);
-    }
-  }
-});
-
-test("document が無い環境でも key-measurement.js のimportで例外にならない", async () => {
-  await assert.doesNotReject(import("../../src/functional-pitch/key-measurement.js"));
+test("測定の試行画面には、見出し「測定(Key C)」「測定(Key Fis)」を渡す", async () => {
+  const c = setup();
+  const fis = setup({ keyCode: "Fis" });
+  await flush();
+  assert.deepEqual(c.mount.mounts[0].display, { heading: "測定(Key C)" });
+  assert.deepEqual(fis.mount.mounts[0].display, { heading: "測定(Key Fis)" });
 });

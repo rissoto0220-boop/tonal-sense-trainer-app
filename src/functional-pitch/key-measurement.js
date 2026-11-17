@@ -7,14 +7,17 @@ import { resumeAudioContext } from "../shared/audio-buffer-player.js";
 import { generateTrialOrder, validateTrialOrder } from "./trial-generator.js";
 import { loadKeyPhrases } from "./key-audio.js";
 import { mountTrialScreen } from "./trial-screen.js";
-import { enableUnloadGuard } from "./unload-guard.js";
+import { enableUnloadGuard } from "../shared/unload-guard.js";
+import { kindFromAudioNotice } from "../shared/error-kinds.js";
 import {
   buildLoadingHtml,
   buildCompletionHtml,
   buildLoadErrorHtml,
   buildInterruptedHtml,
   buildInternalErrorHtml,
+  buildAudioStartErrorHtml,
   showBackScreen,
+  KEY_LABEL,
 } from "./measurement-screens.js";
 
 const RESPONSE_KEYS = [
@@ -120,13 +123,13 @@ export function runKeyMeasurement({
         if (isLast) finish("completed", buildCompletionHtml(keyCode));
         else startTrial(index + 1);
       },
-      onError: () => finish("audio_error", buildInterruptedHtml(completedTrials.length)),
+      onError: ({ kind } = {}) => finish("audio_error", buildInterruptedHtml(completedTrials.length, kindFromAudioNotice(kind))),
     });
   }
 
   function startTrials() {
     disableGuard = enableUnloadGuardFn();
-    controller = mountTrialScreenFn(screenEl, trialControllerOptions);
+    controller = mountTrialScreenFn(screenEl, trialControllerOptions, { heading: `測定(${KEY_LABEL[keyCode] ?? keyCode})` });
     onSessionStarted({
       measurement_key_code: keyCode,
       generated_trial_order: generatedOrder.map(toOrderEntry),
@@ -138,16 +141,21 @@ export function runKeyMeasurement({
   const showLoadError = (failures) => showBack(buildLoadErrorHtml(failures));
 
   // AudioContextの有効化(クリックの中で呼ばれる)→ 10個の音源の読み込みと確認 → 測定の開始。
+  // 起動の失敗と、読み込みの失敗は、then の「失敗」側の位置で分ける(起動の失敗は、専用のエラー画面)。
   Promise.resolve()
     .then(() => resumeAudioContextFn())
-    .then(() => loadKeyPhrasesFn(keyCode))
-    .then((result) => {
-      if (destroyed) return;
-      if (!result.ok) showLoadError(result.failures);
-      else startTrials();
-    }, (error) => {
-      if (!destroyed) showLoadError([{ src: "", reason: "load", error }]);
-    });
+    .then(
+      () => loadKeyPhrasesFn(keyCode).then((result) => {
+        if (destroyed) return;
+        if (!result.ok) showLoadError(result.failures);
+        else startTrials();
+      }, (error) => {
+        if (!destroyed) showLoadError([{ src: "", reason: "load", error }]);
+      }),
+      () => {
+        if (!destroyed) showBack(buildAudioStartErrorHtml());
+      },
+    );
 
   return { destroy };
 }

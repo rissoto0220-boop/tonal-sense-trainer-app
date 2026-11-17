@@ -1,5 +1,5 @@
 // 音感訓練の履歴・CSV出力。機能的音感の history-screen.js と同じ見た目と切り替え。
-// 「中断」には、「訓練を終了する」・ページを閉じた等(interrupted)と、音声エラー(audio_error)の両方を含める。
+// 「中断」には、「中断する」・ページを閉じた等(interrupted)と、音声エラー(audio_error)の両方を含める。
 import { escapeHtml } from "../shared/escape-html.js";
 import { formatDisplayDateTime } from "../shared/display-format.js";
 import { toCsv, downloadTextFile } from "../shared/csv.js";
@@ -25,8 +25,8 @@ export function formatHistoryRow(row) {
 }
 
 // participantData: session-store.js の loadParticipantData() が返す形({ sessions: [...] })。
-// onBack: 「メニュー選択へ戻る」を押したときに呼ぶ。
-export function showHistoryScreen({ screenEl, participantId, participantData, onBack = () => {} }) {
+// onBack: 戻るボタンを押したときに呼ぶ。backLabel: そのボタンの文字(省略すると「メニュー選択へ戻る」。説明画面から開いたときは「戻る」)。
+export function showHistoryScreen({ screenEl, participantId, participantData, onBack = () => {}, backLabel = "メニュー選択へ戻る" }) {
   let includeInterruptedInList = false;
   let includeInterruptedInCsv = false;
 
@@ -47,7 +47,7 @@ export function showHistoryScreen({ screenEl, participantId, participantData, on
           <button id="download-responses" class="secondary">回答詳細CSVをダウンロード</button>
           <button id="download-sessions" class="secondary">訓練履歴CSVをダウンロード</button>
         </div>
-        <div class="actions"><button id="back" class="primary">メニュー選択へ戻る</button></div>
+        <div class="actions"><button id="back" class="primary">${escapeHtml(backLabel)}</button></div>
       </div>`;
 
     document.getElementById("toggle-list-interrupted").addEventListener("change", (e) => {

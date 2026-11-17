@@ -137,6 +137,17 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 .history-list { list-style: none; margin: 16px 0; padding: 0; border-top: 2px solid var(--ink); }
 .history-list li { padding: 12px 6px; border-bottom: 1px solid var(--line); }
 
+/* 音感訓練の得点推移グラフ(インラインSVG)。点には値の文字を付けるので、色は補助 */
+.score-menu-select { display: block; margin: 16px 0; font-weight: 700; }
+.score-menu-select select { display: block; width: 100%; margin-top: 6px; padding: 10px; font: inherit; }
+.score-chart { display: block; width: 100%; height: auto; margin: 16px 0; }
+.score-chart-grid { stroke: var(--line); stroke-width: 1; }
+.score-chart-axis { stroke: var(--line-strong); stroke-width: 1.5; }
+.score-chart-line { fill: none; stroke: var(--blue); stroke-width: 2.5; stroke-linejoin: round; }
+.score-chart-dot { fill: var(--paper); stroke: var(--blue); stroke-width: 2.5; }
+.score-chart-label { fill: var(--muted); font-size: 12px; }
+.score-chart-value { fill: var(--ink); font-size: 13px; font-weight: 700; }
+
 /* テスト選択画面(目次リスト):枠・影なし、区切り線と大きな番号で並べる。
    HTMLは変えず、番号はCSSカウンター(counter)で付ける。
    左端の縦線は絶対音感=青・相対音感=オレンジだが、番号と文字でも区別できるので色は補助。 */
@@ -186,6 +197,29 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 .test-button:disabled::before { color: #a8b0b9; }
 .test-badge { flex: none; font-size: .8rem; font-weight: 700; color: var(--muted); border: 1.5px solid var(--muted); border-radius: 999px; padding: 2px 12px; }
 .test-description { margin: 0 14px 0 72px; color: var(--muted); font-size: .93rem; line-height: 1.7; }
+/* テストの説明画面(src/shared/test-intro-screen.js、2026-11-15)。文章は1段落ずつ、行間をゆったりとる */
+.test-intro h2:focus { outline: none; }
+.test-intro-text { margin: 14px 0 0; line-height: 1.8; overflow-wrap: anywhere; }
+
+/* 音感訓練のメニュー選択のタブ。選択中は、色だけでなく太字と下の太い線(形)で示す。
+   タブが入りきらないときは、タブの列の中だけを横にスクロールさせる(ページ全体は横にスクロールさせない)。 */
+.training-tabs { display: flex; gap: 4px; margin: 20px 0 0; border-bottom: 2px solid var(--ink); overflow-x: auto; }
+.training-tab {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding: 10px 18px;
+  border: 0;
+  border-bottom: 5px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+.training-tab[aria-selected="true"] { color: var(--ink); font-weight: 700; border-bottom-color: var(--ink); }
+.training-tab:hover:not([aria-selected="true"]) { color: var(--ink); background: var(--cream); }
+.training-tab:focus-visible { outline-offset: -3px; }
+.training-tabpanel[role="tabpanel"] .test-list { margin-top: 0; border-top: 0; }
+.training-tab-note { margin: 14px 0 10px; font-weight: 700; }
 /* 準備中:点線の縦線+灰色の文字+「準備中」ラベル(色だけに頼らない) */
 .is-unavailable { --accent: #c9c5bb; border-left-style: dashed; }
 
@@ -354,6 +388,8 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 .functional-trial { max-width: 600px; margin: 0 auto; }
 .functional-progress { margin: 0 0 4px; color: var(--muted); font-weight: 700; letter-spacing: .06em; font-variant-numeric: tabular-nums; }
 .functional-progress:focus { outline: none; }
+/* 試行画面の見出し(「練習」「測定(Key C)」)。進捗の上に、控えめな大きさで出す */
+.functional-trial-title { margin: 0 0 4px; font-size: 1.15rem; }
 .functional-status { margin: 0; min-height: 1.8em; font-weight: 700; }
 
 /* どちらのフレーズが再生中かを示す図(2つの枠)。色だけに頼らず、塗り・枠の形・文字の3つで示す。
@@ -450,21 +486,26 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 }
 
 /* ===== 機能的音感測定: 音色確認・練習の終了画面(tone-check-screen.js / practice-flow.js) =====
-   状態は色だけに頼らず、文字と枠の形(未再生=点線、再生済み=実線、再生中=青の塗り)で示す。 */
+   状態は色だけに頼らず、丸の形と✓(未再生=点線の空の丸、再生済み=実線の丸+✓、再生中=青の塗り)で示す。 */
 .functional-tone-list { list-style: none; margin: 20px 0; padding: 0; }
 .functional-tone-item { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 12px 0; border-bottom: 1px solid var(--line); }
 .functional-tone-item:first-child { border-top: 1px solid var(--line); }
-.functional-tone-state { min-width: 6.5em; padding: 4px 12px; border: 2px dashed var(--line-strong); border-radius: var(--radius); text-align: center; font-weight: 700; color: var(--muted); }
-.functional-tone-item[data-state="played"] .functional-tone-state { border-style: solid; color: var(--ink); }
-.functional-tone-item[data-state="playing"] .functional-tone-state { border-style: solid; border-color: var(--ink); background: var(--blue); color: white; box-shadow: inset 0 0 0 2px white; }
+.functional-tone-state { display: inline-flex; flex: none; }
+.functional-tone-mark { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 2rem; height: 2rem; border: 2px dashed var(--line-strong); border-radius: 50%; font-size: 1.15rem; font-weight: 700; line-height: 1; color: var(--ink); }
+.functional-tone-item[data-state="played"] .functional-tone-mark { border-style: solid; border-color: var(--ink); }
+.functional-tone-item[data-state="playing"] .functional-tone-mark { border-style: solid; border-color: var(--ink); background: var(--blue); box-shadow: inset 0 0 0 2px white; }
 .functional-practice-end h2:focus { outline: none; }
 
 /* ===== 機能的音感測定: Key選択・完了・エラー画面(measurement-screens.js) =====
    Key選択の2つのボタンは同じ見た目・同じ大きさにして、どちらかへ誘導しない。 */
 .functional-key-list { display: flex; flex-wrap: wrap; gap: 16px; margin: 28px 0 8px; }
 .functional-key-button { flex: 1 1 140px; font-size: 1.2rem; min-height: 64px; }
-.functional-error-files { margin: 8px 0 16px; padding-left: 1.4em; font-size: .92rem; color: var(--muted); }
-.functional-key-select h2:focus, .functional-completion h2:focus, .functional-measurement-error h2:focus { outline: none; }
+/* エラー画面(src/shared/error-screen.js)。詳細の行(ファイル名・回答済みの数)、データへの影響、次にすべきこと */
+.error-details { margin: 8px 0 12px; padding-left: 1.4em; font-size: .92rem; color: var(--muted); overflow-wrap: anywhere; }
+.error-impact { margin: 8px 0; }
+.error-next { margin: 8px 0 0; }
+.error-screen h2:focus { outline: none; }
+.functional-key-select h2:focus, .functional-completion h2:focus { outline: none; }
 
 /* ===== 音感訓練の回答画面(src/training/answer-screen.js) =====
    既存の画面(.answer系・.answer-panel系・.functional-*系)とは名前を分け、混同・影響が起きないようにする。
@@ -472,6 +513,13 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
    押せない音は、色だけでなく点線の枠と灰色の文字でも示す。選択中は✓印と内側の枠でも示す。 */
 .training-answer { text-align: center; }
 .training-progress { margin: 0 0 12px; color: var(--muted); font-weight: 700; }
+/* 見出し・進捗(左)と「中断する」(右上)を横に並べる(2026-11-15 研究者の決定)。リプレイ等から離し、押し間違えにくくする。
+   右にボタンを置くので、この行の見出し・進捗は左寄せにする(上部の表示・鍵盤・ボタン類は中央のまま)。 */
+.training-answer-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; text-align: left; }
+.training-answer-heading { flex: 1; min-width: 0; }
+.training-quit-button { flex: none; min-height: 40px; padding: 6px 14px; font-size: .9rem; }
+/* 回答画面の見出し(メニュー名)。長い名前でも折り返す */
+.training-answer-title { margin: 0 0 4px; font-size: 1.1rem; overflow-wrap: anywhere; }
 .training-prompt {
   max-width: 280px;
   margin: 8px auto 32px;
@@ -561,8 +609,7 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
 .training-tools { margin-top: 8px; }
 .training-feedback { min-height: 3.6em; margin-top: 20px; font-size: 1.15rem; font-weight: 700; }
 .training-feedback p { margin: 4px 0; }
-.training-quit { margin-top: 16px; }
-.training-quit-confirm { margin: 16px 0 0; text-align: left; }
+.training-quit-confirm { margin: 0 0 16px; text-align: left; }
 .training-quit-title { margin: 0 0 4px; font-weight: 700; }
 .training-quit-confirm p { margin: 4px 0; }
 .training-quit-confirm .training-quit-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
@@ -571,3 +618,8 @@ label { display: block; font-weight: 700; margin-bottom: 8px; }
   .training-keyboard { gap: 3px; }
   .training-key { font-size: .95rem; }
 }
+
+/* 想定外の例外の帯(src/shared/error-notice.js)。画面の外(#screen の直前)に出る */
+.error-notice { margin: 0 0 12px; padding: 12px 16px; border: 2px solid var(--error); border-radius: 8px; background: var(--cream); }
+.error-notice p { margin: 0 0 8px; }
+.error-notice .actions { margin-top: 8px; flex-wrap: wrap; }

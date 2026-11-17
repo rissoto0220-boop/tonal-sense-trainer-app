@@ -14,16 +14,22 @@
 //   試験的に両方を用意している(第1節: 保留)。
 // リプレイの回数は試行ごとに記録する(第2節)。最初の自動再生は数えない。
 //   回答前 → questionReplayCount、回答後 → feedbackReplayCount(回答後に増えたら onTrialUpdated で通知)。
-// 「訓練を終了する」(第7節): 音を止めて画面内で確認する。「終了する」なら、回答済みの試行だけを残して終える。
+// 「中断する」(第7節。2026-11-15 に「訓練を終了する」から表記を改めた): 音を止めて画面内で確認する。確認の「中断する」なら、回答済みの試行だけを残して終える。
 //   「続ける」なら、止めた再生をやり直す。
-// 完了(第9節): 全問に回答し、かつ最終問の必須のフィードバックが終わった時点。
+// 完了(第9節): 終了画面を出した時点(2026-11-15 に改めた。以前は、最終問の必須のフィードバックが終わった時点)。
+//   最終問が正解なら、フィードバックの0.5秒後に自動で、不正解・「わからない」なら「次に進む」で、終了画面に進む。
+//   それより前に「中断する」で終えたり、ページを閉じたりしたときは、全問に回答済みでも中断として残る。
+// 複数回答(拡張サンプル): 課題テンプレートの回答対象を順に答え、全部そろった時点(または「わからない」)で確定する。
+//   「わからない」は残りの回答対象をすべて giveup にする。responseSubmittedAt・responseTimeMs は最後の回答の時刻
+//   (暫定。複数回答のときの記録の形は研究者の決定が未定)。正誤の文言は、全部答えたあとにまとめて出す。
 import { escapeHtml } from "../shared/escape-html.js";
+import { showErrorScreen } from "../shared/error-screen.js";
 import { audioContextTime } from "../shared/audio-buffer-player.js";
 import { toLocalIso } from "../shared/iso-time.js";
 import { TASK_TEMPLATES } from "./definitions.js";
 import { TRAINING_AUDIO_VERSION } from "./stimuli.js";
 import { buildQuestions, drawSessionKey } from "./question-pool.js";
-import { judgeResponses } from "./judge.js";
+import { judgeResponses, GIVE_UP_RESPONSE_CODE } from "./judge.js";
 import { mountAnswerScreen } from "./answer-screen.js";
 import { createQuestionAudio } from "./question-audio.js";
 
@@ -32,7 +38,6 @@ export const REPLAY_MODES = ["question-only", "with-setup"];
 export const SESSION_TEXT = {
   finishedTitle: "訓練が終了しました",
   backToMenus: "メニュー選択へ戻る",
-  audioError: "音声を読み込めませんでした。ページを再読み込みしてください。",
 };
 
 export function buildFinishedHtml(correctCount, questionCount) {
@@ -49,10 +54,10 @@ export function buildFinishedHtml(correctCount, questionCount) {
 //   onSessionStarted({ menuId, sessionKeyCode, keyAssignmentMethod, trialsPlanned }): 開始時に1回。
 //   onTrialConfirmed(trial): 回答を確定した時点。trial の形は下の confirmTrial を参照。
 //   onTrialUpdated(trial): 回答後に記録が変わったとき(フィードバックを聞き直した回数)。
-//   onFinished(trials): 完了した時点で1回(最終問の必須のフィードバックが終わった時点)。
-//   onInterrupted(trials): 完了前に「訓練を終了する」で終えたとき。
+//   onFinished(trials): 完了した時点(終了画面を出す直前)で1回。
+//   onInterrupted(trials): 完了前に「中断する」で終えたとき。
 //   onAudioError(): 音声を読み込めなかったとき。
-//   onExit(): 終了画面の「メニュー選択へ戻る」、または「訓練を終了する」で終えたあと。
+//   onExit(): 終了画面・音声エラーの画面の「メニュー選択へ戻る」、または「中断する」で終えたあと。
 // 戻り値の destroy(): 画面を離れるときに呼ぶ。音・タイマーを止め、以後の操作を無視する。
 export function runTrainingSession({
   screenEl,
@@ -75,7 +80,11 @@ export function runTrainingSession({
   if (!REPLAY_MODES.includes(replayMode)) throw new Error(`未対応のリプレイの方式です: ${replayMode}`);
   const { sessionKeyCode, keyAssignmentMethod } = drawSessionKey(menu, randomFn);
   const questions = buildQuestions(menu, { randomFn, keyCode: sessionKeyCode, ...(questionCount ? { questionCount } : {}) });
-  const optionSetRef = TASK_TEMPLATES[menu.taskTemplateRef].answerTargets[0].optionSetRef;
+  const { answerTargets } = TASK_TEMPLATES[menu.taskTemplateRef];
+  const optionSetRef = answerTargets[0].optionSetRef;
+  if (answerTargets.some((target) => target.optionSetRef !== optionSetRef)) {
+    throw new Error(`メニュー ${menu.menuId}: 回答対象ごとに回答候補が違う課題には、まだ対応していません`);
+  }
   const trials = [];
   let current = null; // { audio, screen }
   let completed = false;
@@ -91,11 +100,18 @@ export function runTrainingSession({
 
   function showAudioError() {
     teardown();
-    screenEl.innerHTML = `<div class="panel center"><p class="error" role="alert">${escapeHtml(SESSION_TEXT.audioError)}</p></div>`;
+    // 見出し・文言はエラーの種類の表(src/shared/error-kinds.js)。ここまでの回答は、audio_error として保存される。
+    showErrorScreen({
+      screenEl,
+      kind: "audio-load",
+      impact: "recorded-interrupted",
+      backTo: "メニュー選択",
+      onBack: () => { if (!destroyed) onExit(); },
+    });
     onAudioError();
   }
 
-  // 全問に回答し、最終問の必須のフィードバックが終わった時点で1回だけ呼ぶ。
+  // 終了画面を出す直前に、1回だけ呼ぶ。
   function complete() {
     if (completed) return;
     completed = true;
@@ -125,8 +141,8 @@ export function runTrainingSession({
     }
     teardown();
     const question = questions[index];
-    const isLast = index === questions.length - 1;
-    const target = question.resolvedAnswerTargets[0];
+    const targets = question.resolvedAnswerTargets;
+    const responseCodes = []; // 回答順(targets と同じ順)
     const audio = createQuestionAudioFn(question, audioOptions);
     let loaded = false;
     let confirmingQuit = false;
@@ -162,16 +178,14 @@ export function runTrainingSession({
       screen.setNextEnabled(false);
       audio.playFeedback({
         onOnset: () => {
-          screen.showResult({ outcome: trial.responses[0].outcome, correctAnswerCode: target.correctAnswerCode, showNext: !correct, nextEnabled: false, replayEnabled: false });
+          const results = trial.responses.map(({ outcome, correctAnswerCode }) => ({ outcome, correctAnswerCode }));
+          screen.showResult({ ...results[0], results, showNext: !correct, nextEnabled: false, replayEnabled: false });
         },
         onEnd: () => {
           if (correct) return;
           screen.setReplayEnabled(true);
           screen.setNextEnabled(true);
-          if (mandatory && !mandatoryFeedbackDone) {
-            mandatoryFeedbackDone = true;
-            if (isLast) complete();
-          }
+          if (mandatory) mandatoryFeedbackDone = true;
         },
         onAutoNext: correct ? () => {
           mandatoryFeedbackDone = true;
@@ -180,9 +194,10 @@ export function runTrainingSession({
       });
     };
 
-    function confirmTrial(code) {
+    function confirmTrial() {
       const submittedAudioTime = audioContextTimeFn();
-      const { responses, scoring } = judgeResponses(question.resolvedAnswerTargets, { [target.targetId]: code });
+      const codesByTargetId = Object.fromEntries(targets.map((target, i) => [target.targetId, responseCodes[i] ?? GIVE_UP_RESPONSE_CODE]));
+      const { responses, scoring } = judgeResponses(targets, codesByTargetId);
       return {
         trialNumber: question.questionNumber,
         menuId: question.menuId,
@@ -222,10 +237,18 @@ export function runTrainingSession({
       optionSetRef,
       activeOptionCodes: menu.activeOptionCodes,
       progressLabel: `${question.questionNumber} / ${questions.length}`,
-      onAnswer: (code) => {
+      heading: menu.name,
+      tonicCode: menu.tonicCode,
+      targetCount: targets.length,
+      onAnswer: (code, { complete = true } = {}) => {
         if (trial || !enabled) return;
         audio.stop();
-        trial = confirmTrial(code);
+        responseCodes.push(code);
+        if (!complete) {
+          screen.setReplayEnabled(null); // リプレイで止めた音があっても、次の回答の間はリプレイを押せる
+          return;
+        }
+        trial = confirmTrial();
         trials.push(trial);
         onTrialConfirmed(structuredClone(trial));
         playFeedback(true);
