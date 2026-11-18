@@ -80,7 +80,7 @@ final class RegistrationController
         $this->services->pending->insert(Uuid7::generateBinary(), $tokenHash, $now->modify(self::PENDING_LIFETIME));
 
         // 5. 本登録URL（トークンは、フラグメントに含める。サーバのアクセスログに残らない）をメールで送る
-        $url = $this->services->config->publicBaseUrl . '/register#token=' . $token;
+        $url = $this->services->config->publicBaseUrl . '/register/#token=' . $token;
         try {
             $this->services->mailer->send($email, '【TonalSenseTrainer】本登録のご案内', self::registrationMailBody($url));
         } catch (MailException $e) {

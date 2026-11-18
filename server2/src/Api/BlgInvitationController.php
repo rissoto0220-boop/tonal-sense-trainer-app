@@ -65,7 +65,7 @@ final class BlgInvitationController extends BlgController
             $services->invitations->insert(Uuid7::generateBinary(), $blgId, $tokenHash, $expiresAt);
 
             // 4. 招待URL（トークンはフラグメントに含め、サーバのアクセスログに残さない）と所属名を、メールで送る。
-            $url = $services->config->publicBaseUrl . '/invite#token=' . $token;
+            $url = $services->config->publicBaseUrl . '/invite/#token=' . $token;
             try {
                 $services->mailer->send($email, '【TonalSenseTrainer】' . $c->belonging->name . ' からの招待', self::mailBody($c->belonging->name, $url));
             } catch (MailException $e) {

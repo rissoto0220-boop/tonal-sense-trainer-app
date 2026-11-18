@@ -380,7 +380,7 @@ ApiSpec_Auth.md 7.7 と同じ形式（`PublicKeyCredentialCreationOptions` の J
 1. 回数制限（所属単位、システム全体。9.）を確認する。超えていたら `429 RATE_LIMITED`。
 2. メールアドレスの形式を検証する（ApiSpec_Auth.md 0.6）。不正なら `422 VALIDATION_FAILED`。
 3. 招待トークンを生成し、`belonging_invitations` に、ハッシュ・所属・有効期限（7日）のみを保存する。
-4. 招待URL（`https://<ホスト>/invite#token=<トークン>`）と所属名を、メールで送る。
+4. 招待URL（`https://<ホスト>/invite/#token=<トークン>`）と所属名を、メールで送る。
    - トークンはフラグメントに含め、サーバのアクセスログに残らないようにする（基本方針 3.2、10.5）。
 5. 送信に失敗した場合は、エラーログにメールアドレスと失敗理由を記録し（基本方針 7.）、3. の行を削除して `503 MAIL_SEND_FAILED` を返す。
 

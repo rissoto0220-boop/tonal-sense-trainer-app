@@ -104,7 +104,7 @@ final class DebugMailViewerTest extends BlgApiTestCase
         $this->assertSame('parent@example.com', $mails[0]['to']);
         $this->assertSame('no-reply@example.com', $mails[0]['from']);
         $this->assertStringContainsString('本登録', $mails[0]['subject']);
-        $this->assertMatchesRegularExpression('#http://localhost:8888/register\#token=[A-Za-z0-9_-]{43}#', $mails[0]['body']);
+        $this->assertMatchesRegularExpression('#http://localhost:8888/register/\#token=[A-Za-z0-9_-]{43}#', $mails[0]['body']);
 
         // メールを送らない API には、リンクを加えない。2通目のメールは、新しい ID で、一覧の先頭になる。
         $this->assertArrayNotHasKey('debug', $client->get('/api/v1/sessions/current')->json());
@@ -128,7 +128,7 @@ final class DebugMailViewerTest extends BlgApiTestCase
         $mails = $blg->get('/debug/mails?format=json')->json()['mails'];
         $this->assertSame('invitee@example.com', $mails[0]['to']);
         $this->assertStringContainsString('○○大学', $mails[0]['subject']);
-        $this->assertMatchesRegularExpression('#http://localhost:8888/invite\#token=[A-Za-z0-9_-]{43}#', $mails[0]['body']);
+        $this->assertMatchesRegularExpression('#http://localhost:8888/invite/\#token=[A-Za-z0-9_-]{43}#', $mails[0]['body']);
     }
 
     public function testIndexPageIsShownOnlyWhenItsFeatureIsOn(): void

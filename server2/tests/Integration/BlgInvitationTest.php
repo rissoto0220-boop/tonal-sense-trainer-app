@@ -29,7 +29,7 @@ final class BlgInvitationTest extends BlgApiTestCase
         $this->assertSame('invitee@example.com', $mail['to']);
         $this->assertStringContainsString('○○大学', $mail['subject']);
         $this->assertStringContainsString('○○大学', $mail['body']);
-        $this->assertMatchesRegularExpression('#http://localhost:8888/invite\#token=[A-Za-z0-9_-]{43}#', $mail['body']);
+        $this->assertMatchesRegularExpression('#http://localhost:8888/invite/\#token=[A-Za-z0-9_-]{43}#', $mail['body']);
 
         $this->assertSame(['pendingCount' => 1], $blg->get('/api/v1/blg/invitations')->json());
         // 送信成功時は、メールアドレスをログに残さない。DB にも、保存しない。

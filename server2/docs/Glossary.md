@@ -43,7 +43,7 @@
 |---|---|---|---|
 | 仮登録 | メールアドレスを入力して、本登録のリンクを受け取るまでの手順。メールアドレスは保存しない | 新規登録（ページの題）、新規ユーザ登録（ログインしていない画面のボタン） | `pending_registrations`、`POST /registrations`（#1） |
 | 本登録 | 本登録のリンクを開いて、ユーザ名を入力して、家族を作る手順 | 本登録 | `POST /registrations/complete`（#3）、`registrationToken` |
-| 本登録のリンク（URL） | 仮登録のメールに書かれた、トークン付きの URL（`…/register#token=…`） | （メールの本文） | `publicBaseUrl + '/register#token='`、トークンは URL のフラグメントに置く |
+| 本登録のリンク（URL） | 仮登録のメールに書かれた、トークン付きの URL（`…/register/#token=…`） | （メールの本文） | `publicBaseUrl + '/register/#token='`、トークンは URL のフラグメントに置く |
 | 復旧コード | 登録時に1回だけ表示される、ログイン用のコード。家族ごとに1つ。紛失すると、アカウントを復旧できない | 復旧コード | `recovery_code_hash`・`recovery_code_key_id`、`POST /recovery-code`（再発行）、`RecoveryCode` |
 | ログイン | 復旧コードで、この端末にログインすること。パスワードでは、ログインできない | 復旧コードでログイン、ログイン | `POST /sessions`（#4）、`api.sessions.login` |
 | ログイン状態の保持 | ログインした端末は、有効期限まで、ログインしたままになる | 「〜までログインしたままになります」 | `sessions.expires_at` |
