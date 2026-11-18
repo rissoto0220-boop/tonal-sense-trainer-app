@@ -15,6 +15,8 @@ use UecTst\Mail\MailLog;
  *
  * GET /debug/mails               ページ（HTML）。新しいメールを、数秒おきに自動で取得して表示する
  * GET /debug/mails?format=json   メールの一覧（新しい順、最大100件）。ページが使う
+ * DELETE /debug/mails/{id}       そのメールを削除する（204。なければ 404）
+ * DELETE /debug/mails            すべてのメールを削除する（204）
  */
 final class DebugMailController
 {
@@ -37,6 +39,20 @@ final class DebugMailController
         ]);
     }
 
+    /** @param array<string, string> $params */
+    public function delete(Request $request, array $params): Response
+    {
+        $id = $params['id'] ?? null;
+        if ($id !== null && !preg_match('/^[0-9]{14}-[0-9a-f]{8}$/', $id)) {
+            return Response::json(404, ['error' => ['code' => 'NOT_FOUND', 'message' => 'メールが見つかりません']]);
+        }
+        $removed = $this->log->delete($id);
+        if ($id !== null && $removed === 0) {
+            return Response::json(404, ['error' => ['code' => 'NOT_FOUND', 'message' => 'メールが見つかりません']]);
+        }
+        return Response::noContent();
+    }
+
     private const PAGE = <<<'HTML'
 <!doctype html>
 <html lang="ja">
@@ -51,6 +67,9 @@ final class DebugMailController
   header { position: sticky; top: 0; background: #7a3b00; color: #fff; padding: 8px 16px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
   header h1 { font-size: 16px; margin: 0; }
   header span { font-size: 13px; opacity: .9; }
+  header button { margin-left: auto; font: inherit; font-size: 13px; padding: 2px 10px; border: 1px solid #fff; border-radius: 6px; background: transparent; color: #fff; cursor: pointer; }
+  dl { position: relative; }
+  .del { position: absolute; top: 8px; right: 10px; font: inherit; font-size: 12px; padding: 1px 8px; border: 1px solid #b3261e; border-radius: 6px; background: transparent; color: #b3261e; cursor: pointer; }
   main { max-width: 760px; margin: 0 auto; padding: 16px; }
   .empty { color: #667; text-align: center; margin-top: 48px; }
   article { background: #fff; border: 1px solid #d5d9e0; border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
@@ -79,6 +98,7 @@ final class DebugMailController
   <h1>メール表示（デバッグ）</h1>
   <span id="status">読み込み中…</span>
   <span>送信したことにしたメールを表示します。本番では使えません。</span>
+  <button type="button" id="delAll">すべて削除</button>
 </header>
 <main id="list"></main>
 <script>
@@ -129,6 +149,15 @@ final class DebugMailController
     row(dl, "宛先", mail.to);
     row(dl, "送信元", mail.from);
     row(dl, "件名", mail.subject, "subject");
+    var del = document.createElement("button");
+    del.type = "button";
+    del.className = "del";
+    del.textContent = "削除";
+    del.addEventListener("click", function () {
+      if (!confirm("このメールを削除します。リンクは、開けなくなります。よろしいですか？\n宛先: " + mail.to)) return;
+      remove(location.pathname + "/" + encodeURIComponent(mail.id));
+    });
+    dl.appendChild(del);
     el.appendChild(dl);
     el.appendChild(linkify(mail.body));
     return el;
@@ -162,6 +191,21 @@ final class DebugMailController
     }
     latestId = mails.length > 0 ? mails[0].id : null;
   }
+
+  function remove(url) {
+    fetch(url, { method: "DELETE", cache: "no-store", credentials: "same-origin" })
+      .then(function (r) {
+        if (!r.ok && r.status !== 404) throw new Error(String(r.status));
+        latestId = undefined; // 次の取得で、必ず描き直す
+        load();
+      })
+      .catch(function () { statusEl.textContent = "削除できませんでした"; });
+  }
+
+  document.getElementById("delAll").addEventListener("click", function () {
+    if (!confirm("表示中のメールを、すべて削除します。リンクは、開けなくなります。よろしいですか？")) return;
+    remove(location.pathname);
+  });
 
   function load() {
     fetch(location.pathname + "?format=json", { cache: "no-store", credentials: "same-origin" })

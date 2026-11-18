@@ -54,6 +54,52 @@ final class MailLog
         return $records;
     }
 
+    /**
+     * 指定した ID のメールを消す（ファイルの該当の行を除く）。ID が null なら、すべて消す。
+     * ファイルを作り直さず、同じファイルの中身を書き換える（所有者・権限を変えない）。
+     *
+     * @return int 消した件数
+     * @throws MailException
+     */
+    public function delete(?string $id): int
+    {
+        if (!is_file($this->file)) {
+            return 0;
+        }
+        $handle = @fopen($this->file, 'c+b');
+        if ($handle === false || !flock($handle, LOCK_EX)) {
+            throw new MailException('メールのログを書き換えられません');
+        }
+        try {
+            $text = (string) stream_get_contents($handle);
+            $kept = [];
+            $removed = 0;
+            foreach (explode("\n", $text) as $line) {
+                if ($line === '') {
+                    continue;
+                }
+                $data = json_decode($line, true);
+                $lineId = is_array($data) && isset($data['id']) && is_string($data['id']) ? $data['id'] : null;
+                if ($id === null || $lineId === $id) {
+                    $removed++;
+                    continue;
+                }
+                $kept[] = $line;
+            }
+            if ($removed > 0) {
+                $out = $kept === [] ? '' : implode("\n", $kept) . "\n";
+                if (!ftruncate($handle, 0) || fseek($handle, 0) !== 0 || fwrite($handle, $out) === false) {
+                    throw new MailException('メールのログを書き換えられません');
+                }
+                fflush($handle);
+            }
+            return $removed;
+        } finally {
+            flock($handle, LOCK_UN);
+            fclose($handle);
+        }
+    }
+
     /** @return list<string> */
     private function tailLines(): array
     {

@@ -38,6 +38,8 @@ final class Routes
             // メール表示ページ。DB を使わない（Services を作らない）。デバッグ状態でなければ、ルート自体がなく、404 になる。
             $mailViewer = new DebugMailController(new MailLog($config->mailLogFile));
             $router->add('GET', DebugMailLink::PAGE_PATH, static fn (Request $r, array $p): Response => $mailViewer->show($r));
+            $router->add('DELETE', DebugMailLink::PAGE_PATH . '/{id}', static fn (Request $r, array $p): Response => $mailViewer->delete($r, $p));
+            $router->add('DELETE', DebugMailLink::PAGE_PATH, static fn (Request $r, array $p): Response => $mailViewer->delete($r, []));
         }
 
         // 登録

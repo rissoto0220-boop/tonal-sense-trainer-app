@@ -114,6 +114,31 @@ final class DebugMailViewerTest extends BlgApiTestCase
         $this->assertSame(['second@example.com', 'parent@example.com'], array_column($newest, 'to'));
     }
 
+    public function testMailsCanBeDeletedOneByOneOrAll(): void
+    {
+        $this->useLogMailer(['enabled' => true, 'features' => ['mailViewer' => true]]);
+        $client = $this->client();
+        $client->post('/api/v1/registrations', ['email' => 'a@example.com', 'captchaToken' => 'ok']);
+        $client->post('/api/v1/registrations', ['email' => 'b@example.com', 'captchaToken' => 'ok']);
+        $mails = $client->get('/debug/mails?format=json')->json()['mails'];
+        $this->assertCount(2, $mails);
+
+        $this->assertSame(204, $client->delete('/debug/mails/' . $mails[0]['id'])->status());
+        $left = $client->get('/debug/mails?format=json')->json()['mails'];
+        $this->assertSame(['a@example.com'], array_column($left, 'to'));
+
+        $this->assertError($client->delete('/debug/mails/' . $mails[0]['id']), 404, 'NOT_FOUND');
+        $this->assertError($client->delete('/debug/mails/..%2F..'), 404, 'NOT_FOUND');
+
+        $this->assertSame(204, $client->delete('/debug/mails')->status());
+        $this->assertSame([], $client->get('/debug/mails?format=json')->json()['mails']);
+    }
+
+    public function testMailDeletionIsNotAvailableWithoutTheFeature(): void
+    {
+        $this->assertError($this->client()->delete('/debug/mails'), 404, 'NOT_FOUND');
+    }
+
     public function testInvitationMailIsLinkedToo(): void
     {
         $this->useLogMailer(['enabled' => true, 'features' => ['mailViewer' => true]]);
